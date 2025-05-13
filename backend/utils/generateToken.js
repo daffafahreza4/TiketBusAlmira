@@ -1,4 +1,3 @@
-// File: backend/utils/generateToken.js
 const jwt = require('jsonwebtoken');
 
 // Generate JWT

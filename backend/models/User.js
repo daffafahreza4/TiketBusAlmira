@@ -1,4 +1,3 @@
-// File: backend/models/User.js (update)
 const { DataTypes, Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const bcrypt = require('bcryptjs');

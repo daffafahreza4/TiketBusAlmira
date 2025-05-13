@@ -1,4 +1,3 @@
-// File: backend/models/index.js
 const User = require('./User');
 const Bus = require('./Bus');
 const Rute = require('./Rute');

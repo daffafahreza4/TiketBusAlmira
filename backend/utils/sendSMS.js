@@ -1,4 +1,3 @@
-// File: backend/utils/sendSMS.js
 const twilio = require('twilio');
 
 const sendSMS = async (options) => {

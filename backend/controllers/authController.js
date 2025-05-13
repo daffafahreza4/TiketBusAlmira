@@ -1,4 +1,3 @@
-// File: backend/controllers/authController.js
 const crypto = require('crypto');
 const { User } = require('../models');
 const generateToken = require('../utils/generateToken');
@@ -6,9 +5,7 @@ const sendEmail = require('../utils/sendEmail');
 const sendSMS = require('../utils/sendSMS');
 const { Op } = require('sequelize');
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, no_telepon } = req.body;
@@ -58,9 +55,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -111,9 +106,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// @desc    Get user profile
-// @route   GET /api/auth/profile
-// @access  Private
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id_user, {
@@ -133,9 +125,6 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-// @access  Private
 exports.updateProfile = async (req, res) => {
   try {
     const { username, email, no_telepon, password } = req.body;
@@ -167,9 +156,6 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// @desc    Forgot password
-// @route   POST /api/auth/forgotpassword
-// @access  Public
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -237,9 +223,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// @desc    Reset password via SMS
-// @route   POST /api/auth/resetpassword/sms
-// @access  Public
 exports.resetPasswordSMS = async (req, res) => {
   try {
     const { no_telepon } = req.body;
@@ -302,9 +285,6 @@ exports.resetPasswordSMS = async (req, res) => {
   }
 };
 
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:resettoken
-// @access  Public
 exports.resetPassword = async (req, res) => {
   try {
     // Get hashed token
@@ -347,9 +327,6 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// @desc    Verify SMS code
-// @route   POST /api/auth/verifysms
-// @access  Public
 exports.verifySMSCode = async (req, res) => {
   try {
     const { code, no_telepon, password } = req.body;

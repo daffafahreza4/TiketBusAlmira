@@ -1,4 +1,3 @@
-// File: backend/models/Rute.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 

@@ -1,4 +1,3 @@
-// File: backend/utils/sendEmail.js
 const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {

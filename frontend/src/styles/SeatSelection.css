@@ -1,0 +1,102 @@
+.seat {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.seat-available {
+  background-color: #e5edff;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.seat-available:hover {
+  background-color: #dbeafe;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.seat-selected {
+  background-color: #3b82f6;
+  color: white;
+  border: 1px solid #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.seat-booked {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  border: 1px solid #d1d5db;
+  cursor: not-allowed;
+}
+
+.bus-layout {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.driver-area {
+  position: relative;
+}
+
+.driver-area::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 8px;
+  background-color: #9ca3af;
+  border-radius: 4px 4px 0 0;
+}
+
+.seats-container {
+  background-color: #f9fafb;
+}
+
+/* Animasi untuk seat selection */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.seat-selected {
+  animation: pulse 1.5s infinite;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .seat {
+    width: 35px;
+    height: 35px;
+    font-size: 11px;
+  }
+  
+  .bus-layout {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .seat {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+  }
+}

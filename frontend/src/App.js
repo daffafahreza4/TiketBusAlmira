@@ -16,6 +16,9 @@ import ProfilePage from './pages/ProfilePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import BookingPage from './pages/BookingPage';
 import BookingDetailsPage from './pages/BookingDetailsPage';
+import MyTicketsPage from './pages/MyTicketsPage';
+import TicketDetailPage from './pages/TicketDetailPage';
+import PrintTiket from './components/tiket/PrintTiket';
 
 // Routing utilitity
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -71,6 +74,30 @@ const App = () => {
             element={
               <PrivateRoute>
                 <BookingDetailsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/my-tickets"
+            element={
+              <PrivateRoute>
+                <MyTicketsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/ticket/:id"
+            element={
+              <PrivateRoute>
+                <TicketDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/ticket/print/:id"
+            element={
+              <PrivateRoute>
+                <PrintTiket />
               </PrivateRoute>
             }
           />

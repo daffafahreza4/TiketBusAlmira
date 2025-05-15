@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
+import SearchRoute from '../components/rute/SearchRoute';
 
 const HomePage = () => {
   return (
@@ -40,6 +41,15 @@ const HomePage = () => {
           </div>
         </section>
 
+        {/* Search Section */}
+        <section className="py-8 bg-gray-100">
+          <div className="container mx-auto px-4">
+            <div className="relative -mt-20 mb-8">
+              <SearchRoute />
+            </div>
+          </div>
+        </section>
+
         {/* Features Section */}
         <section className="py-12 bg-gray-100">
           <div className="container mx-auto px-4">
@@ -73,6 +83,22 @@ const HomePage = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+        
+        {/* CTA Section */}
+        <section className="py-16 bg-blue-600 text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-4">Siap untuk perjalanan selanjutnya?</h2>
+            <p className="text-lg mb-8 max-w-2xl mx-auto">
+              Pesan tiket bus Anda sekarang dan nikmati kemudahan serta kenyamanan perjalanan dengan TicketBus!
+            </p>
+            <Link
+              to="/search-results"
+              className="inline-block px-6 py-3 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100 transition duration-300"
+            >
+              Pesan Tiket Sekarang
+            </Link>
           </div>
         </section>
       </main>

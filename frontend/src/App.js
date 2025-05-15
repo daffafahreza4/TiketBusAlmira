@@ -13,6 +13,9 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyAccountPage from './pages/VerifyAccountPage';
 import ProfilePage from './pages/ProfilePage';
+import SearchResultsPage from './pages/SearchResultsPage';
+import BookingPage from './pages/BookingPage';
+import BookingDetailsPage from './pages/BookingDetailsPage';
 
 // Routing utilitity
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -37,6 +40,7 @@ const App = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
+          <Route path="/search-results" element={<SearchResultsPage />} />
           <Route
             path="/profile"
             element={
@@ -46,6 +50,30 @@ const App = () => {
             }
           />
         </Routes>
+        <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/booking/:id"
+            element={
+              <PrivateRoute>
+                <BookingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/booking/details/:id"
+            element={
+              <PrivateRoute>
+                <BookingDetailsPage />
+              </PrivateRoute>
+            }
+          />
       </Router>
     </Provider>
   );

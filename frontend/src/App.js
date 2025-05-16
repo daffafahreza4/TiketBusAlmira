@@ -37,6 +37,7 @@ const App = () => {
     <Provider store={store}>
       <Router>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -44,16 +45,9 @@ const App = () => {
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
           <Route path="/search-results" element={<SearchResultsPage />} />
+          
+          {/* Protected Routes */}
           <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <ProfilePage />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-        <Route
             path="/profile"
             element={
               <PrivateRoute>
@@ -101,6 +95,15 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
       </Router>
     </Provider>
   );

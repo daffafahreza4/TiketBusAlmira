@@ -19,6 +19,7 @@ import BookingDetailsPage from './pages/BookingDetailsPage';
 import MyTicketsPage from './pages/MyTicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
 import PrintTiket from './components/tiket/PrintTiket';
+import DashboardPage from './pages/DashboardPage';
 
 // Routing utilitity
 import PrivateRoute from './components/routing/PrivateRoute';

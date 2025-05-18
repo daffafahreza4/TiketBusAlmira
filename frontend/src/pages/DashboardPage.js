@@ -27,17 +27,18 @@ const DashboardPage = ({
   tiket: { tickets, loading: ticketLoading },
   getUserTickets
 }) => {
-  // Redirect if not authenticated
-  if (!isAuthenticated && !authLoading) {
-    return <Navigate to="/login" />;
-  }
-
+  // PERBAIKAN: Pindahkan useEffect SEBELUM conditional return
   // Fetch user tickets when component mounts
   useEffect(() => {
     if (isAuthenticated) {
       getUserTickets();
     }
   }, [getUserTickets, isAuthenticated]);
+
+  // Redirect if not authenticated - SETELAH useEffect
+  if (!isAuthenticated && !authLoading) {
+    return <Navigate to="/login" />;
+  }
 
   // Calculate if we're loading anything
   const isLoading = authLoading || ticketLoading;
@@ -64,7 +65,7 @@ const DashboardPage = ({
               <div className="lg:col-span-2">
                 <AccountSummaryWidget 
                   user={user} 
-                  tickets={tickets} 
+                  tickets={tickets || []} 
                   loading={isLoading} 
                 />
               </div>
@@ -76,14 +77,14 @@ const DashboardPage = ({
               {/* Row 2 */}
               <div>
                 <PaymentStatusWidget 
-                  tickets={tickets} 
+                  tickets={tickets || []} 
                   loading={isLoading} 
                 />
               </div>
               
               <div>
                 <UpcomingTicketsWidget 
-                  tickets={tickets} 
+                  tickets={tickets || []} 
                   loading={isLoading} 
                 />
               </div>
@@ -95,7 +96,7 @@ const DashboardPage = ({
               {/* Row 3 */}
               <div className="lg:col-span-3">
                 <RecentTicketsWidget 
-                  tickets={tickets} 
+                  tickets={tickets || []} 
                   loading={isLoading} 
                 />
               </div>

@@ -13,13 +13,16 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Public routes
 router.post('/register', register);
 router.post('/login', login);
-router.get('/profile', protect, getProfile);
-router.put('/profile', protect, updateProfile);
 router.post('/forgotpassword', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);
 router.post('/resetpassword/sms', resetPasswordSMS);
 router.post('/verifysms', verifySMSCode);
+
+// Protected routes
+router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
 
 module.exports = router;

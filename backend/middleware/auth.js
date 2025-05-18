@@ -4,37 +4,37 @@ const { User } = require('../models');
 exports.protect = async (req, res, next) => {
   let token;
 
-  // Cek header untuk token
+  // Check for token in Authorization header
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
+    try {
+      // Extract token
+      token = req.headers.authorization.split(' ')[1];
 
-  // Pastikan token ada
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Tidak diizinkan untuk mengakses rute ini'
-    });
-  }
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  try {
-    // Verifikasi token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Find user in database
+      const user = await User.findByPk(decoded.id, {
+        attributes: { exclude: ['password'] }
+      });
 
-    // Ambil data user dari id dalam payload token
-    const user = await User.findByPk(decoded.id);
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User tidak ditemukan'
+        });
+      }
 
-    if (!user) {
+      // Attach user to request
+      req.user = user;
+      next();
+    } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Pengguna tidak ditemukan'
+        message: 'Tidak diizinkan untuk mengakses rute ini'
       });
     }
-
-    // Set user ke req.user
-    req.user = user;
-    next();
-  } catch (error) {
+  } else {
     return res.status(401).json({
       success: false,
       message: 'Tidak diizinkan untuk mengakses rute ini'
@@ -42,7 +42,7 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-// Middleware untuk roles
+// Additional middleware for role-based access
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

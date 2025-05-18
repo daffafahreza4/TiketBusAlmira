@@ -5,16 +5,14 @@ const sendEmail = require('../utils/sendEmail');
 const sendSMS = require('../utils/sendSMS');
 const { Op } = require('sequelize');
 
-
+// Register new user
 exports.register = async (req, res) => {
   try {
     const { username, email, password, no_telepon } = req.body;
 
-    // Cek apakah user sudah terdaftar
+    // Check if user already exists
     const userExists = await User.findOne({
-      where: {
-        email
-      }
+      where: { email }
     });
 
     if (userExists) {
@@ -24,7 +22,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Buat user baru
+    // Create new user
     const user = await User.create({
       username,
       email,
@@ -47,7 +45,7 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Register error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -55,16 +53,14 @@ exports.register = async (req, res) => {
   }
 };
 
-
+// Login user
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Cek apakah user ada
+    // Check if user exists
     const user = await User.findOne({
-      where: {
-        email
-      }
+      where: { email }
     });
 
     if (!user) {
@@ -74,7 +70,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Cek apakah password benar
+    // Check password
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
@@ -98,7 +94,7 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -106,18 +102,34 @@ exports.login = async (req, res) => {
   }
 };
 
+// Get user profile
 exports.getProfile = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User tidak terautentikasi'
+      });
+    }
+
+    // Get fresh user data from database
     const user = await User.findByPk(req.user.id_user, {
       attributes: { exclude: ['password'] }
     });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
 
     res.status(200).json({
       success: true,
       data: user
     });
   } catch (error) {
-    console.error(error);
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -125,12 +137,21 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// Update user profile
 exports.updateProfile = async (req, res) => {
   try {
     const { username, email, no_telepon, password } = req.body;
 
     const user = await User.findByPk(req.user.id_user);
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    // Update fields
     if (username) user.username = username;
     if (email) user.email = email;
     if (no_telepon) user.no_telepon = no_telepon;
@@ -148,7 +169,7 @@ exports.updateProfile = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -156,14 +177,13 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+// Forgot password
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
     const user = await User.findOne({
-      where: {
-        email
-      }
+      where: { email }
     });
 
     if (!user) {
@@ -176,7 +196,7 @@ exports.forgotPassword = async (req, res) => {
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
 
-    // Set reset password token dan expiry
+    // Set reset password token and expiry
     user.resetPasswordToken = crypto
       .createHash('sha256')
       .update(resetToken)
@@ -185,7 +205,7 @@ exports.forgotPassword = async (req, res) => {
 
     await user.save({ validate: false });
 
-    // Buat reset url
+    // Create reset URL
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
 
     const message = `Anda menerima email ini karena Anda (atau orang lain) telah meminta reset password. Klik link berikut untuk melanjutkan: \n\n ${resetUrl}`;
@@ -203,7 +223,7 @@ exports.forgotPassword = async (req, res) => {
         message: 'Email terkirim'
       });
     } catch (err) {
-      console.error(err);
+      console.error('Send email error:', err);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
 
@@ -215,7 +235,7 @@ exports.forgotPassword = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(error);
+    console.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -223,14 +243,13 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// Reset password SMS
 exports.resetPasswordSMS = async (req, res) => {
   try {
     const { no_telepon } = req.body;
 
     const user = await User.findOne({
-      where: {
-        no_telepon
-      }
+      where: { no_telepon }
     });
 
     if (!user) {
@@ -243,7 +262,7 @@ exports.resetPasswordSMS = async (req, res) => {
     // Generate reset token
     const resetToken = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
 
-    // Set reset password token dan expiry
+    // Set reset password token and expiry
     user.resetPasswordToken = crypto
       .createHash('sha256')
       .update(resetToken)
@@ -265,7 +284,7 @@ exports.resetPasswordSMS = async (req, res) => {
         message: 'SMS terkirim'
       });
     } catch (err) {
-      console.error(err);
+      console.error('Send SMS error:', err);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
 
@@ -277,7 +296,7 @@ exports.resetPasswordSMS = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(error);
+    console.error('Reset password SMS error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -285,6 +304,7 @@ exports.resetPasswordSMS = async (req, res) => {
   }
 };
 
+// Reset password
 exports.resetPassword = async (req, res) => {
   try {
     // Get hashed token
@@ -319,7 +339,7 @@ exports.resetPassword = async (req, res) => {
       message: 'Password berhasil diubah'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -327,6 +347,7 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+// Verify SMS code
 exports.verifySMSCode = async (req, res) => {
   try {
     const { code, no_telepon, password } = req.body;
@@ -364,7 +385,7 @@ exports.verifySMSCode = async (req, res) => {
       message: 'Password berhasil diubah'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Verify SMS code error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

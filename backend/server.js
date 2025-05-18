@@ -23,7 +23,11 @@ app.use('/api/auth', authRoutes);
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {
-  res.json({ message: 'API Ticketing Bus berjalan dengan baik' });
+  res.json({ 
+    message: 'API Ticketing Bus berjalan dengan baik',
+    environment: process.env.NODE_ENV,
+    jwtConfigured: !!process.env.JWT_SECRET
+  });
 });
 
 // Port

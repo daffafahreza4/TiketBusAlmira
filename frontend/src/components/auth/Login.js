@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { login } from '../../redux/actions/authActions';
 import Spinner from '../layout/Spinner';
 
 const Login = ({ login, isAuthenticated, loading }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -21,9 +22,17 @@ const Login = ({ login, isAuthenticated, loading }) => {
     login(email, password);
   };
 
-  // Redirect jika sudah login
+  // useEffect untuk menangani redirect setelah login berhasil
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      console.log('Login berhasil, redirect ke dashboard');
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, loading, navigate]);
+
+  // Redirect langsung jika sudah terautentikasi
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -31,7 +40,10 @@ const Login = ({ login, isAuthenticated, loading }) => {
       <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
         <h3 className="text-2xl font-bold text-center text-gray-800">Login</h3>
         {loading ? (
-          <Spinner />
+          <div className="text-center">
+            <Spinner />
+            <p className="mt-4 text-gray-600">Sedang memproses login...</p>
+          </div>
         ) : (
           <form className="mt-4" onSubmit={onSubmit}>
             <div className="mt-4">
@@ -71,9 +83,10 @@ const Login = ({ login, isAuthenticated, loading }) => {
             <div className="flex items-center justify-between mt-6">
               <button
                 type="submit"
-                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 w-full"
+                className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 w-full disabled:opacity-50"
+                disabled={loading}
               >
-                Login
+                {loading ? 'Memproses...' : 'Login'}
               </button>
             </div>
             <div className="mt-6 text-center">

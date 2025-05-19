@@ -13,8 +13,13 @@ import setAuthToken from '../../utils/setAuthToken';
 
 // Load User
 export const loadUser = () => async dispatch => {
-  if (localStorage.token) {
-    setAuthToken(localStorage.token);
+  const token = localStorage.getItem('token');
+  
+  if (token) {
+    setAuthToken(token);
+  } else {
+    dispatch({ type: AUTH_ERROR });
+    return;
   }
 
   try {
@@ -25,9 +30,9 @@ export const loadUser = () => async dispatch => {
       payload: res.data.data
     });
   } catch (err) {
-    dispatch({
-      type: AUTH_ERROR
-    });
+    // Clear token on authentication error
+    setAuthToken(null);
+    dispatch({ type: AUTH_ERROR });
   }
 };
 
@@ -54,18 +59,27 @@ export const register = formData => async dispatch => {
       payload: res.data
     });
 
-    dispatch(loadUser());
+    // Extract token from response
+    const token = res.data.data?.token;
+
+    if (token) {
+      // Set token and load user
+      setAuthToken(token);
+      dispatch(loadUser());
+    }
+    
     dispatch(setAlert('Registrasi berhasil', 'success'));
   } catch (err) {
     const errors = err.response && err.response.data.errors;
-
     if (errors) {
       errors.forEach(error => dispatch(setAlert(error.msg, 'danger')));
+    } else {
+      dispatch(setAlert(err.response?.data?.message || 'Registration failed', 'danger'));
     }
 
     dispatch({
       type: REGISTER_FAIL,
-      payload: err.response ? err.response.data.message : 'Server error'
+      payload: err.response?.data?.message || 'Server error'
     });
   }
 };
@@ -83,23 +97,40 @@ export const login = (email, password) => async dispatch => {
 
     const res = await axios.post('/api/auth/login', body, config);
 
+    // Extract token from response
+    const token = res.data.data?.token;
+
+    if (!token) {
+      dispatch(setAlert('Login failed: No token received', 'danger'));
+      return;
+    }
+
+    // Dispatch login success
     dispatch({
       type: LOGIN_SUCCESS,
       payload: res.data
     });
 
-    dispatch(loadUser());
+    // Set token to headers and localStorage
+    setAuthToken(token);
+
+    // Load user profile immediately after login
+    await dispatch(loadUser());
+
     dispatch(setAlert('Login berhasil', 'success'));
   } catch (err) {
+    dispatch(setAlert(err.response?.data?.message || 'Login failed', 'danger'));
+
     dispatch({
       type: LOGIN_FAIL,
-      payload: err.response ? err.response.data.message : 'Server error'
+      payload: err.response?.data?.message || 'Server error'
     });
   }
 };
 
 // Logout
 export const logout = () => dispatch => {
+  setAuthToken(null);
   dispatch({ type: LOGOUT });
   dispatch(setAlert('Logout berhasil', 'success'));
 };

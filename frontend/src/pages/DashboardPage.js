@@ -27,7 +27,6 @@ const DashboardPage = ({
   tiket: { tickets, loading: ticketLoading },
   getUserTickets
 }) => {
-  // PERBAIKAN: Pindahkan useEffect SEBELUM conditional return
   // Fetch user tickets when component mounts
   useEffect(() => {
     if (isAuthenticated) {
@@ -35,7 +34,7 @@ const DashboardPage = ({
     }
   }, [getUserTickets, isAuthenticated]);
 
-  // Redirect if not authenticated - SETELAH useEffect
+  // Redirect if not authenticated
   if (!isAuthenticated && !authLoading) {
     return <Navigate to="/login" />;
   }
@@ -44,65 +43,75 @@ const DashboardPage = ({
   const isLoading = authLoading || ticketLoading;
 
   return (
-    <div className="dashboard-layout bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="dashboard-content">
+      <div className="flex">
         <Sidebar />
         
-        <div className="dashboard-main pt-20 pb-10 px-4 md:px-8">
-          <Alert />
-          
-          <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-          
-          {isLoading ? (
-            <div className="flex justify-center my-12">
-              <Spinner />
+        {/* Main content area */}
+        <main className="flex-1 ml-0 md:ml-64 pt-16">
+          <div className="p-6">
+            <Alert />
+            
+            {/* Page Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Selamat datang kembali, {user?.username || 'User'}!
+              </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-              {/* Row 1 */}
-              <div className="lg:col-span-2">
-                <AccountSummaryWidget 
-                  user={user} 
-                  tickets={tickets || []} 
-                  loading={isLoading} 
-                />
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Spinner />
               </div>
-              
-              <div>
-                <QuickSearchWidget loading={ticketLoading} />
+            ) : (
+              <div className="space-y-6">
+                {/* Row 1: Account Summary + Quick Search */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <AccountSummaryWidget 
+                      user={user} 
+                      tickets={tickets || []} 
+                      loading={isLoading} 
+                    />
+                  </div>
+                  <div>
+                    <QuickSearchWidget loading={ticketLoading} />
+                  </div>
+                </div>
+                
+                {/* Row 2: Three equal columns */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div>
+                    <PaymentStatusWidget 
+                      tickets={tickets || []} 
+                      loading={isLoading} 
+                    />
+                  </div>
+                  <div>
+                    <UpcomingTicketsWidget 
+                      tickets={tickets || []} 
+                      loading={isLoading} 
+                    />
+                  </div>
+                  <div>
+                    <NotificationWidget loading={isLoading} />
+                  </div>
+                </div>
+                
+                {/* Row 3: Recent Tickets - Full width */}
+                <div>
+                  <RecentTicketsWidget 
+                    tickets={tickets || []} 
+                    loading={isLoading} 
+                  />
+                </div>
               </div>
-              
-              {/* Row 2 */}
-              <div>
-                <PaymentStatusWidget 
-                  tickets={tickets || []} 
-                  loading={isLoading} 
-                />
-              </div>
-              
-              <div>
-                <UpcomingTicketsWidget 
-                  tickets={tickets || []} 
-                  loading={isLoading} 
-                />
-              </div>
-              
-              <div>
-                <NotificationWidget loading={isLoading} />
-              </div>
-              
-              {/* Row 3 */}
-              <div className="lg:col-span-3">
-                <RecentTicketsWidget 
-                  tickets={tickets || []} 
-                  loading={isLoading} 
-                />
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </main>
       </div>
       
       <Footer />

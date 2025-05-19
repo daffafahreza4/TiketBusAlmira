@@ -36,40 +36,45 @@ const Sidebar = ({ user }) => {
   ];
   
   return (
-    <aside className="w-64 bg-white h-screen shadow-md pt-8 fixed left-0 top-0 overflow-y-auto hidden md:block">
+    <aside className="sidebar w-64 bg-white h-screen shadow-md fixed left-0 top-16 overflow-y-auto hidden md:block">
       {/* User info section */}
-      <div className="px-6 py-4 border-b">
-        <div className="flex items-center space-x-3">
-          <div className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold">
+      <div className="px-6 py-6 border-b border-gray-200">
+        <div className="flex items-center space-x-4">
+          <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold">
             {user && user.username ? user.username.charAt(0).toUpperCase() : 'U'}
           </div>
-          <div className="truncate">
-            <h3 className="font-semibold truncate">{user ? user.username : 'User'}</h3>
-            <p className="text-xs text-gray-500 truncate">{user ? user.email : 'user@example.com'}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 truncate">
+              {user ? user.username : 'User'}
+            </h3>
+            <p className="text-sm text-gray-500 truncate">
+              {user ? user.email : 'user@example.com'}
+            </p>
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+              Terverifikasi
+            </span>
           </div>
         </div>
       </div>
       
       {/* Navigation */}
       <nav className="mt-6">
-        <ul className="px-4">
+        <ul className="px-4 space-y-1">
           {navItems.map((item) => (
-            <li key={item.name} className="mb-2">
+            <li key={item.name}>
               <Link
                 to={item.path}
-                className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
                   location.pathname === item.path
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <i className={`${item.icon} w-5 text-center`}></i>
-                <span className="ml-3">{item.name}</span>
-                
-                {/* Active indicator */}
-                {location.pathname === item.path && (
-                  <span className="ml-auto w-1.5 h-8 rounded-full bg-blue-600"></span>
-                )}
+                <i className={`${item.icon} w-5 text-center mr-3 ${
+                  location.pathname === item.path ? 'text-blue-600' : 'text-gray-400'
+                }`}></i>
+                <span>{item.name}</span>
               </Link>
             </li>
           ))}
@@ -77,9 +82,11 @@ const Sidebar = ({ user }) => {
       </nav>
       
       {/* Bottom section with app version */}
-      <div className="absolute bottom-0 w-full px-6 py-4 text-xs text-gray-500 border-t">
-        <p>TicketBus v1.0.0</p>
-        <p className="mt-1">© 2025 TicketBus</p>
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 bg-white">
+        <div className="text-center">
+          <p className="text-xs text-gray-500 font-medium">TicketBus v1.0.0</p>
+          <p className="text-xs text-gray-400 mt-1">© 2025 TicketBus</p>
+        </div>
       </div>
     </aside>
   );

@@ -43,15 +43,15 @@ const DashboardPage = ({
   const isLoading = authLoading || ticketLoading;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       
-      <div className="flex">
+      <div className="flex flex-1">
         <Sidebar />
         
         {/* Main content area */}
-        <main className="flex-1 ml-0 md:ml-64 pt-16">
-          <div className="p-6">
+        <main className="flex-1 ml-0 md:ml-64 pt-16 pb-0">
+          <div className="p-6 min-h-full">
             <Alert />
             
             {/* Page Header */}
@@ -67,7 +67,7 @@ const DashboardPage = ({
                 <Spinner />
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-8">
                 {/* Row 1: Account Summary + Quick Search */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
@@ -114,7 +114,10 @@ const DashboardPage = ({
         </main>
       </div>
       
-      <Footer />
+      {/* Footer positioned properly */}
+      <div className="ml-0 md:ml-64">
+        <Footer />
+      </div>
     </div>
   );
 };

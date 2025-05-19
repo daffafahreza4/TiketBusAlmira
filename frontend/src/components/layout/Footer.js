@@ -3,102 +3,147 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-800 text-white pt-12 pb-8">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-wrap">
-          <div className="w-full md:w-1/4 mb-8">
+    <footer className="bg-gray-800 text-white mt-auto">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand Section */}
+          <div className="col-span-1 md:col-span-1">
             <h3 className="text-xl font-bold mb-4">TicketBus</h3>
-            <p className="mb-4 text-gray-400">
+            <p className="text-gray-400 text-sm leading-relaxed">
               Layanan pemesanan tiket bus online terpercaya dengan berbagai pilihan rute dan jadwal.
             </p>
-            <div className="flex space-x-4">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
-                <i className="fab fa-facebook-f"></i>
+            <div className="flex space-x-4 mt-6">
+              <a 
+                href="https://facebook.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-gray-400 hover:text-white transition-colors duration-200"
+                aria-label="Facebook"
+              >
+                <i className="fab fa-facebook-f text-lg"></i>
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
-                <i className="fab fa-twitter"></i>
+              <a 
+                href="https://twitter.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-gray-400 hover:text-white transition-colors duration-200"
+                aria-label="Twitter"
+              >
+                <i className="fab fa-twitter text-lg"></i>
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
-                <i className="fab fa-instagram"></i>
+              <a 
+                href="https://instagram.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-gray-400 hover:text-white transition-colors duration-200"
+                aria-label="Instagram"
+              >
+                <i className="fab fa-instagram text-lg"></i>
               </a>
             </div>
           </div>
-          <div className="w-full md:w-1/4 mb-8">
-            <h3 className="text-lg font-bold mb-4">Link Cepat</h3>
-            <ul className="space-y-2">
+
+          {/* Quick Links */}
+          <div className="col-span-1">
+            <h3 className="text-lg font-semibold mb-4">Link Cepat</h3>
+            <ul className="space-y-3">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Beranda
                 </Link>
               </li>
               <li>
-                <Link to="/booking" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/search-results" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Pesan Tiket
                 </Link>
               </li>
               <li>
-                <Link to="/rute" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/routes" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Rute & Jadwal
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/about" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Tentang Kami
                 </Link>
               </li>
             </ul>
           </div>
-          <div className="w-full md:w-1/4 mb-8">
-            <h3 className="text-lg font-bold mb-4">Informasi</h3>
-            <ul className="space-y-2">
+
+          {/* Information */}
+          <div className="col-span-1">
+            <h3 className="text-lg font-semibold mb-4">Informasi</h3>
+            <ul className="space-y-3">
               <li>
-                <Link to="/terms" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/terms" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Syarat & Ketentuan
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/privacy" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Kebijakan Privasi
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/faq" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-white">
+                <Link 
+                  to="/contact" 
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
                   Hubungi Kami
                 </Link>
               </li>
             </ul>
           </div>
-          <div className="w-full md:w-1/4 mb-8">
-            <h3 className="text-lg font-bold mb-4">Kontak</h3>
-            <ul className="space-y-2 text-gray-400">
-              <li className="flex items-start">
-                <span className="mr-2">
-                  <i className="fas fa-map-marker-alt"></i>
-                </span>
+
+          {/* Contact */}
+          <div className="col-span-1">
+            <h3 className="text-lg font-semibold mb-4">Kontak</h3>
+            <ul className="space-y-3">
+              <li className="flex items-start text-gray-400 text-sm">
+                <i className="fas fa-map-marker-alt mt-1 mr-3 flex-shrink-0"></i>
                 <span>Jl. Pahlawan No. 123, Jakarta Pusat, Indonesia</span>
               </li>
-              <li className="flex items-start">
-                <span className="mr-2">
-                  <i className="fas fa-phone"></i>
-                </span>
+              <li className="flex items-center text-gray-400 text-sm">
+                <i className="fas fa-phone mr-3 flex-shrink-0"></i>
                 <span>+62 21 1234 5678</span>
               </li>
-              <li className="flex items-start">
-                <span className="mr-2">
-                  <i className="fas fa-envelope"></i>
-                </span>
+              <li className="flex items-center text-gray-400 text-sm">
+                <i className="fas fa-envelope mr-3 flex-shrink-0"></i>
                 <span>info@ticketbus.com</span>
               </li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-700 pt-6 mt-4">
-          <p className="text-gray-400 text-center">
+        
+        {/* Copyright */}
+        <div className="border-t border-gray-700 mt-8 pt-6">
+          <p className="text-gray-400 text-center text-sm">
             &copy; {new Date().getFullYear()} TicketBus. All rights reserved.
           </p>
         </div>

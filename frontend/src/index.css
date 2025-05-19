@@ -9,8 +9,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
+/* Root container for React app */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Spinner styles */
 .spinner {
   margin: 100px auto;
   width: 40px;
@@ -64,6 +73,8 @@ body {
   margin-bottom: 1rem;
   border: 1px solid transparent;
   border-radius: 0.25rem;
+  position: relative;
+  z-index: 60; /* Ensure alerts are above fixed elements */
 }
 
 .alert-success {
@@ -92,8 +103,14 @@ body {
 
 /* Fade-in animation for alerts */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .fade-in {
@@ -121,4 +138,103 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Layout utilities */
+.min-h-screen-flex {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+/* Ensure proper stacking context */
+.navbar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+.content-with-navbar {
+  padding-top: 4rem; /* Height of navbar */
+}
+
+.sidebar-fixed {
+  position: fixed;
+  top: 4rem; /* Below navbar */
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+}
+
+.main-with-sidebar {
+  margin-left: 0;
+}
+
+@media (min-width: 768px) {
+  .main-with-sidebar {
+    margin-left: 16rem; /* Width of sidebar */
+  }
+}
+
+/* Footer styles to prevent overlap */
+.footer-spacing {
+  margin-top: auto;
+}
+
+/* Responsive text utilities */
+@media (max-width: 640px) {
+  .text-responsive-sm {
+    font-size: 0.875rem;
+  }
+}
+
+/* Utility classes for common layouts */
+.page-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.container-responsive {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-responsive {
+    max-width: 1280px;
+  }
 }

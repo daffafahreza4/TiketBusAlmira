@@ -67,23 +67,9 @@ const DashboardPage = ({
                 <Spinner />
               </div>
             ) : (
-              <div className="space-y-6 pb-8">
-                {/* Row 1: Account Summary + Quick Search */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <AccountSummaryWidget 
-                      user={user} 
-                      tickets={tickets || []} 
-                      loading={isLoading} 
-                    />
-                  </div>
-                  <div>
-                    <QuickSearchWidget loading={ticketLoading} />
-                  </div>
-                </div>
-                
-                {/* Row 2: Three equal columns */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="space-y-6 pb-8">  
+                {/* Row 1: Three equal columns */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <PaymentStatusWidget 
                       tickets={tickets || []} 
@@ -96,12 +82,9 @@ const DashboardPage = ({
                       loading={isLoading} 
                     />
                   </div>
-                  <div>
-                    <NotificationWidget loading={isLoading} />
-                  </div>
                 </div>
                 
-                {/* Row 3: Recent Tickets - Full width */}
+                {/* Row 2: Recent Tickets - Full width */}
                 <div>
                   <RecentTicketsWidget 
                     tickets={tickets || []} 

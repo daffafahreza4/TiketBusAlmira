@@ -103,11 +103,16 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="page-container">
       <Navbar />
-      <Alert />
-      <main className="flex-grow bg-gray-100 py-8">
-        <div className="container mx-auto px-4">
+      
+      {/* Alert with proper spacing */}
+      <div className="content-with-navbar">
+        <Alert />
+      </div>
+      
+      <main className="main-content bg-gray-100">
+        <div className="container mx-auto px-4 py-8">
           <div className="bg-white shadow-md rounded-lg p-6 max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold mb-6 text-center">Profil Saya</h2>
             
@@ -285,6 +290,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
           </div>
         </div>
       </main>
+      
       <Footer />
     </div>
   );

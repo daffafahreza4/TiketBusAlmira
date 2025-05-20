@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
-import SearchRoute from '../components/rute/SearchRoute';
 
 const HomePage = () => {
   return (
@@ -37,15 +36,6 @@ const HomePage = () => {
                   className="rounded-lg shadow-xl"
                 />
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Search Section */}
-        <section className="py-8 bg-gray-100">
-          <div className="container mx-auto px-4">
-            <div className="relative -mt-20 mb-8">
-              <SearchRoute />
             </div>
           </div>
         </section>

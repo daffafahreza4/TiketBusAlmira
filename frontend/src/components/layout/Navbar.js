@@ -14,11 +14,6 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
   const authLinks = (
     <ul className="flex items-center space-x-4 lg:space-x-6">
       <li className="hidden md:block">
-        <Link to="/dashboard" className="text-white hover:text-gray-200 transition-colors duration-200">
-          Dashboard
-        </Link>
-      </li>
-      <li className="hidden md:block">
         <Link to="/my-tickets" className="text-white hover:text-gray-200 transition-colors duration-200">
           Tiket Saya
         </Link>
@@ -84,15 +79,9 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
               </Link>
               <Link 
                 to="/search-results" 
-                className="text-white hover:text-gray-200 px-3 py-2 transition-colors duration-200"
+                className="text-white hover:text-gray-200 py-2 transition-colors duration-200"
               >
                 Cari Tiket
-              </Link>
-              <Link 
-                to="/about" 
-                className="text-white hover:text-gray-200 px-3 py-2 transition-colors duration-200"
-              >
-                Tentang Kami
               </Link>
             </div>
           </div>
@@ -144,13 +133,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
               {auth.isAuthenticated ? (
                 <>
                   <div className="border-t border-blue-600 my-2"></div>
-                  <Link 
-                    to="/dashboard" 
-                    className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
+
                   <Link 
                     to="/my-tickets" 
                     className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"

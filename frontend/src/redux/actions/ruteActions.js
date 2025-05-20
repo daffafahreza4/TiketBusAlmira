@@ -3,7 +3,6 @@ import { setAlert } from './alertActions';
 import {
   GET_RUTES,
   GET_RUTE,
-  SEARCH_RUTES,
   RUTE_ERROR,
   CLEAR_RUTE
 } from '../types';
@@ -11,6 +10,8 @@ import {
 // Get all routes
 export const getRutes = () => async dispatch => {
   try {
+    dispatch({ type: CLEAR_RUTE }); // Clear previous state
+    
     const res = await axios.get('/api/rute');
 
     dispatch({
@@ -42,41 +43,6 @@ export const getRouteById = id => async dispatch => {
       payload: err.response && err.response.data.message 
         ? err.response.data.message 
         : 'Terjadi kesalahan saat mengambil data rute'
-    });
-  }
-};
-
-// Search routes
-export const searchRoutes = searchParams => async dispatch => {
-  try {
-    const { asal, tujuan, tanggal } = searchParams;
-
-    // Store search params in reducer
-    dispatch({
-      type: SEARCH_RUTES,
-      payload: {
-        routes: [], // We'll fill this after the API call
-        searchParams
-      }
-    });
-
-    const res = await axios.get(
-      `/api/rute/search?asal=${asal}&tujuan=${tujuan}&tanggal=${tanggal}`
-    );
-
-    dispatch({
-      type: SEARCH_RUTES,
-      payload: {
-        routes: res.data.data,
-        searchParams
-      }
-    });
-  } catch (err) {
-    dispatch({
-      type: RUTE_ERROR,
-      payload: err.response && err.response.data.message 
-        ? err.response.data.message 
-        : 'Terjadi kesalahan saat mencari rute'
     });
   }
 };

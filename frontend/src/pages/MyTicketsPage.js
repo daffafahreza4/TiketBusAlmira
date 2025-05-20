@@ -53,6 +53,11 @@ const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
       <Navbar />
       <Alert />
       
+      {/* Alert with proper spacing */}
+      <div className="content-with-navbar">
+          <Alert />
+      </div>
+
       <main className="flex-grow bg-gray-100 py-8">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-6">

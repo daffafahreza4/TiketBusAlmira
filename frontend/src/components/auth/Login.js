@@ -96,6 +96,11 @@ const Login = ({ login, isAuthenticated, loading }) => {
                   Daftar
                 </Link>
               </p>
+                <p className="text-sm">
+                <Link to=  "/" className="text-blue-600 hover:underline">
+                  Kembali
+                </Link>
+              </p>
             </div>
           </form>
         )}

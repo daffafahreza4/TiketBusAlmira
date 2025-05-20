@@ -1,7 +1,6 @@
 import {
   GET_RUTES,
   GET_RUTE,
-  SEARCH_RUTES,
   RUTE_ERROR,
   CLEAR_RUTE
 } from '../types';
@@ -9,7 +8,6 @@ import {
 const initialState = {
   routes: [],
   selectedRoute: null,
-  searchParams: null,
   loading: true,
   error: null
 };
@@ -32,14 +30,6 @@ const ruteReducer = (state = initialState, action) => {
         loading: false,
         error: null
       };
-    case SEARCH_RUTES:
-      return {
-        ...state,
-        routes: payload.routes,
-        searchParams: payload.searchParams,
-        loading: false,
-        error: null
-      };
     case RUTE_ERROR:
       return {
         ...state,
@@ -50,6 +40,8 @@ const ruteReducer = (state = initialState, action) => {
       return {
         ...state,
         selectedRoute: null,
+        routes: [],
+        loading: true,
         error: null
       };
     default:

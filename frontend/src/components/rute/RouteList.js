@@ -3,9 +3,15 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
-import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
+import { getRutes } from '../../redux/actions/ruteActions';
+import { formatCurrency, formatTime } from '../../utils/formatters';
 
-const RouteList = ({ routes, loading, error, searchParams }) => {
+const RouteList = ({ routes, loading, error, getRutes }) => {
+  // Fetch all routes when component mounts
+  useEffect(() => {
+    getRutes();
+  }, [getRutes]);
+
   if (loading) {
     return <Spinner />;
   }
@@ -20,92 +26,100 @@ const RouteList = ({ routes, loading, error, searchParams }) => {
 
   if (routes.length === 0) {
     return (
-      <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-4">
-        Tidak ada rute yang tersedia untuk pencarian Anda. Silakan coba tanggal atau tujuan lain.
+      <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-4 text-center">
+        <div className="text-4xl mb-2">🚌</div>
+        <p className="font-medium">Belum ada rute yang tersedia saat ini</p>
+        <p className="text-sm">Silakan cek kembali nanti</p>
       </div>
     );
   }
 
   return (
-    <div>
-      {searchParams && (
-        <div className="bg-gray-100 p-4 rounded-lg mb-4">
-          <h3 className="font-bold text-lg mb-2">Hasil Pencarian</h3>
-          <div className="flex flex-wrap gap-x-8">
-            <div>
-              <span className="text-gray-600">Dari:</span> {searchParams.asal}
-            </div>
-            <div>
-              <span className="text-gray-600">Ke:</span> {searchParams.tujuan}
-            </div>
-            <div>
-              <span className="text-gray-600">Tanggal:</span> {formatDate(searchParams.tanggal)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {routes.map(route => (
-          <div 
-            key={route.id_rute} 
-            className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
-          >
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-              <div>
-                <h3 className="font-bold text-lg">{route.nama_bus}</h3>
-                <p className="text-gray-600">{route.kelas || 'Ekonomi'}</p>
-              </div>
-              <div className="font-bold text-xl text-blue-600">
-                {formatCurrency(route.harga)}
-              </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row justify-between border-t border-b py-3 my-3">
-              <div className="flex items-center mb-2 md:mb-0">
-                <div className="mr-2 text-lg font-semibold">{formatTime(route.waktu_berangkat)}</div>
-                <div className="text-gray-600">{route.asal}</div>
-              </div>
-              
-              <div className="flex flex-col items-center">
-                <div className="text-gray-500">
-                  <i className="fas fa-arrow-right"></i>
+    <div className="space-y-4">
+      {routes.map(route => (
+        <div 
+          key={route.id_rute} 
+          className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+        >
+          <div className="flex justify-between items-center">
+            {/* Left side - Time and Route info */}
+            <div className="flex-1">
+              <div className="flex items-center space-x-4 mb-2">
+                {/* Departure Time */}
+                <div className="text-xl font-bold text-gray-900">
+                  {formatTime(route.waktu_berangkat)}
                 </div>
-                <div className="text-xs text-gray-500">8 jam (perkiraan)</div>
+                
+                {/* Route Line */}
+                <div className="flex-1 border-t-2 border-blue-300 relative">
+                  <div className="absolute left-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
+                  <div className="absolute right-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
+                </div>
+                
+                {/* Arrival Time */}
+                <div className="text-xl font-bold text-gray-900">
+                  {formatTime(route.perkiraan_tiba)}
+                </div>
               </div>
               
-              <div className="flex items-center mt-2 md:mt-0">
-                <div className="mr-2 text-lg font-semibold">{formatTime(route.perkiraan_tiba)}</div>
-                <div className="text-gray-600">{route.tujuan}</div>
+              {/* Station Names */}
+              <div className="flex justify-between text-sm text-gray-600 mb-3">
+                <span>{route.asal}</span>
+                <span>{route.tujuan}</span>
+              </div>
+              
+              {/* Details Section */}
+              <div className="flex items-center space-x-4">
+                <button className="flex items-center text-gray-500 text-sm hover:text-gray-700">
+                  <i className="fas fa-info-circle mr-1"></i>
+                  Details
+                </button>
+                
+                {/* Price */}
+                <div className="text-lg font-bold text-gray-900">
+                  {formatCurrency(route.harga)}
+                </div>
               </div>
             </div>
             
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="mb-3 md:mb-0">
-                <p className="text-sm text-gray-600">
-                  <i className="fas fa-chair mr-1"></i>
-                  {route.kursi_tersedia} kursi tersedia
-                </p>
+            {/* Right side - Book button */}
+            <div className="ml-6">
+              <Link
+                to={`/booking/${route.id_rute}`}
+                className="bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-gray-900 transition-colors duration-200 font-medium"
+              >
+                Pesan
+              </Link>
+            </div>
+          </div>
+          
+          {/* Bus info and facilities */}
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="flex justify-between items-center text-sm text-gray-600">
+              <div className="flex items-center space-x-4">
+                <span className="font-medium">{route.nama_bus}</span>
                 {route.fasilitas && (
-                  <div className="flex mt-1 space-x-2">
-                    {route.fasilitas.includes('AC') && <span className="text-xs bg-gray-200 px-2 py-1 rounded">AC</span>}
-                    {route.fasilitas.includes('WiFi') && <span className="text-xs bg-gray-200 px-2 py-1 rounded">WiFi</span>}
-                    {route.fasilitas.includes('USB Charging') && <span className="text-xs bg-gray-200 px-2 py-1 rounded">USB</span>}
-                    {route.fasilitas.includes('Toilet') && <span className="text-xs bg-gray-200 px-2 py-1 rounded">Toilet</span>}
+                  <div className="flex space-x-2">
+                    {route.fasilitas.split(',').map((facility, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                      >
+                        {facility.trim()}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
               
-              <Link
-                to={`/booking/${route.id_rute}`}
-                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300"
-              >
-                Pilih
-              </Link>
+              <div className="text-green-600">
+                <i className="fas fa-chair mr-1"></i>
+                {route.kursi_tersedia || route.total_kursi} kursi tersedia
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -114,14 +128,13 @@ RouteList.propTypes = {
   routes: PropTypes.array.isRequired,
   loading: PropTypes.bool,
   error: PropTypes.string,
-  searchParams: PropTypes.object
+  getRutes: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
   routes: state.rute.routes,
   loading: state.rute.loading,
-  error: state.rute.error,
-  searchParams: state.rute.searchParams
+  error: state.rute.error
 });
 
-export default connect(mapStateToProps)(RouteList);
+export default connect(mapStateToProps, { getRutes })(RouteList);

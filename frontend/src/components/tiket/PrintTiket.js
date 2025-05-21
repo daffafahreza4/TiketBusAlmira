@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import Spinner from '../layout/Spinner';
 import { getTicketById } from '../../redux/actions/tiketActions';
-import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
+import { formatDate, formatTime } from '../../utils/formatters';
 
 const PrintTiket = ({ getTicketById, ticket, loading, error }) => {
   const { id } = useParams();

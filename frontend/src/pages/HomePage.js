@@ -23,7 +23,7 @@ const HomePage = () => {
                   Nikmati perjalanan aman dan nyaman bersama kami.
                 </p>
                 <Link
-                  to="/booking"
+                  to="/search-results" // Path yang ada di aplikasi
                   className="inline-block px-6 py-3 bg-white text-blue-600 font-bold rounded-lg shadow-md hover:bg-gray-100 transition duration-300"
                 >
                   Pesan Sekarang
@@ -75,7 +75,7 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-        
+
         {/* CTA Section */}
         <section className="py-16 bg-blue-600 text-white">
           <div className="container mx-auto px-4 text-center">

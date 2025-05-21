@@ -1,10 +1,10 @@
-
 import React from 'react';
 import PropTypes from 'prop-types';
-import { formatCurrency, formatDate, formatStatus } from '../../utils/formatters';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Link } from 'react-router-dom';
 
-const PaymentStatusWidget = ({ tickets, loading }) => {
+// Ubah definisi komponen untuk menggunakan parameter default
+const PaymentStatusWidget = ({ tickets = [], loading = false }) => {
   // Filter untuk mendapatkan tiket pending payment
   const pendingPayments = tickets
     .filter(ticket => ticket.status_tiket === 'pending')
@@ -88,13 +88,14 @@ const PaymentStatusWidget = ({ tickets, loading }) => {
 };
 
 PaymentStatusWidget.propTypes = {
-  tickets: PropTypes.array.isRequired,
+  tickets: PropTypes.array,
   loading: PropTypes.bool
 };
 
-PaymentStatusWidget.defaultProps = {
-  tickets: [],
-  loading: false
-};
+// Hapus defaultProps
+// PaymentStatusWidget.defaultProps = {
+//   tickets: [],
+//   loading: false
+// };
 
 export default PaymentStatusWidget;

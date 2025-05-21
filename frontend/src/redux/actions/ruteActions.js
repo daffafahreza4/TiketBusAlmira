@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { setAlert } from './alertActions';
 import {
   GET_RUTES,
   GET_RUTE,

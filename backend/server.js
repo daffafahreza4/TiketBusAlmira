@@ -9,6 +9,7 @@ const models = require('./models');
 const authRoutes = require('./routes/auth');
 const ruteRoutes = require('./routes/rute');
 const adminRoutes = require('./routes/admin');
+const tiketRoutes = require('./routes/tiket'); // Tambahkan ini
 
 // Load env vars
 dotenv.config();
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/rute', ruteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/tiket', tiketRoutes); // Tambahkan ini
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {

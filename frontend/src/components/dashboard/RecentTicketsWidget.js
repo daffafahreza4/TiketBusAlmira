@@ -2,7 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 
-const RecentTicketsWidget = ({ tickets, loading }) => {
+// Ubah definisi komponen untuk menggunakan parameter default
+const RecentTicketsWidget = ({ tickets = [], loading = false }) => {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 h-full">
@@ -38,9 +39,10 @@ RecentTicketsWidget.propTypes = {
   loading: PropTypes.bool
 };
 
-RecentTicketsWidget.defaultProps = {
-  tickets: [],
-  loading: false
-};
+// Hapus defaultProps
+// RecentTicketsWidget.defaultProps = {
+//   tickets: [],
+//   loading: false
+// };
 
 export default RecentTicketsWidget;

@@ -104,6 +104,14 @@ const App = () => {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/booking"
+            element={
+              <PrivateRoute>
+                <SearchResultsPage />
+            </PrivateRoute>
+            }
+          />
         </Routes>
       </Router>
     </Provider>

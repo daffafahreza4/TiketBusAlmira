@@ -12,12 +12,10 @@ import Spinner from '../components/layout/Spinner';
 import '../styles/Dashboard.css';
 
 // Dashboard widgets
-import AccountSummaryWidget from '../components/dashboard/AccountSummaryWidget';
-import QuickSearchWidget from '../components/dashboard/QuickSearchWidget';
 import UpcomingTicketsWidget from '../components/dashboard/UpcomingTicketsWidget';
 import RecentTicketsWidget from '../components/dashboard/RecentTicketsWidget';
 import PaymentStatusWidget from '../components/dashboard/PaymentStatusWidget';
-import NotificationWidget from '../components/dashboard/NotificationWidget';
+
 
 // Actions
 import { getUserTickets } from '../redux/actions/tiketActions';

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -18,7 +18,6 @@ const TicketDetailPage = ({
   error 
 }) => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [showCancelModal, setShowCancelModal] = useState(false);
   
   useEffect(() => {

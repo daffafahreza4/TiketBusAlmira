@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from './redux/store';
 import setAuthToken from './utils/setAuthToken';
@@ -21,7 +21,7 @@ import TicketDetailPage from './pages/TicketDetailPage';
 import PrintTiket from './components/tiket/PrintTiket';
 import DashboardPage from './pages/DashboardPage';
 
-// Routing utilitity
+// Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
 
 // Cek token di local storage

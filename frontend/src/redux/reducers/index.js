@@ -10,5 +10,5 @@ export default combineReducers({
   alert: alertReducer,
   rute: ruteReducer,
   tiket: tiketReducer,
-  reservasi: reservasiReducer
+  reservasi: reservasiReducer,
 });

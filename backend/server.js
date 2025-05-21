@@ -8,6 +8,7 @@ const models = require('./models');
 // Import routes
 const authRoutes = require('./routes/auth');
 const ruteRoutes = require('./routes/rute');
+const adminRoutes = require('./routes/admin');
 
 // Load env vars
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(express.json());
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rute', ruteRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {

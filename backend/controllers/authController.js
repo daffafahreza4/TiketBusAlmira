@@ -392,3 +392,38 @@ exports.verifySMSCode = async (req, res) => {
     });
   }
 };
+
+// Make user an admin (only accessible by admin)
+exports.makeAdmin = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    // Change role to admin
+    user.role = 'admin';
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${user.username} berhasil dijadikan admin`,
+      data: {
+        id: user.id_user,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Make admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};

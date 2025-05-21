@@ -7,9 +7,10 @@ const {
   forgotPassword,
   resetPassword,
   resetPasswordSMS,
-  verifySMSCode
+  verifySMSCode,
+  makeAdmin
 } = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth'); // Tambahkan authorize
 
 const router = express.Router();
 
@@ -24,5 +25,8 @@ router.post('/verifysms', verifySMSCode);
 // Protected routes
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
+
+// Admin routes (protected with admin role)
+router.put('/make-admin/:id', protect, authorize('admin'), makeAdmin);
 
 module.exports = router;

@@ -53,9 +53,9 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { username, email, no_telepon, role } = req.body;
-    
+
     const user = await User.findByPk(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -94,7 +94,7 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -164,9 +164,9 @@ exports.getAllBuses = async (req, res) => {
 exports.updateBus = async (req, res) => {
   try {
     const { nama_bus, total_kursi, fasilitas } = req.body;
-    
+
     const bus = await Bus.findByPk(req.params.id);
-    
+
     if (!bus) {
       return res.status(404).json({
         success: false,
@@ -198,7 +198,7 @@ exports.updateBus = async (req, res) => {
 exports.deleteBus = async (req, res) => {
   try {
     const bus = await Bus.findByPk(req.params.id);
-    
+
     if (!bus) {
       return res.status(404).json({
         success: false,
@@ -261,9 +261,9 @@ exports.createRoute = async (req, res) => {
 exports.updateRoute = async (req, res) => {
   try {
     const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
-    
+
     const rute = await Rute.findByPk(req.params.id);
-    
+
     if (!rute) {
       return res.status(404).json({
         success: false,
@@ -309,7 +309,7 @@ exports.updateRoute = async (req, res) => {
 exports.deleteRoute = async (req, res) => {
   try {
     const rute = await Rute.findByPk(req.params.id);
-    
+
     if (!rute) {
       return res.status(404).json({
         success: false,
@@ -374,9 +374,9 @@ exports.getAllTickets = async (req, res) => {
 exports.updateTicketStatus = async (req, res) => {
   try {
     const { status_tiket } = req.body;
-    
+
     const ticket = await Tiket.findByPk(req.params.id);
-    
+
     if (!ticket) {
       return res.status(404).json({
         success: false,
@@ -406,42 +406,42 @@ exports.getDashboardStats = async (req, res) => {
   try {
     // Count total users
     const totalUsers = await User.count();
-    
+
     // Count total buses
     const totalBuses = await Bus.count();
-    
+
     // Count total active routes
     const totalActiveRoutes = await Rute.count({
       where: {
         status: 'aktif'
       }
     });
-    
+
     // Count tickets by status
     const pendingTickets = await Tiket.count({
       where: {
         status_tiket: 'pending'
       }
     });
-    
+
     const confirmedTickets = await Tiket.count({
       where: {
         status_tiket: 'confirmed'
       }
     });
-    
+
     const completedTickets = await Tiket.count({
       where: {
         status_tiket: 'completed'
       }
     });
-    
+
     const cancelledTickets = await Tiket.count({
       where: {
         status_tiket: 'cancelled'
       }
     });
-    
+
     // Sum total revenue from completed tickets
     const totalRevenue = await Tiket.sum('total_bayar', {
       where: {
@@ -450,7 +450,7 @@ exports.getDashboardStats = async (req, res) => {
         }
       }
     });
-    
+
     // Get recent tickets (5 most recent)
     const recentTickets = await Tiket.findAll({
       limit: 5,
@@ -458,7 +458,7 @@ exports.getDashboardStats = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['username']
+          attributes: ['username', 'email'] // ✅ Perbaikan: pastikan field ada
         },
         {
           model: Rute,

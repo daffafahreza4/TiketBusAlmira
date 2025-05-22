@@ -4,6 +4,7 @@ import alertReducer from './alertReducer';
 import ruteReducer from './ruteReducer';
 import tiketReducer from './tiketReducer';
 import reservasiReducer from './reservasiReducer';
+import adminReducer from './adminReducer';
 
 export default combineReducers({
   auth: authReducer,
@@ -11,4 +12,5 @@ export default combineReducers({
   rute: ruteReducer,
   tiket: tiketReducer,
   reservasi: reservasiReducer,
+  admin: adminReducer,
 });

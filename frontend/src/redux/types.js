@@ -76,3 +76,8 @@ export const REMOVE_ALERT = 'REMOVE_ALERT';
 
 // Error Types
 export const CLEAR_ERRORS = 'CLEAR_ERRORS';
+
+// Admin Types
+export const GET_ADMIN_STATS = 'GET_ADMIN_STATS';
+export const ADMIN_ERROR = 'ADMIN_ERROR';
+export const CLEAR_ADMIN_DATA = 'CLEAR_ADMIN_DATA';

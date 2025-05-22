@@ -11,18 +11,55 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // Helper function to get home path based on user role
+  const getHomePath = () => {
+    if (auth.isAuthenticated && auth.user) {
+      return auth.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    }
+    return '/';
+  };
+
   const authLinks = (
     <ul className="flex items-center space-x-4 lg:space-x-6">
-      <li className="hidden md:block">
-        <Link to="/my-tickets" className="text-white hover:text-gray-200 transition-colors duration-200">
-          Tiket Saya
-        </Link>
-      </li>
+      {/* Show different links based on user role */}
+      {auth.user?.role === 'admin' ? (
+        // Admin links
+        <>
+          <li className="hidden md:block">
+            <Link to="/admin/users" className="text-white hover:text-gray-200 transition-colors duration-200">
+              Kelola User
+            </Link>
+          </li>
+          <li className="hidden md:block">
+            <Link to="/admin/tickets" className="text-white hover:text-gray-200 transition-colors duration-200">
+              Kelola Tiket
+            </Link>
+          </li>
+        </>
+      ) : (
+        // Regular user links
+        <>
+          <li className="hidden md:block">
+            <Link to="/my-tickets" className="text-white hover:text-gray-200 transition-colors duration-200">
+              Tiket Saya
+            </Link>
+          </li>
+        </>
+      )}
+      
       <li className="hidden md:block">
         <Link to="/profile" className="text-white hover:text-gray-200 flex items-center space-x-2 transition-colors duration-200">
           <span>{auth.user ? auth.user.username : 'Profil'}</span>
-          <div className="w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
-            {auth.user && auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U'}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+            auth.user?.role === 'admin' 
+              ? 'bg-red-600 text-white' 
+              : 'bg-white text-blue-600'
+          }`}>
+            {auth.user?.role === 'admin' ? (
+              <i className="fas fa-user-shield"></i>
+            ) : (
+              auth.user && auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U'
+            )}
           </div>
         </Link>
       </li>
@@ -63,7 +100,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <Link 
-              to={auth.isAuthenticated ? "/dashboard" : "/"} 
+              to={getHomePath()} 
               className="flex-shrink-0 flex items-center"
             >
               <span className="text-white text-xl font-bold">TicketBus</span>
@@ -72,17 +109,20 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex md:items-center md:space-x-6 md:ml-8">
               <Link 
-                to={auth.isAuthenticated ? "/dashboard" : "/"} 
+                to={getHomePath()} 
                 className="text-white hover:text-gray-200 px-3 py-2 transition-colors duration-200"
               >
                 Beranda
               </Link>
-              <Link 
-                to="/search-results" 
-                className="text-white hover:text-gray-200 py-2 transition-colors duration-200"
-              >
-                Cari Tiket
-              </Link>
+              {/* Only show "Cari Tiket" for non-admin users */}
+              {auth.user?.role !== 'admin' && (
+                <Link 
+                  to="/search-results" 
+                  className="text-white hover:text-gray-200 py-2 transition-colors duration-200"
+                >
+                  Cari Tiket
+                </Link>
+              )}
             </div>
           </div>
           
@@ -109,19 +149,24 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
           <div className="md:hidden absolute top-16 left-0 right-0 bg-blue-700 shadow-lg">
             <div className="px-4 py-3 space-y-2">
               <Link 
-                to={auth.isAuthenticated ? "/dashboard" : "/"} 
+                to={getHomePath()} 
                 className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Beranda
               </Link>
-              <Link 
-                to="/search-results" 
-                className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Cari Tiket
-              </Link>
+              
+              {/* Only show "Cari Tiket" for non-admin users */}
+              {auth.user?.role !== 'admin' && (
+                <Link 
+                  to="/search-results" 
+                  className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Cari Tiket
+                </Link>
+              )}
+              
               <Link 
                 to="/about" 
                 className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
@@ -134,13 +179,50 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                 <>
                   <div className="border-t border-blue-600 my-2"></div>
 
-                  <Link 
-                    to="/my-tickets" 
-                    className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Tiket Saya
-                  </Link>
+                  {/* Show different mobile menu items based on user role */}
+                  {auth.user?.role === 'admin' ? (
+                    // Admin mobile menu items
+                    <>
+                      <Link 
+                        to="/admin/users" 
+                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Kelola User
+                      </Link>
+                      <Link 
+                        to="/admin/buses" 
+                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Kelola Bus
+                      </Link>
+                      <Link 
+                        to="/admin/routes" 
+                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Kelola Rute
+                      </Link>
+                      <Link 
+                        to="/admin/tickets" 
+                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Kelola Tiket
+                      </Link>
+                    </>
+                  ) : (
+                    // Regular user mobile menu items
+                    <Link 
+                      to="/my-tickets" 
+                      className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Tiket Saya
+                    </Link>
+                  )}
+                  
                   <Link 
                     to="/profile" 
                     className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"

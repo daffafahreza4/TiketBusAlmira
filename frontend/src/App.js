@@ -20,6 +20,7 @@ import MyTicketsPage from './pages/MyTicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
 import PrintTiket from './components/tiket/PrintTiket';
 import DashboardPage from './pages/DashboardPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 // Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -46,7 +47,7 @@ const App = () => {
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
           <Route path="/search-results" element={<SearchResultsPage />} />
-          
+
           {/* Protected Routes */}
           <Route
             path="/profile"
@@ -109,7 +110,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <SearchResultsPage />
-            </PrivateRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <PrivateRoute>
+                <AdminDashboardPage />
+              </PrivateRoute>
             }
           />
         </Routes>

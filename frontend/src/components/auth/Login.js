@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { login } from '../../redux/actions/authActions';
 import Spinner from '../layout/Spinner';
 
-const Login = ({ login, isAuthenticated, loading }) => {
+const Login = ({ login, isAuthenticated, loading, user }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -26,13 +26,21 @@ const Login = ({ login, isAuthenticated, loading }) => {
   useEffect(() => {
     if (isAuthenticated && !loading) {
       console.log('Login berhasil, redirect ke dashboard');
-      navigate('/dashboard');
+      if (user && user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, user, navigate]);
 
   // Redirect langsung jika sudah terautentikasi
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    if (user && user.role === 'admin') {
+      return <Navigate to="/admin/dashboard" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return (
@@ -96,8 +104,8 @@ const Login = ({ login, isAuthenticated, loading }) => {
                   Daftar
                 </Link>
               </p>
-                <p className="text-sm">
-                <Link to=  "/" className="text-blue-600 hover:underline">
+              <p className="text-sm">
+                <Link to="/" className="text-blue-600 hover:underline">
                   Kembali
                 </Link>
               </p>
@@ -112,12 +120,14 @@ const Login = ({ login, isAuthenticated, loading }) => {
 Login.propTypes = {
   login: PropTypes.func.isRequired,
   isAuthenticated: PropTypes.bool,
-  loading: PropTypes.bool
+  loading: PropTypes.bool,
+  user: PropTypes.object  
 };
 
 const mapStateToProps = state => ({
   isAuthenticated: state.auth.isAuthenticated,
-  loading: state.auth.loading
+  loading: state.auth.loading,
+  user: state.auth.user  // ✅ INI yang hilang!
 });
 
 export default connect(mapStateToProps, { login })(Login);

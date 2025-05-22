@@ -13,7 +13,7 @@ import {
 const initialState = {
   token: localStorage.getItem('token'),
   isAuthenticated: null,
-  loading: false,
+  loading: true,
   user: null,
   error: null
 };
@@ -31,12 +31,26 @@ const authReducer = (state = initialState, action) => {
         error: null
       };
     case REGISTER_SUCCESS:
-    case LOGIN_SUCCESS:
-      localStorage.setItem('token', payload.token);
+      const registerToken = payload.data?.token;
+      if (registerToken) {
+        localStorage.setItem('token', registerToken);
+      }
       return {
         ...state,
-        token: payload.token,
-        isAuthenticated: true,
+        token: registerToken,
+        isAuthenticated: false,
+        loading: false,
+        error: null
+      };
+    case LOGIN_SUCCESS:
+      const loginToken = payload.data?.token;
+      if (loginToken) {
+        localStorage.setItem('token', loginToken);
+      }
+      return {
+        ...state,
+        token: loginToken,
+        isAuthenticated: false,
         loading: false,
         error: null
       };

@@ -79,5 +79,8 @@ export const CLEAR_ERRORS = 'CLEAR_ERRORS';
 
 // Admin Types
 export const GET_ADMIN_STATS = 'GET_ADMIN_STATS';
+export const GET_ALL_USERS = 'GET_ALL_USERS';
+export const DELETE_USER_SUCCESS = 'DELETE_USER_SUCCESS';
+export const MAKE_USER_ADMIN_SUCCESS = 'MAKE_USER_ADMIN_SUCCESS';
 export const ADMIN_ERROR = 'ADMIN_ERROR';
 export const CLEAR_ADMIN_DATA = 'CLEAR_ADMIN_DATA';

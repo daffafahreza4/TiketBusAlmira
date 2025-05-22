@@ -30,7 +30,6 @@ export const loadUser = () => async dispatch => {
       payload: res.data.data
     });
   } catch (err) {
-    // Clear token on authentication error
     setAuthToken(null);
     dispatch({ type: AUTH_ERROR });
   }
@@ -59,11 +58,9 @@ export const register = formData => async dispatch => {
       payload: res.data
     });
 
-    // Extract token from response
     const token = res.data.data?.token;
 
     if (token) {
-      // Set token and load user
       setAuthToken(token);
       dispatch(loadUser());
     }
@@ -97,13 +94,15 @@ export const login = (email, password) => async dispatch => {
 
     const res = await axios.post('/api/auth/login', body, config);
 
-    // Extract token from response
     const token = res.data.data?.token;
 
     if (!token) {
       dispatch(setAlert('Login failed: No token received', 'danger'));
-      return;
+      return Promise.reject('No token received');
     }
+
+    // Set token to headers and localStorage FIRST
+    setAuthToken(token);
 
     // Dispatch login success
     dispatch({
@@ -111,13 +110,11 @@ export const login = (email, password) => async dispatch => {
       payload: res.data
     });
 
-    // Set token to headers and localStorage
-    setAuthToken(token);
-
     // Load user profile immediately after login
     await dispatch(loadUser());
 
     dispatch(setAlert('Login berhasil', 'success'));
+    return Promise.resolve();
   } catch (err) {
     dispatch(setAlert(err.response?.data?.message || 'Login failed', 'danger'));
 
@@ -125,6 +122,8 @@ export const login = (email, password) => async dispatch => {
       type: LOGIN_FAIL,
       payload: err.response?.data?.message || 'Server error'
     });
+    
+    return Promise.reject(err);
   }
 };
 

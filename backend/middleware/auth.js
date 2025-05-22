@@ -31,13 +31,13 @@ exports.protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Tidak diizinkan untuk mengakses rute ini'
+        message: 'Token tidak valid'
       });
     }
   } else {
     return res.status(401).json({
       success: false,
-      message: 'Tidak diizinkan untuk mengakses rute ini'
+      message: 'Tidak ada token, akses ditolak'
     });
   }
 };
@@ -45,12 +45,20 @@ exports.protect = async (req, res, next) => {
 // Additional middleware for role-based access
 exports.authorize = (...roles) => {
   return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User tidak terautentikasi'
+      });
+    }
+    
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: `Role ${req.user.role} tidak diizinkan untuk mengakses rute ini`
       });
     }
+    
     next();
   };
 };

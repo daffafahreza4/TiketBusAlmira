@@ -20,13 +20,6 @@ const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ✅ TAMBAHKAN middleware logging untuk debug
-router.use((req, res, next) => {
-  console.log('Admin route accessed:', req.path);
-  console.log('User:', req.user?.username, 'Role:', req.user?.role);
-  next();
-});
-
 // Protect all routes and authorize only admin
 router.use(protect);
 router.use(authorize('admin'));

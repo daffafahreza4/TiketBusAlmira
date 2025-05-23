@@ -16,10 +16,6 @@ const Bus = sequelize.define('Bus', {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  fasilitas: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

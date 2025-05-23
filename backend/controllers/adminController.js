@@ -120,12 +120,11 @@ exports.deleteUser = async (req, res) => {
 // Create a new bus (admin only)
 exports.createBus = async (req, res) => {
   try {
-    const { nama_bus, total_kursi, fasilitas } = req.body;
+    const { nama_bus, total_kursi } = req.body;
 
     const bus = await Bus.create({
       nama_bus,
-      total_kursi,
-      fasilitas
+      total_kursi
     });
 
     res.status(201).json({
@@ -163,7 +162,7 @@ exports.getAllBuses = async (req, res) => {
 // Update bus (admin only)
 exports.updateBus = async (req, res) => {
   try {
-    const { nama_bus, total_kursi, fasilitas } = req.body;
+    const { nama_bus, total_kursi } = req.body;
 
     const bus = await Bus.findByPk(req.params.id);
 
@@ -177,7 +176,6 @@ exports.updateBus = async (req, res) => {
     // Update fields
     if (nama_bus) bus.nama_bus = nama_bus;
     if (total_kursi) bus.total_kursi = total_kursi;
-    if (fasilitas !== undefined) bus.fasilitas = fasilitas;
 
     await bus.save();
 

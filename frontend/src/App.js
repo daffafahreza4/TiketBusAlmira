@@ -22,6 +22,7 @@ import PrintTiket from './components/tiket/PrintTiket';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminBusesPage from './pages/AdminBusesPage';
 
 // Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -114,7 +115,7 @@ const App = () => {
               </PrivateRoute>
             }
           />
-          
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
@@ -129,6 +130,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <AdminUsersPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/buses"
+            element={
+              <PrivateRoute>
+                <AdminBusesPage />
               </PrivateRoute>
             }
           />

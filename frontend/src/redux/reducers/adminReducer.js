@@ -4,7 +4,8 @@ import {
   DELETE_USER_SUCCESS,
   MAKE_USER_ADMIN_SUCCESS,
   ADMIN_ERROR,
-  CLEAR_ADMIN_DATA
+  CLEAR_ADMIN_DATA,
+  UPDATE_USER_SUCCESS
 } from '../types';
 
 const initialState = {
@@ -42,8 +43,8 @@ const adminReducer = (state = initialState, action) => {
     case MAKE_USER_ADMIN_SUCCESS:
       return {
         ...state,
-        users: state.users.map(user => 
-          user.id_user === payload.id_user 
+        users: state.users.map(user =>
+          user.id_user === payload.id_user
             ? { ...user, role: payload.role }
             : user
         ),
@@ -62,6 +63,17 @@ const adminReducer = (state = initialState, action) => {
         stats: null,
         users: null,
         loading: true,
+        error: null
+      };
+    case UPDATE_USER_SUCCESS:
+      return {
+        ...state,
+        users: state.users.map(user =>
+          user.id_user === payload.id_user
+            ? payload
+            : user
+        ),
+        loading: false,
         error: null
       };
     default:

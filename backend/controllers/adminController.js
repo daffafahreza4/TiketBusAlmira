@@ -401,6 +401,48 @@ exports.updateTicketStatus = async (req, res) => {
   }
 };
 
+// Create new user (admin only)
+exports.createUser = async (req, res) => {
+  try {
+    const { username, email, password, no_telepon, role } = req.body;
+
+    // Check if user exists
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email sudah terdaftar'
+      });
+    }
+
+    // Create user
+    const user = await User.create({
+      username,
+      email,
+      password,
+      no_telepon,
+      role: role || 'user'
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id_user: user.id_user,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        no_telepon: user.no_telepon
+      }
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
 // Get dashboard stats (admin only)
 exports.getDashboardStats = async (req, res) => {
   try {

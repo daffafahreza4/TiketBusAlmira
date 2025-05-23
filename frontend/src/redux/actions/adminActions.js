@@ -6,7 +6,8 @@ import {
   DELETE_USER_SUCCESS,
   MAKE_USER_ADMIN_SUCCESS,
   ADMIN_ERROR,
-  CLEAR_ADMIN_DATA
+  CLEAR_ADMIN_DATA,
+  UPDATE_USER_SUCCESS
 } from '../types';
 
 // Get admin dashboard stats
@@ -102,6 +103,37 @@ export const makeUserAdmin = (userId) => async dispatch => {
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat membuat admin';
+    
+    dispatch(setAlert(errorMsg, 'danger'));
+    
+    dispatch({
+      type: ADMIN_ERROR,
+      payload: errorMsg
+    });
+  }
+};
+
+// Update user
+export const updateUser = (userId, userData) => async dispatch => {
+  try {
+    const config = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const res = await axios.put(`/api/admin/users/${userId}`, userData, config);
+    
+    dispatch({
+      type: UPDATE_USER_SUCCESS,
+      payload: res.data.data
+    });
+    
+    dispatch(setAlert('User berhasil diperbarui', 'success'));
+  } catch (err) {
+    const errorMsg = err.response && err.response.data.message 
+      ? err.response.data.message 
+      : 'Terjadi kesalahan saat memperbarui user';
     
     dispatch(setAlert(errorMsg, 'danger'));
     

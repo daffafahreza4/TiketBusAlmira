@@ -13,7 +13,8 @@ const {
   deleteRoute,
   getAllTickets,
   updateTicketStatus,
-  getDashboardStats
+  getDashboardStats,
+  createUser
 } = require('../controllers/adminController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -29,6 +30,7 @@ router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
+router.post('/users', createUser);
 
 // Bus management routes
 router.post('/buses', createBus);

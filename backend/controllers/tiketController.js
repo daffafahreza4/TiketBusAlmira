@@ -17,7 +17,7 @@ exports.getMyTickets = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi', 'fasilitas']
+              attributes: ['nama_bus', 'total_kursi' ]
             }
           ]
         },
@@ -60,7 +60,7 @@ exports.getTicketById = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi', 'fasilitas']
+              attributes: ['nama_bus', 'total_kursi' ]
             }
           ]
         },

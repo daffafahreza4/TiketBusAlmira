@@ -11,6 +11,7 @@ const {
   createRoute,
   updateRoute,
   deleteRoute,
+  getAllRoutes,
   getAllTickets,
   updateTicketStatus,
   getDashboardStats,
@@ -39,6 +40,7 @@ router.put('/buses/:id', updateBus);
 router.delete('/buses/:id', deleteBus);
 
 // Route management routes
+router.get('/routes', getAllRoutes);
 router.post('/routes', createRoute);
 router.put('/routes/:id', updateRoute);
 router.delete('/routes/:id', deleteRoute);

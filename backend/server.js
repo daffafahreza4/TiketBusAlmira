@@ -1,4 +1,3 @@
-// File: backend/server.js
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -9,7 +8,7 @@ const models = require('./models');
 const authRoutes = require('./routes/auth');
 const ruteRoutes = require('./routes/rute');
 const adminRoutes = require('./routes/admin');
-const tiketRoutes = require('./routes/tiket'); // Tambahkan ini
+const tiketRoutes = require('./routes/tiket'); 
 
 // Load env vars
 dotenv.config();
@@ -25,7 +24,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/rute', ruteRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/tiket', tiketRoutes); // Tambahkan ini
+app.use('/api/tiket', tiketRoutes); 
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {

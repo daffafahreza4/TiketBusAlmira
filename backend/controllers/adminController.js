@@ -344,7 +344,7 @@ exports.getAllTickets = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi', 'fasilitas']
+              attributes: ['nama_bus', 'total_kursi' ]
             }
           ]
         },
@@ -434,6 +434,31 @@ exports.createUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Get all routes (admin only)
+exports.getAllRoutes = async (req, res) => {
+  try {
+    const routes = await Rute.findAll({
+      include: [{
+        model: Bus,
+        attributes: ['nama_bus', 'total_kursi']
+      }],
+      order: [['waktu_berangkat', 'ASC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      count: routes.length,
+      data: routes
+    });
+  } catch (error) {
+    console.error('Get all routes error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

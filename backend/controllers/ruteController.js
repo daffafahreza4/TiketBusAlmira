@@ -5,9 +5,13 @@ const { Op } = require('sequelize');
 exports.getAllRoutes = async (req, res) => {
   try {
     const routes = await Rute.findAll({
+      attributes: [
+        'id_rute', 'id_bus', 'asal', 'tujuan', 
+        'waktu_berangkat', 'harga', 'status', 'created_at'
+      ],
       include: [{
         model: Bus,
-        attributes: ['nama_bus', 'total_kursi', 'fasilitas']
+        attributes: ['id_bus', 'nama_bus', 'total_kursi'] // 🚨 EXPLICIT - NO fasilitas!
       }],
       where: {
         status: 'aktif'
@@ -25,7 +29,6 @@ exports.getAllRoutes = async (req, res) => {
         perkiraan_tiba: arrival,
         nama_bus: route.Bus.nama_bus,
         total_kursi: route.Bus.total_kursi,
-        fasilitas: route.Bus.fasilitas,
         kursi_tersedia: route.Bus.total_kursi // For now, assume all seats available
       };
     });
@@ -47,9 +50,13 @@ exports.getAllRoutes = async (req, res) => {
 exports.getRouteById = async (req, res) => {
   try {
     const route = await Rute.findByPk(req.params.id, {
+      attributes: [
+        'id_rute', 'id_bus', 'asal', 'tujuan', 
+        'waktu_berangkat', 'harga', 'status', 'created_at'
+      ],
       include: [{
         model: Bus,
-        attributes: ['nama_bus', 'total_kursi', 'fasilitas']
+        attributes: ['id_bus', 'nama_bus', 'total_kursi']
       }]
     });
 
@@ -69,7 +76,6 @@ exports.getRouteById = async (req, res) => {
       perkiraan_tiba: arrival,
       nama_bus: route.Bus.nama_bus,
       total_kursi: route.Bus.total_kursi,
-      fasilitas: route.Bus.fasilitas,
       kursi_tersedia: route.Bus.total_kursi
     };
 

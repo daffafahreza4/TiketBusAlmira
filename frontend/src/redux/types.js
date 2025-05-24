@@ -17,7 +17,7 @@ export const RESET_PASSWORD_FAIL = 'RESET_PASSWORD_FAIL';
 export const UPDATE_PROFILE_SUCCESS = 'UPDATE_PROFILE_SUCCESS';
 export const UPDATE_PROFILE_FAIL = 'UPDATE_PROFILE_FAIL';
 
-// Bus Types
+// BUS TYPES 
 export const GET_BUSES = 'GET_BUSES';
 export const GET_BUS = 'GET_BUS';
 export const ADD_BUS = 'ADD_BUS';

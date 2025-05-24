@@ -12,6 +12,11 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
     getRutes();
   }, [getRutes]);
 
+  // Add refresh function for user
+  const handleRefresh = () => {
+    getRutes();
+  };
+
   if (loading) {
     return <Spinner />;
   }
@@ -19,7 +24,15 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
   if (error) {
     return (
       <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
-        {error}
+        <div className="flex justify-between items-center">
+          <span>{error}</span>
+          <button 
+            onClick={handleRefresh}
+            className="ml-4 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Coba Lagi
+          </button>
+        </div>
       </div>
     );
   }
@@ -30,12 +43,30 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
         <div className="text-4xl mb-2">🚌</div>
         <p className="font-medium">Belum ada rute yang tersedia saat ini</p>
         <p className="text-sm">Silakan cek kembali nanti</p>
+        <button 
+          onClick={handleRefresh}
+          className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+        >
+          Refresh Data
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Add refresh button for users */}
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-gray-600">{routes.length} rute tersedia</p>
+        <button 
+          onClick={handleRefresh}
+          className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+        >
+          <i className="fas fa-sync-alt mr-1"></i>
+          Refresh
+        </button>
+      </div>
+
       {routes.map(route => (
         <div 
           key={route.id_rute} 
@@ -87,12 +118,20 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
             </div>
           </div>
           
-          {/* Details */}
+          {/* Show bus info clearly */}
           <div className="mt-4 pt-3 border-t border-gray-100">
-            <button className="flex items-center text-gray-500 text-sm hover:text-gray-700">
-              <i className="fas fa-info-circle mr-2"></i>
-              Details
-            </button>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center text-gray-600">
+                <i className="fas fa-bus mr-2"></i>
+                <span>Bus: <strong>{route.nama_bus || 'Bus Tidak Diketahui'}</strong></span>
+                <span className="mx-2">•</span>
+                <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
+              </div>
+              <button className="flex items-center text-gray-500 text-sm hover:text-gray-700">
+                <i className="fas fa-info-circle mr-2"></i>
+                Details
+              </button>
+            </div>
           </div>
         </div>
       ))}

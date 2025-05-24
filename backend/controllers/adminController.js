@@ -344,7 +344,7 @@ exports.getAllTickets = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi' ]
+              attributes: ['nama_bus', 'total_kursi']
             }
           ]
         },
@@ -459,6 +459,73 @@ exports.getAllRoutes = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all routes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Delete ticket (admin only) - TAMBAHAN BARU
+exports.deleteTicket = async (req, res) => {
+  try {
+    console.log('🔍 [adminController] Delete ticket request:', {
+      ticketId: req.params.id,
+      adminUser: req.user.id_user
+    });
+
+    const ticket = await Tiket.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          attributes: ['username', 'email']
+        },
+        {
+          model: Rute,
+          attributes: ['asal', 'tujuan']
+        }
+      ]
+    });
+
+    if (!ticket) {
+      console.log('❌ [adminController] Ticket not found:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Tiket tidak ditemukan'
+      });
+    }
+
+    console.log('🔍 [adminController] Found ticket to delete:', {
+      id: ticket.id_tiket,
+      user: ticket.User?.username,
+      route: `${ticket.Rute?.asal} → ${ticket.Rute?.tujuan}`,
+      status: ticket.status_tiket
+    });
+
+    // Check if ticket can be deleted (business logic)
+    if (ticket.status_tiket === 'completed') {
+      console.log('❌ [adminController] Cannot delete completed ticket:', ticket.id_tiket);
+      return res.status(400).json({
+        success: false,
+        message: 'Tiket yang sudah selesai tidak dapat dihapus'
+      });
+    }
+
+    await ticket.destroy();
+
+    console.log('✅ [adminController] Ticket deleted successfully:', ticket.id_tiket);
+
+    res.status(200).json({
+      success: true,
+      message: 'Tiket berhasil dihapus'
+    });
+  } catch (error) {
+    console.error('❌ [adminController] Delete ticket error:', {
+      error: error.message,
+      stack: error.stack,
+      ticketId: req.params.id
+    });
+
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

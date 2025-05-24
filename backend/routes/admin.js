@@ -15,7 +15,8 @@ const {
   getAllTickets,
   updateTicketStatus,
   getDashboardStats,
-  createUser
+  createUser,
+  deleteTicket
 } = require('../controllers/adminController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -48,6 +49,7 @@ router.delete('/routes/:id', deleteRoute);
 // Ticket management routes
 router.get('/tickets', getAllTickets);
 router.put('/tickets/:id/status', updateTicketStatus);
+router.delete('/tickets/:id', deleteTicket);
 
 // Dashboard stats
 router.get('/dashboard/stats', getDashboardStats);

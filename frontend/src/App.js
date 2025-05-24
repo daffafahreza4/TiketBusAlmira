@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from './redux/store';
 import setAuthToken from './utils/setAuthToken';
@@ -24,6 +24,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminBusesPage from './pages/AdminBusesPage';
 import AdminRoutesPage from './pages/AdminRoutesPage';
+import AdminTicketsPage from './pages/AdminTicketsPage';
 
 // Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -147,6 +148,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <AdminRoutesPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/tickets"
+            element={
+              <PrivateRoute>
+                <AdminTicketsPage />
               </PrivateRoute>
             }
           />

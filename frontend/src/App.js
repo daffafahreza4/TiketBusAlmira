@@ -23,6 +23,7 @@ import DashboardPage from './pages/DashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminBusesPage from './pages/AdminBusesPage';
+import AdminRoutesPage from './pages/AdminRoutesPage';
 
 // Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -138,6 +139,14 @@ const App = () => {
             element={
               <PrivateRoute>
                 <AdminBusesPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/routes"
+            element={
+              <PrivateRoute>
+                <AdminRoutesPage />
               </PrivateRoute>
             }
           />

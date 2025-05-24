@@ -11,7 +11,7 @@ exports.getAllRoutes = async (req, res) => {
       ],
       include: [{
         model: Bus,
-        attributes: ['id_bus', 'nama_bus', 'total_kursi'] // 🚨 EXPLICIT - NO fasilitas!
+        attributes: ['id_bus', 'nama_bus', 'total_kursi']
       }],
       where: {
         status: 'aktif'
@@ -27,9 +27,9 @@ exports.getAllRoutes = async (req, res) => {
       return {
         ...route.toJSON(),
         perkiraan_tiba: arrival,
-        nama_bus: route.Bus.nama_bus,
-        total_kursi: route.Bus.total_kursi,
-        kursi_tersedia: route.Bus.total_kursi // For now, assume all seats available
+        nama_bus: route.Bus ? route.Bus.nama_bus : 'Bus Tidak Diketahui',
+        total_kursi: route.Bus ? route.Bus.total_kursi : 0,
+        kursi_tersedia: route.Bus ? route.Bus.total_kursi : 0 // For now, assume all seats available
       };
     });
 
@@ -74,9 +74,9 @@ exports.getRouteById = async (req, res) => {
     const routeWithDetails = {
       ...route.toJSON(),
       perkiraan_tiba: arrival,
-      nama_bus: route.Bus.nama_bus,
-      total_kursi: route.Bus.total_kursi,
-      kursi_tersedia: route.Bus.total_kursi
+      nama_bus: route.Bus ? route.Bus.nama_bus : 'Bus Tidak Diketahui',
+      total_kursi: route.Bus ? route.Bus.total_kursi : 0,
+      kursi_tersedia: route.Bus ? route.Bus.total_kursi : 0
     };
 
     res.status(200).json({

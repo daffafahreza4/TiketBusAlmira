@@ -4,11 +4,6 @@ const { Op } = require('sequelize');
 // Create temporary reservation (hold seat for 1 hour)
 exports.createTempReservation = async (req, res) => {
   try {
-    console.log('🔍 [reservasiController] Creating temp reservation:', {
-      userId: req.user.id_user,
-      body: req.body
-    });
-
     const { id_rute, nomor_kursi } = req.body;
 
     // Validate required fields
@@ -98,12 +93,6 @@ exports.createTempReservation = async (req, res) => {
       reservations.push(reservation);
     }
 
-    console.log('✅ [reservasiController] Temp reservations created:', {
-      count: reservations.length,
-      seats: nomor_kursi,
-      expiredAt: waktu_expired
-    });
-
     res.status(201).json({
       success: true,
       message: 'Kursi berhasil direservasi sementara',
@@ -116,12 +105,7 @@ exports.createTempReservation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [reservasiController] Create temp reservation error:', {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id_user
-    });
-
+    console.error('Create temp reservation error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat membuat reservasi'
@@ -132,10 +116,6 @@ exports.createTempReservation = async (req, res) => {
 // Get all user reservations
 exports.getUserReservations = async (req, res) => {
   try {
-    console.log('🔍 [reservasiController] Getting user reservations:', {
-      userId: req.user.id_user
-    });
-
     const reservations = await ReservasiSementara.findAll({
       where: {
         id_user: req.user.id_user,
@@ -161,10 +141,6 @@ exports.getUserReservations = async (req, res) => {
       order: [['waktu_reservasi', 'DESC']]
     });
 
-    console.log('✅ [reservasiController] User reservations retrieved:', {
-      count: reservations.length
-    });
-
     res.status(200).json({
       success: true,
       count: reservations.length,
@@ -172,11 +148,7 @@ exports.getUserReservations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [reservasiController] Get user reservations error:', {
-      error: error.message,
-      userId: req.user?.id_user
-    });
-
+    console.error('Get user reservations error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi'
@@ -187,11 +159,6 @@ exports.getUserReservations = async (req, res) => {
 // Get specific reservation by ID
 exports.getReservationById = async (req, res) => {
   try {
-    console.log('🔍 [reservasiController] Getting reservation by ID:', {
-      reservationId: req.params.id,
-      userId: req.user.id_user
-    });
-
     const reservation = await ReservasiSementara.findOne({
       where: {
         id_reservasi: req.params.id,
@@ -233,23 +200,13 @@ exports.getReservationById = async (req, res) => {
       });
     }
 
-    console.log('✅ [reservasiController] Reservation retrieved:', {
-      reservationId: reservation.id_reservasi,
-      seat: reservation.nomor_kursi
-    });
-
     res.status(200).json({
       success: true,
       data: reservation
     });
 
   } catch (error) {
-    console.error('❌ [reservasiController] Get reservation by ID error:', {
-      error: error.message,
-      reservationId: req.params.id,
-      userId: req.user?.id_user
-    });
-
+    console.error('Get reservation by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi'
@@ -260,11 +217,6 @@ exports.getReservationById = async (req, res) => {
 // Cancel reservation manually
 exports.cancelReservation = async (req, res) => {
   try {
-    console.log('🔍 [reservasiController] Canceling reservation:', {
-      reservationId: req.params.id,
-      userId: req.user.id_user
-    });
-
     const reservation = await ReservasiSementara.findOne({
       where: {
         id_reservasi: req.params.id,
@@ -295,11 +247,6 @@ exports.cancelReservation = async (req, res) => {
     // Delete the reservation
     await reservation.destroy();
 
-    console.log('✅ [reservasiController] Reservation canceled:', {
-      reservationId: reservation.id_reservasi,
-      seat: reservation.nomor_kursi
-    });
-
     res.status(200).json({
       success: true,
       message: `Reservasi kursi ${reservation.nomor_kursi} berhasil dibatalkan`,
@@ -307,12 +254,7 @@ exports.cancelReservation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [reservasiController] Cancel reservation error:', {
-      error: error.message,
-      reservationId: req.params.id,
-      userId: req.user?.id_user
-    });
-
+    console.error('Cancel reservation error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat membatalkan reservasi'
@@ -323,8 +265,6 @@ exports.cancelReservation = async (req, res) => {
 // Check and cleanup expired reservations
 exports.checkExpiredReservations = async () => {
   try {
-    console.log('🔍 [reservasiController] Checking for expired reservations...');
-
     const expiredReservations = await ReservasiSementara.findAll({
       where: {
         waktu_expired: {
@@ -344,17 +284,6 @@ exports.checkExpiredReservations = async () => {
     });
 
     if (expiredReservations.length > 0) {
-      console.log('🔍 [reservasiController] Found expired reservations:', {
-        count: expiredReservations.length,
-        reservations: expiredReservations.map(res => ({
-          id: res.id_reservasi,
-          user: res.User?.username,
-          seat: res.nomor_kursi,
-          route: `${res.Rute?.asal} → ${res.Rute?.tujuan}`,
-          expiredAt: res.waktu_expired
-        }))
-      });
-
       // Delete all expired reservations
       const deletedCount = await ReservasiSementara.destroy({
         where: {
@@ -362,10 +291,6 @@ exports.checkExpiredReservations = async () => {
             [Op.lt]: new Date()
           }
         }
-      });
-
-      console.log('✅ [reservasiController] Expired reservations cleaned up:', {
-        deletedCount
       });
 
       return {
@@ -379,7 +304,6 @@ exports.checkExpiredReservations = async () => {
         }))
       };
     } else {
-      console.log('✅ [reservasiController] No expired reservations found');
       return {
         success: true,
         deletedCount: 0,
@@ -388,11 +312,7 @@ exports.checkExpiredReservations = async () => {
     }
 
   } catch (error) {
-    console.error('❌ [reservasiController] Check expired reservations error:', {
-      error: error.message,
-      stack: error.stack
-    });
-
+    console.error('Check expired reservations error:', error);
     return {
       success: false,
       error: error.message
@@ -404,10 +324,6 @@ exports.checkExpiredReservations = async () => {
 exports.getRouteReservations = async (req, res) => {
   try {
     const { routeId } = req.params;
-
-    console.log('🔍 [reservasiController] Getting route reservations:', {
-      routeId
-    });
 
     const reservations = await ReservasiSementara.findAll({
       where: {
@@ -427,12 +343,6 @@ exports.getRouteReservations = async (req, res) => {
 
     const reservedSeats = reservations.map(res => res.nomor_kursi);
 
-    console.log('✅ [reservasiController] Route reservations retrieved:', {
-      routeId,
-      reservedSeatsCount: reservedSeats.length,
-      reservedSeats
-    });
-
     res.status(200).json({
       success: true,
       data: {
@@ -443,11 +353,7 @@ exports.getRouteReservations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [reservasiController] Get route reservations error:', {
-      error: error.message,
-      routeId: req.params.routeId
-    });
-
+    console.error('Get route reservations error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi rute'

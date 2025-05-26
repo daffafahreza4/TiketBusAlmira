@@ -7,8 +7,6 @@ let cleanupInterval = null;
  * Runs every 5 minutes
  */
 const startCleanupJob = () => {
-  console.log('🚀 [cleanupJob] Starting reservation cleanup job...');
-  
   // Run immediately on start
   runCleanup();
   
@@ -16,8 +14,6 @@ const startCleanupJob = () => {
   cleanupInterval = setInterval(() => {
     runCleanup();
   }, 5 * 60 * 1000); // 5 minutes
-  
-  console.log('✅ [cleanupJob] Cleanup job started - will run every 5 minutes');
 };
 
 /**
@@ -36,25 +32,15 @@ const stopCleanupJob = () => {
  */
 const runCleanup = async () => {
   try {
-    console.log('🧹 [cleanupJob] Running cleanup at:', new Date().toISOString());
-    
     const result = await checkExpiredReservations();
     
     if (result.success && result.deletedCount > 0) {
       console.log('✅ [cleanupJob] Cleanup completed:', {
-        deletedCount: result.deletedCount,
-        expiredReservations: result.expiredReservations
+        deletedCount: result.deletedCount
       });
-    } else if (result.success) {
-      console.log('✅ [cleanupJob] Cleanup completed - no expired reservations found');
-    } else {
-      console.error('❌ [cleanupJob] Cleanup failed:', result.error);
     }
   } catch (error) {
-    console.error('❌ [cleanupJob] Cleanup error:', {
-      error: error.message,
-      stack: error.stack
-    });
+    console.error('❌ [cleanupJob] Cleanup error:', error.message);
   }
 };
 

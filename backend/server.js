@@ -10,6 +10,7 @@ const ruteRoutes = require('./routes/rute');
 const adminRoutes = require('./routes/admin');
 const tiketRoutes = require('./routes/tiket');
 const reservasiRoutes = require('./routes/reservasi');
+const bookingRoutes = require('./routes/booking'); // Add booking routes
 const { startCleanupJob, stopCleanupJob } = require('./utils/cleanupJob'); 
 
 // Load env vars
@@ -28,6 +29,9 @@ app.use('/api/rute', ruteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tiket', tiketRoutes); 
 app.use('/api/reservasi', reservasiRoutes);
+app.use('/api/booking', bookingRoutes); // Add booking routes
+
+console.log('🔍 Server starting WITH booking routes...');
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {
@@ -49,37 +53,17 @@ const server = app.listen(PORT, async () => {
     // Sinkronisasi model dengan database
     await sequelize.sync({ alter: true });
     console.log('Sinkronisasi database berhasil');
+    
+    // Start cleanup job
+    startCleanupJob();
+    console.log('Cleanup job started');
   } catch (error) {
     console.error('Sinkronisasi database gagal:', error);
   }
 });
 
-const startServer = () => {
-  const PORT = process.env.PORT || 5000;
-  
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    
-    // Start the reservation cleanup job
-    startCleanupJob();
-  });
-};
-
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  stopCleanupJob();
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  stopCleanupJob();
-  process.exit(0);
-});
-
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.log(`Error: ${err.message}`);
-  // Close server & exit process
   server.close(() => process.exit(1));
 });

@@ -1,4 +1,5 @@
-const { Tiket, User, Rute, Pembayaran, Bus } = require('../models');
+const { Tiket, User, Rute, Pembayaran, Bus, ReservasiSementara } = require('../models');
+const { Op } = require('sequelize');
 
 // Get all tickets for authenticated user
 exports.getMyTickets = async (req, res) => {
@@ -90,23 +91,17 @@ exports.getTicketById = async (req, res) => {
   }
 };
 
-// Get available seats for a route
+// Get available seats for a route (Enhanced with reservation check)
 exports.getAvailableSeats = async (req, res) => {
   try {
     const { routeId } = req.params;
     
-    // Logika untuk mendapatkan kursi yang tersedia
-    // Ini contoh sederhana, sesuaikan dengan model dan logika bisnis Anda
-    const bookedSeats = await Tiket.findAll({
-      where: {
-        id_rute: routeId,
-        status_tiket: ['pending', 'confirmed', 'completed']
-      },
-      attributes: ['nomor_kursi']
-    });
-    
+    // Get route and bus information
     const route = await Rute.findByPk(routeId, {
-      include: [{ model: Bus }]
+      include: [{ 
+        model: Bus,
+        attributes: ['nama_bus', 'total_kursi']
+      }]
     });
     
     if (!route) {
@@ -115,25 +110,187 @@ exports.getAvailableSeats = async (req, res) => {
         message: 'Rute tidak ditemukan'
       });
     }
+
+    // Get booked seats from confirmed tickets
+    const bookedSeats = await Tiket.findAll({
+      where: {
+        id_rute: routeId,
+        status_tiket: {
+          [Op.in]: ['pending', 'confirmed', 'completed']
+        }
+      },
+      attributes: ['nomor_kursi']
+    });
+
+    // Get reserved seats (temporary reservations that haven't expired)
+    const reservedSeats = await ReservasiSementara.findAll({
+      where: {
+        id_rute: routeId,
+        waktu_expired: {
+          [Op.gt]: new Date() // Not expired yet
+        }
+      },
+      attributes: ['nomor_kursi', 'id_user', 'waktu_expired']
+    });
     
     const totalSeats = route.Bus.total_kursi;
-    const allPossibleSeats = [];
+    const seatsPerRow = 4; // Assuming 4 seats per row (A, B, C, D)
+    const totalRows = Math.ceil(totalSeats / seatsPerRow);
     
-    // Generate all possible seats (example: 10 rows with 4 seats each - 1A,1B,1C,1D, etc.)
-    for (let i = 1; i <= Math.ceil(totalSeats / 4); i++) {
-      allPossibleSeats.push(`${i}A`, `${i}B`, `${i}C`, `${i}D`);
+    // Generate all possible seats
+    const allSeats = [];
+    for (let row = 1; row <= totalRows; row++) {
+      const seatsInRow = Math.min(seatsPerRow, totalSeats - allSeats.length);
+      const seatLetters = ['A', 'B', 'C', 'D'];
+      
+      for (let i = 0; i < seatsInRow; i++) {
+        allSeats.push({
+          number: `${row}${seatLetters[i]}`,
+          row: row,
+          position: seatLetters[i],
+          status: 'available'
+        });
+      }
     }
     
-    // Filter out booked seats
+    // Mark booked seats
     const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
-    const availableSeats = allPossibleSeats.filter(seat => !bookedSeatNumbers.includes(seat));
     
+    // Mark reserved seats
+    const reservedSeatInfo = reservedSeats.reduce((acc, seat) => {
+      acc[seat.nomor_kursi] = {
+        isMyReservation: seat.id_user === req.user?.id_user,
+        expiredAt: seat.waktu_expired
+      };
+      return acc;
+    }, {});
+
+    // Update seat statuses
+    const seatsWithStatus = allSeats.map(seat => {
+      if (bookedSeatNumbers.includes(seat.number)) {
+        return { ...seat, status: 'booked' };
+      } else if (reservedSeatInfo[seat.number]) {
+        const reservationInfo = reservedSeatInfo[seat.number];
+        return { 
+          ...seat, 
+          status: reservationInfo.isMyReservation ? 'my_reservation' : 'reserved',
+          expiredAt: reservationInfo.expiredAt
+        };
+      }
+      return seat;
+    });
+
+    // Calculate statistics
+    const availableCount = seatsWithStatus.filter(seat => seat.status === 'available').length;
+    const bookedCount = seatsWithStatus.filter(seat => seat.status === 'booked').length;
+    const reservedCount = seatsWithStatus.filter(seat => seat.status === 'reserved').length;
+    const myReservationCount = seatsWithStatus.filter(seat => seat.status === 'my_reservation').length;
+
     res.status(200).json({
       success: true,
-      data: availableSeats.slice(0, totalSeats) // Ensure we don't return more seats than the bus has
+      data: {
+        routeId,
+        busName: route.Bus.nama_bus,
+        totalSeats,
+        seats: seatsWithStatus,
+        statistics: {
+          available: availableCount,
+          booked: bookedCount,
+          reserved: reservedCount,
+          my_reservations: myReservationCount
+        },
+        seatLayout: {
+          rows: totalRows,
+          seatsPerRow: seatsPerRow
+        }
+      }
     });
+
   } catch (error) {
     console.error('Get available seats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Cancel ticket (before departure)
+exports.cancelTicket = async (req, res) => {
+  try {
+    const ticket = await Tiket.findOne({
+      where: {
+        id_tiket: req.params.id,
+        id_user: req.user.id_user
+      },
+      include: [
+        {
+          model: Rute,
+          attributes: ['asal', 'tujuan', 'waktu_berangkat']
+        },
+        {
+          model: Pembayaran
+        }
+      ]
+    });
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tiket tidak ditemukan'
+      });
+    }
+
+    // Check if ticket can be cancelled
+    if (ticket.status_tiket === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiket sudah dibatalkan'
+      });
+    }
+
+    if (ticket.status_tiket === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiket yang sudah selesai tidak dapat dibatalkan'
+      });
+    }
+
+    // Check if departure time has passed
+    const now = new Date();
+    const departureTime = new Date(ticket.Rute.waktu_berangkat);
+    const hoursUntilDeparture = (departureTime - now) / (1000 * 60 * 60);
+
+    if (hoursUntilDeparture < 2) { // Cannot cancel within 2 hours of departure
+      return res.status(400).json({
+        success: false,
+        message: 'Tiket tidak dapat dibatalkan dalam 2 jam sebelum keberangkatan'
+      });
+    }
+
+    // Update ticket status
+    ticket.status_tiket = 'cancelled';
+    await ticket.save();
+
+    // Update payment status if exists
+    if (ticket.Pembayaran) {
+      ticket.Pembayaran.status = 'cancelled';
+      await ticket.Pembayaran.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Tiket berhasil dibatalkan',
+      data: {
+        id_tiket: ticket.id_tiket,
+        nomor_kursi: ticket.nomor_kursi,
+        status_tiket: ticket.status_tiket,
+        refund_eligible: ticket.Pembayaran?.status === 'completed'
+      }
+    });
+
+  } catch (error) {
+    console.error('Cancel ticket error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

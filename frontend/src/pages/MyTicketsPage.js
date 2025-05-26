@@ -93,7 +93,7 @@ const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
                   : `Tidak ada tiket dengan status "${filter}" saat ini.`}
               </p>
               <Link
-                to="/"
+                to="/search-results"
                 className="inline-block px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition"
               >
                 Pesan Tiket

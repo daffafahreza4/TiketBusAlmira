@@ -8,7 +8,9 @@ const models = require('./models');
 const authRoutes = require('./routes/auth');
 const ruteRoutes = require('./routes/rute');
 const adminRoutes = require('./routes/admin');
-const tiketRoutes = require('./routes/tiket'); 
+const tiketRoutes = require('./routes/tiket');
+const reservasiRoutes = require('./routes/reservasi');
+const { startCleanupJob, stopCleanupJob } = require('./utils/cleanupJob'); 
 
 // Load env vars
 dotenv.config();
@@ -25,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rute', ruteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tiket', tiketRoutes); 
+app.use('/api/reservasi', reservasiRoutes);
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {
@@ -49,6 +52,29 @@ const server = app.listen(PORT, async () => {
   } catch (error) {
     console.error('Sinkronisasi database gagal:', error);
   }
+});
+
+const startServer = () => {
+  const PORT = process.env.PORT || 5000;
+  
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Start the reservation cleanup job
+    startCleanupJob();
+  });
+};
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  stopCleanupJob();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  stopCleanupJob();
+  process.exit(0);
 });
 
 // Handle unhandled promise rejections

@@ -3,7 +3,6 @@ const Bus = require('./Bus');
 const Rute = require('./Rute');
 const Tiket = require('./Tiket');
 const Pembayaran = require('./Pembayaran');
-const Refund = require('./Refund');
 const ReservasiSementara = require('./ReservasiSementara');
 
 // Relasi Bus dan Rute
@@ -22,10 +21,6 @@ Tiket.belongsTo(Rute, { foreignKey: 'id_rute' });
 Tiket.hasOne(Pembayaran, { foreignKey: 'id_tiket' });
 Pembayaran.belongsTo(Tiket, { foreignKey: 'id_tiket' });
 
-// Relasi Tiket dan Refund
-Tiket.hasOne(Refund, { foreignKey: 'id_tiket' });
-Refund.belongsTo(Tiket, { foreignKey: 'id_tiket' });
-
 // Relasi User dan ReservasiSementara
 User.hasMany(ReservasiSementara, { foreignKey: 'id_user' });
 ReservasiSementara.belongsTo(User, { foreignKey: 'id_user' });
@@ -40,6 +35,5 @@ module.exports = {
   Rute,
   Tiket,
   Pembayaran,
-  Refund,
   ReservasiSementara
 };

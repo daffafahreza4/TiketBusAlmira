@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getAvailableSeats, setSelectedSeats } from '../../redux/actions/tiketActions';
+import { createTempReservation } from '../../redux/actions/reservasiActions';
 import { formatCurrency } from '../../utils/formatters';
 
 const SeatSelection = ({ 
@@ -14,55 +15,157 @@ const SeatSelection = ({
   loading, 
   error,
   getAvailableSeats, 
-  setSelectedSeats 
+  setSelectedSeats,
+  createTempReservation 
 }) => {
   const navigate = useNavigate();
   const [selectedSeatsList, setSelectedSeatsList] = useState(selectedSeats || []);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [seatStatuses, setSeatStatuses] = useState({});
 
-  // Ambil data kursi yang tersedia saat komponen dimuat
+  // Generate all possible seats (1A-10D = 40 seats)
+  const generateAllSeats = () => {
+    const allSeats = {};
+    for (let row = 1; row <= 10; row++) {
+      ['A', 'B', 'C', 'D'].forEach(col => {
+        const seatNumber = `${row}${col}`;
+        allSeats[seatNumber] = 'available'; // Default: all seats available
+      });
+    }
+    return allSeats;
+  };
+
+  // Initialize seats on component mount
+  useEffect(() => {
+    console.log('🔍 [SeatSelection] Initializing default seat statuses...');
+    const defaultSeats = generateAllSeats();
+    setSeatStatuses(defaultSeats);
+    console.log('✅ [SeatSelection] Default seats set:', defaultSeats);
+  }, []);
+
+  // Fetch available seats when component mounts
   useEffect(() => {
     if (routeId) {
+      console.log('🔍 [SeatSelection] Getting available seats for route:', routeId);
       getAvailableSeats(routeId);
     }
   }, [getAvailableSeats, routeId]);
 
-  // Update total harga saat kursi dipilih
+  // Update total price when seats selected
   useEffect(() => {
     if (route && selectedSeatsList) {
       setTotalPrice(route.harga * selectedSeatsList.length);
     }
   }, [route, selectedSeatsList]);
 
-  // Handle klik pada kursi
+  // Process seat data from backend - FIXED
+  useEffect(() => {
+    console.log('🔍 [SeatSelection] Processing available seats:', availableSeats);
+    
+    // Start with all seats available
+    const statusMap = generateAllSeats();
+    
+    if (availableSeats) {
+      // Case 1: Array of available seat numbers ['1A', '1B', '2A', ...]
+      if (Array.isArray(availableSeats)) {
+        console.log('📝 [SeatSelection] Processing array format:', availableSeats);
+        
+        // Mark all seats as booked first
+        Object.keys(statusMap).forEach(seat => {
+          statusMap[seat] = 'booked';
+        });
+        
+        // Then mark available seats
+        availableSeats.forEach(seat => {
+          if (statusMap.hasOwnProperty(seat)) {
+            statusMap[seat] = 'available';
+          }
+        });
+      } 
+      // Case 2: Object with seats array
+      else if (availableSeats.seats && Array.isArray(availableSeats.seats)) {
+        console.log('📝 [SeatSelection] Processing object format:', availableSeats.seats);
+        
+        availableSeats.seats.forEach(seatData => {
+          if (seatData.seat_number) {
+            let status = seatData.status || 'available';
+            // Simplify: reserved and my_reservation become 'booked'
+            if (status === 'reserved' || status === 'my_reservation') {
+              status = 'booked';
+            }
+            statusMap[seatData.seat_number] = status;
+          }
+        });
+      }
+      // Case 3: Object with direct seat mapping
+      else if (typeof availableSeats === 'object') {
+        console.log('📝 [SeatSelection] Processing direct object mapping:', availableSeats);
+        Object.keys(availableSeats).forEach(seat => {
+          let status = availableSeats[seat];
+          if (status === 'reserved' || status === 'my_reservation') {
+            status = 'booked';
+          }
+          statusMap[seat] = status;
+        });
+      }
+    }
+    
+    console.log('✅ [SeatSelection] Final seat statuses:', statusMap);
+    setSeatStatuses(statusMap);
+  }, [availableSeats]);
+
+  // Handle seat click - IMPROVED
   const handleSeatClick = (seatNumber) => {
-    // Cek apakah kursi tersedia
-    if (!availableSeats.includes(seatNumber)) {
-      return; // Kursi sudah terisi, abaikan klik
+    console.log('🔍 [SeatSelection] Seat clicked:', seatNumber);
+    console.log('🔍 [SeatSelection] Current seatStatuses:', seatStatuses);
+    
+    const seatStatus = seatStatuses[seatNumber];
+    console.log('🔍 [SeatSelection] Seat status for', seatNumber, ':', seatStatus);
+    
+    // Only allow clicking available seats
+    if (seatStatus !== 'available') {
+      console.log('❌ [SeatSelection] Seat not available:', seatNumber, 'Status:', seatStatus);
+      return;
     }
 
-    // Cek apakah kursi sudah dipilih sebelumnya
     if (selectedSeatsList.includes(seatNumber)) {
-      // Hapus kursi dari daftar yang dipilih
-      setSelectedSeatsList(selectedSeatsList.filter(seat => seat !== seatNumber));
+      // Remove seat from selection
+      const newSelection = selectedSeatsList.filter(seat => seat !== seatNumber);
+      setSelectedSeatsList(newSelection);
+      console.log('✅ [SeatSelection] Seat deselected:', seatNumber);
+      console.log('📝 [SeatSelection] New selection:', newSelection);
     } else {
-      // Tambahkan kursi ke daftar yang dipilih
-      setSelectedSeatsList([...selectedSeatsList, seatNumber]);
+      // Add seat to selection
+      const newSelection = [...selectedSeatsList, seatNumber];
+      setSelectedSeatsList(newSelection);
+      console.log('✅ [SeatSelection] Seat selected:', seatNumber);
+      console.log('📝 [SeatSelection] New selection:', newSelection);
     }
   };
 
-  // Handle submit pemilihan kursi
-  const handleSubmit = () => {
+  // Handle submit
+  const handleSubmit = async () => {
     if (selectedSeatsList.length === 0) {
       alert('Silakan pilih minimal 1 kursi');
       return;
     }
 
-    // Simpan kursi yang dipilih ke Redux store
-    setSelectedSeats(selectedSeatsList);
+    try {
+      console.log('🔍 [SeatSelection] Creating reservation for seats:', selectedSeatsList);
+      
+      setSelectedSeats(selectedSeatsList);
 
-    // Navigasi ke halaman pemesanan
-    navigate(`/booking/details/${routeId}`);
+      const reservationData = {
+        id_rute: routeId,
+        nomor_kursi: selectedSeatsList
+      };
+
+      await createTempReservation(reservationData);
+      navigate(`/booking/summary/${routeId}`);
+    } catch (error) {
+      console.error('❌ [SeatSelection] Error creating reservation:', error);
+      alert('Gagal membuat reservasi. Silakan coba lagi.');
+    }
   };
 
   if (loading) {
@@ -72,62 +175,69 @@ const SeatSelection = ({
   if (error) {
     return (
       <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
-        {error}
+        <h3 className="font-bold mb-2">Error</h3>
+        <p>{error}</p>
       </div>
     );
   }
 
-  // Generasi grid kursi bus
+  // Generate bus layout
   const generateBusLayout = () => {
-    // Asumsi bahwa bus memiliki 10 baris dengan 4 kursi per baris (2-2)
     const rows = 10;
     const layout = [];
 
     for (let row = 1; row <= rows; row++) {
       const rowSeats = [];
       
-      // Kursi di sisi kiri (A & B)
+      // Left side seats (A & B)
       rowSeats.push(
         <div key={`${row}A`} className="flex gap-1">
           <div 
             className={`seat ${getSeatClass(`${row}A`)}`}
             onClick={() => handleSeatClick(`${row}A`)}
+            data-seat={`${row}A`}
+            style={{ cursor: 'pointer' }} // Ensure cursor is pointer
           >
             {row}A
           </div>
           <div 
             className={`seat ${getSeatClass(`${row}B`)}`}
             onClick={() => handleSeatClick(`${row}B`)}
+            data-seat={`${row}B`}
+            style={{ cursor: 'pointer' }}
           >
             {row}B
           </div>
         </div>
       );
       
-      // Lorong (aisle)
+      // Aisle
       rowSeats.push(
         <div key={`aisle-${row}`} className="w-8"></div>
       );
       
-      // Kursi di sisi kanan (C & D)
+      // Right side seats (C & D)
       rowSeats.push(
         <div key={`${row}C`} className="flex gap-1">
           <div 
             className={`seat ${getSeatClass(`${row}C`)}`}
             onClick={() => handleSeatClick(`${row}C`)}
+            data-seat={`${row}C`}
+            style={{ cursor: 'pointer' }}
           >
             {row}C
           </div>
           <div 
             className={`seat ${getSeatClass(`${row}D`)}`}
             onClick={() => handleSeatClick(`${row}D`)}
+            data-seat={`${row}D`}
+            style={{ cursor: 'pointer' }}
           >
             {row}D
           </div>
         </div>
       );
       
-      // Tambahkan baris ke layout
       layout.push(
         <div key={`row-${row}`} className="flex justify-center items-center mb-2">
           {rowSeats}
@@ -138,17 +248,26 @@ const SeatSelection = ({
     return layout;
   };
 
-  // Fungsi untuk menentukan class CSS untuk setiap kursi
+  // Get seat CSS class - IMPROVED
   const getSeatClass = (seatNumber) => {
-    if (!availableSeats.includes(seatNumber)) {
-      return 'seat-booked'; // Kursi sudah dipesan orang lain
-    }
-    
+    // Check if seat is selected first
     if (selectedSeatsList.includes(seatNumber)) {
-      return 'seat-selected'; // Kursi dipilih oleh pengguna
+      return 'seat-selected'; // Gray - selected by user
     }
     
-    return 'seat-available'; // Kursi tersedia
+    // Then check seat status
+    const status = seatStatuses[seatNumber];
+    console.log('🎨 [SeatSelection] Getting class for', seatNumber, 'status:', status);
+    
+    switch (status) {
+      case 'available':
+        return 'seat-available'; // Green - can be selected
+      case 'booked':
+      case 'reserved':
+      case 'my_reservation':
+      default:
+        return 'seat-booked'; // Red - cannot be selected
+    }
   };
 
   return (
@@ -157,7 +276,7 @@ const SeatSelection = ({
       
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1">
-          {/* Informasi Bus */}
+          {/* Bus Info */}
           {route && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <h3 className="font-bold text-lg">{route.nama_bus}</h3>
@@ -178,46 +297,43 @@ const SeatSelection = ({
             </div>
           )}
           
-          {/* Legenda */}
-          <div className="mb-6 flex justify-center space-x-4">
-            <div className="flex items-center">
+          {/* Legend - 3 colors only */}
+          <div className="mb-6 flex justify-center space-x-6 flex-wrap">
+            <div className="flex items-center mb-2">
               <div className="seat-available w-6 h-6 mr-2"></div>
               <span className="text-sm">Tersedia</span>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center mb-2">
               <div className="seat-selected w-6 h-6 mr-2"></div>
               <span className="text-sm">Dipilih</span>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center mb-2">
               <div className="seat-booked w-6 h-6 mr-2"></div>
               <span className="text-sm">Terisi</span>
             </div>
           </div>
           
-          {/* Layout Bus */}
+          {/* Bus Layout */}
           <div className="bus-layout mb-8">
-            {/* Bagian depan bus */}
             <div className="text-center mb-4">
               <div className="driver-area mx-auto w-24 h-10 bg-gray-300 rounded-t-lg flex items-center justify-center">
                 <span className="text-xs text-gray-700">SOPIR</span>
               </div>
             </div>
             
-            {/* Layout kursi */}
             <div className="seats-container py-4 px-6 border border-gray-300 rounded-lg">
               {generateBusLayout()}
             </div>
             
-            {/* Bagian belakang bus */}
             <div className="text-center mt-4">
               <div className="back-area mx-auto w-full h-6 bg-gray-200 rounded-b-lg"></div>
             </div>
           </div>
         </div>
         
-        {/* Ringkasan Pemesanan */}
+        {/* Booking Summary */}
         <div className="md:w-1/3">
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 sticky top-4">
             <h3 className="font-bold text-lg mb-4">Ringkasan Pemesanan</h3>
             
             {route && (
@@ -275,12 +391,26 @@ const SeatSelection = ({
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                 >
-                  {selectedSeatsList.length === 0 ? 'Pilih Kursi' : 'Lanjutkan Pemesanan'}
+                  {selectedSeatsList.length === 0 ? 'Pilih Kursi' : 'Lanjutkan Reservasi'}
                 </button>
               </>
             )}
           </div>
         </div>
+      </div>
+      
+      {/* Enhanced Debug Info */}
+      <div className="mt-4 p-4 bg-gray-100 rounded text-xs font-mono">
+        <p><strong>🔍 Debug Info:</strong></p>
+        <p><strong>Available Seats from API:</strong> {JSON.stringify(availableSeats)}</p>
+        <p><strong>Processed Seat Statuses:</strong> {JSON.stringify(seatStatuses)}</p>
+        <p><strong>Selected Seats:</strong> {JSON.stringify(selectedSeatsList)}</p>
+        <p><strong>Sample Seat Status Check:</strong></p>
+        <ul className="ml-4">
+          <li>1A: {seatStatuses['1A'] || 'undefined'}</li>
+          <li>1B: {seatStatuses['1B'] || 'undefined'}</li>
+          <li>2A: {seatStatuses['2A'] || 'undefined'}</li>
+        </ul>
       </div>
     </div>
   );
@@ -289,12 +419,13 @@ const SeatSelection = ({
 SeatSelection.propTypes = {
   routeId: PropTypes.string.isRequired,
   route: PropTypes.object,
-  availableSeats: PropTypes.array,
+  availableSeats: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
   selectedSeats: PropTypes.array,
   loading: PropTypes.bool,
   error: PropTypes.string,
   getAvailableSeats: PropTypes.func.isRequired,
-  setSelectedSeats: PropTypes.func.isRequired
+  setSelectedSeats: PropTypes.func.isRequired,
+  createTempReservation: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -305,4 +436,8 @@ const mapStateToProps = state => ({
   error: state.tiket.error
 });
 
-export default connect(mapStateToProps, { getAvailableSeats, setSelectedSeats })(SeatSelection);
+export default connect(mapStateToProps, { 
+  getAvailableSeats, 
+  setSelectedSeats,
+  createTempReservation 
+})(SeatSelection);

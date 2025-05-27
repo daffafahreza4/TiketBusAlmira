@@ -8,6 +8,7 @@ import adminReducer from './adminReducer';
 import busReducer from './busReducer';
 import routeAdminReducer from './routeAdminReducer';
 import ticketAdminReducer from './ticketAdminReducer';
+import bookingReducer from './bookingReducer';
 
 export default combineReducers({
   auth: authReducer,
@@ -19,4 +20,5 @@ export default combineReducers({
   bus: busReducer,
   routeAdmin: routeAdminReducer,
   ticketAdmin: ticketAdminReducer,
+  booking: bookingReducer,
 });

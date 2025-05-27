@@ -6,7 +6,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
-import { createReservation } from '../redux/actions/reservasiActions';
+import { createTempReservation } from '../redux/actions/reservasiActions'; // FIXED: Changed from createReservation
 import { formatCurrency, formatDate, formatTime } from '../utils/formatters';
 
 const BookingDetailsPage = ({ 
@@ -14,7 +14,7 @@ const BookingDetailsPage = ({
   route, 
   selectedSeats, 
   loading, 
-  createReservation, 
+  createTempReservation, // FIXED: Changed from createReservation
   isAuthenticated 
 }) => {
   const { id } = useParams();
@@ -58,22 +58,34 @@ const BookingDetailsPage = ({
     });
   };
   
-  const onSubmit = e => {
+  const onSubmit = async e => {
     e.preventDefault();
     
     if (!agreeTerms) {
-      return; // Form validation failed
+      alert('Anda harus menyetujui syarat dan ketentuan');
+      return;
     }
     
-    const reservationData = {
-      id_rute: id,
-      nomor_kursi: selectedSeats,
-      nama_penumpang: nama,
-      email,
-      no_telepon: noTelepon
-    };
-    
-    createReservation(reservationData, navigate);
+    try {
+      const reservationData = {
+        id_rute: id,
+        nomor_kursi: selectedSeats,
+        nama_penumpang: nama,
+        email,
+        no_telepon: noTelepon
+      };
+      
+      // FIXED: Use createTempReservation instead of createReservation
+      const reservation = await createTempReservation(reservationData);
+      
+      if (reservation && reservation.id_reservasi) {
+        // Navigate to booking summary page
+        navigate(`/booking/summary/${id}?reservation=${reservation.id_reservasi}`);
+      }
+    } catch (error) {
+      console.error('Error creating reservation:', error);
+      // Error will be handled by the action and displayed via alerts
+    }
   };
   
   if (loading || !route) {
@@ -180,7 +192,7 @@ const BookingDetailsPage = ({
                     }`}
                     disabled={!agreeTerms}
                   >
-                    Lanjutkan ke Pembayaran
+                    Lanjutkan ke Reservasi
                   </button>
                 </form>
               </div>
@@ -252,7 +264,7 @@ const BookingDetailsPage = ({
                     <span>{formatCurrency(totalPrice)}</span>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    *Sudah termasuk pajak dan biaya layanan
+                    *Kursi akan direservasi selama 1 jam
                   </p>
                 </div>
               </div>
@@ -271,7 +283,7 @@ BookingDetailsPage.propTypes = {
   route: PropTypes.object,
   selectedSeats: PropTypes.array,
   loading: PropTypes.bool,
-  createReservation: PropTypes.func.isRequired,
+  createTempReservation: PropTypes.func.isRequired, // FIXED: Changed from createReservation
   isAuthenticated: PropTypes.bool
 };
 
@@ -283,4 +295,4 @@ const mapStateToProps = state => ({
   isAuthenticated: state.auth.isAuthenticated
 });
 
-export default connect(mapStateToProps, { createReservation })(BookingDetailsPage);
+export default connect(mapStateToProps, { createTempReservation })(BookingDetailsPage); // FIXED: Changed from createReservation

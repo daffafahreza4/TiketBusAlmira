@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import BookingPage from './pages/BookingPage';
 import BookingDetailsPage from './pages/BookingDetailsPage';
+import BookingSummaryPage from './pages/BookingSummaryPage';
 import MyTicketsPage from './pages/MyTicketsPage';
 import TicketDetailPage from './pages/TicketDetailPage';
 import PrintTiket from './components/tiket/PrintTiket';
@@ -74,6 +75,15 @@ const App = () => {
             element={
               <PrivateRoute>
                 <BookingDetailsPage />
+              </PrivateRoute>
+            }
+          />
+          {/* NEW ROUTE - Booking Summary with Reservation Timer */}
+          <Route
+            path="/booking/summary/:routeId"
+            element={
+              <PrivateRoute>
+                <BookingSummaryPage />
               </PrivateRoute>
             }
           />

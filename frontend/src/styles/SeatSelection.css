@@ -9,35 +9,52 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+  position: relative;
+  border: 2px solid;
 }
 
+/* 1. HIJAU - Available seats (bisa dipilih) */
 .seat-available {
-  background-color: #e5edff;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  background-color: #6b7280;
+  color: white;
+  border-color: #4b5563;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
 }
 
 .seat-available:hover {
-  background-color: #dbeafe;
+  background-color: #bbf7d0;
   transform: translateY(-2px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 2. ABU-ABU - Selected seats (dipilih user) */
 .seat-selected {
-  background-color: #3b82f6;
-  color: white;
-  border: 1px solid #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #dcfce7;
+  color: #16a34a;
+  border-color: #16a34a;
 }
 
+.seat-selected:hover {
+  background-color: #4b5563;
+}
+
+/* 3. MERAH - Booked/Reserved seats (tidak bisa dipilih) */
 .seat-booked {
-  background-color: #e5e7eb;
-  color: #9ca3af;
-  border: 1px solid #d1d5db;
+  background-color: #fecaca;
+  color: #dc2626;
+  border-color: #dc2626;
   cursor: not-allowed;
+  opacity: 0.8;
 }
 
+.seat-booked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Bus layout styling */
 .bus-layout {
   max-width: 500px;
   margin: 0 auto;
@@ -63,21 +80,37 @@
   background-color: #f9fafb;
 }
 
-/* Animasi untuk seat selection */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-  }
+/* Remove all complex animations and indicators */
+.seat-selected {
+  /* No animation */
 }
 
-.seat-selected {
-  animation: pulse 1.5s infinite;
+/* Legend improvements */
+.seat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.seat-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.seat-legend-item .seat {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  cursor: default;
+}
+
+.seat-legend-item .seat:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Responsiveness */
@@ -99,4 +132,23 @@
     height: 30px;
     font-size: 10px;
   }
+}
+
+/* Debug styling */
+.debug-info {
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: #374151;
+  margin-top: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.debug-info p {
+  margin: 4px 0;
+  word-break: break-all;
 }

@@ -33,16 +33,6 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/tickets',
       icon: 'fas fa-ticket-alt'
     },
-    {
-      name: 'Laporan',
-      path: '/admin/reports',
-      icon: 'fas fa-chart-bar'
-    },
-    {
-      name: 'Pengaturan',
-      path: '/admin/settings',
-      icon: 'fas fa-cog'
-    }
   ];
   
   return (

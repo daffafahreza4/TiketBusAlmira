@@ -14,7 +14,6 @@ exports.getAllUsers = async (req, res) => {
       data: users
     });
   } catch (error) {
-    console.error('Get all users error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -41,7 +40,6 @@ exports.getUserById = async (req, res) => {
       data: user
     });
   } catch (error) {
-    console.error('Get user by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -82,7 +80,6 @@ exports.updateUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Update user error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -109,7 +106,6 @@ exports.deleteUser = async (req, res) => {
       message: 'User berhasil dihapus'
     });
   } catch (error) {
-    console.error('Delete user error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -132,7 +128,6 @@ exports.createBus = async (req, res) => {
       data: bus
     });
   } catch (error) {
-    console.error('Create bus error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -151,7 +146,6 @@ exports.getAllBuses = async (req, res) => {
       data: buses
     });
   } catch (error) {
-    console.error('Get all buses error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -184,7 +178,6 @@ exports.updateBus = async (req, res) => {
       data: bus
     });
   } catch (error) {
-    console.error('Update bus error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -211,7 +204,6 @@ exports.deleteBus = async (req, res) => {
       message: 'Bus berhasil dihapus'
     });
   } catch (error) {
-    console.error('Delete bus error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -247,7 +239,6 @@ exports.createRoute = async (req, res) => {
       data: rute
     });
   } catch (error) {
-    console.error('Create route error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -295,7 +286,6 @@ exports.updateRoute = async (req, res) => {
       data: rute
     });
   } catch (error) {
-    console.error('Update route error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -322,7 +312,6 @@ exports.deleteRoute = async (req, res) => {
       message: 'Rute berhasil dihapus'
     });
   } catch (error) {
-    console.error('Delete route error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -360,7 +349,6 @@ exports.getAllTickets = async (req, res) => {
       data: tickets
     });
   } catch (error) {
-    console.error('Get all tickets error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -391,7 +379,6 @@ exports.updateTicketStatus = async (req, res) => {
       data: ticket
     });
   } catch (error) {
-    console.error('Update ticket status error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -433,7 +420,6 @@ exports.createUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Create user error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -458,7 +444,6 @@ exports.getAllRoutes = async (req, res) => {
       data: routes
     });
   } catch (error) {
-    console.error('Get all routes error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -466,14 +451,9 @@ exports.getAllRoutes = async (req, res) => {
   }
 };
 
-// Delete ticket (admin only) - TAMBAHAN BARU
+// Delete ticket (admin only)
 exports.deleteTicket = async (req, res) => {
   try {
-    console.log('🔍 [adminController] Delete ticket request:', {
-      ticketId: req.params.id,
-      adminUser: req.user.id_user
-    });
-
     const ticket = await Tiket.findByPk(req.params.id, {
       include: [
         {
@@ -488,23 +468,14 @@ exports.deleteTicket = async (req, res) => {
     });
 
     if (!ticket) {
-      console.log('❌ [adminController] Ticket not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Tiket tidak ditemukan'
       });
     }
 
-    console.log('🔍 [adminController] Found ticket to delete:', {
-      id: ticket.id_tiket,
-      user: ticket.User?.username,
-      route: `${ticket.Rute?.asal} → ${ticket.Rute?.tujuan}`,
-      status: ticket.status_tiket
-    });
-
     // Check if ticket can be deleted (business logic)
     if (ticket.status_tiket === 'completed') {
-      console.log('❌ [adminController] Cannot delete completed ticket:', ticket.id_tiket);
       return res.status(400).json({
         success: false,
         message: 'Tiket yang sudah selesai tidak dapat dihapus'
@@ -513,19 +484,11 @@ exports.deleteTicket = async (req, res) => {
 
     await ticket.destroy();
 
-    console.log('✅ [adminController] Ticket deleted successfully:', ticket.id_tiket);
-
     res.status(200).json({
       success: true,
       message: 'Tiket berhasil dihapus'
     });
   } catch (error) {
-    console.error('❌ [adminController] Delete ticket error:', {
-      error: error.message,
-      stack: error.stack,
-      ticketId: req.params.id
-    });
-
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -590,7 +553,7 @@ exports.getDashboardStats = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['username', 'email'] // ✅ Perbaikan: pastikan field ada
+          attributes: ['username', 'email']
         },
         {
           model: Rute,
@@ -623,7 +586,6 @@ exports.getDashboardStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get dashboard stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

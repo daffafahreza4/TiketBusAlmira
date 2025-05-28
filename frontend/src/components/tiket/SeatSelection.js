@@ -37,16 +37,13 @@ const SeatSelection = ({
 
   // Initialize seats on component mount
   useEffect(() => {
-    console.log('🔍 [SeatSelection] Initializing default seat statuses...');
     const defaultSeats = generateAllSeats();
     setSeatStatuses(defaultSeats);
-    console.log('✅ [SeatSelection] Default seats set:', defaultSeats);
   }, []);
 
   // Fetch available seats when component mounts
   useEffect(() => {
     if (routeId) {
-      console.log('🔍 [SeatSelection] Getting available seats for route:', routeId);
       getAvailableSeats(routeId);
     }
   }, [getAvailableSeats, routeId]);
@@ -58,18 +55,14 @@ const SeatSelection = ({
     }
   }, [route, selectedSeatsList]);
 
-  // Process seat data from backend - FIXED
+  // Process seat data from backend
   useEffect(() => {
-    console.log('🔍 [SeatSelection] Processing available seats:', availableSeats);
-    
     // Start with all seats available
     const statusMap = generateAllSeats();
     
     if (availableSeats) {
       // Case 1: Array of available seat numbers ['1A', '1B', '2A', ...]
       if (Array.isArray(availableSeats)) {
-        console.log('📝 [SeatSelection] Processing array format:', availableSeats);
-        
         // Mark all seats as booked first
         Object.keys(statusMap).forEach(seat => {
           statusMap[seat] = 'booked';
@@ -84,8 +77,6 @@ const SeatSelection = ({
       } 
       // Case 2: Object with seats array
       else if (availableSeats.seats && Array.isArray(availableSeats.seats)) {
-        console.log('📝 [SeatSelection] Processing object format:', availableSeats.seats);
-        
         availableSeats.seats.forEach(seatData => {
           if (seatData.seat_number) {
             let status = seatData.status || 'available';
@@ -99,7 +90,6 @@ const SeatSelection = ({
       }
       // Case 3: Object with direct seat mapping
       else if (typeof availableSeats === 'object') {
-        console.log('📝 [SeatSelection] Processing direct object mapping:', availableSeats);
         Object.keys(availableSeats).forEach(seat => {
           let status = availableSeats[seat];
           if (status === 'reserved' || status === 'my_reservation') {
@@ -110,21 +100,15 @@ const SeatSelection = ({
       }
     }
     
-    console.log('✅ [SeatSelection] Final seat statuses:', statusMap);
     setSeatStatuses(statusMap);
   }, [availableSeats]);
 
-  // Handle seat click - IMPROVED
+  // Handle seat click
   const handleSeatClick = (seatNumber) => {
-    console.log('🔍 [SeatSelection] Seat clicked:', seatNumber);
-    console.log('🔍 [SeatSelection] Current seatStatuses:', seatStatuses);
-    
     const seatStatus = seatStatuses[seatNumber];
-    console.log('🔍 [SeatSelection] Seat status for', seatNumber, ':', seatStatus);
     
     // Only allow clicking available seats
     if (seatStatus !== 'available') {
-      console.log('❌ [SeatSelection] Seat not available:', seatNumber, 'Status:', seatStatus);
       return;
     }
 
@@ -132,14 +116,10 @@ const SeatSelection = ({
       // Remove seat from selection
       const newSelection = selectedSeatsList.filter(seat => seat !== seatNumber);
       setSelectedSeatsList(newSelection);
-      console.log('✅ [SeatSelection] Seat deselected:', seatNumber);
-      console.log('📝 [SeatSelection] New selection:', newSelection);
     } else {
       // Add seat to selection
       const newSelection = [...selectedSeatsList, seatNumber];
       setSelectedSeatsList(newSelection);
-      console.log('✅ [SeatSelection] Seat selected:', seatNumber);
-      console.log('📝 [SeatSelection] New selection:', newSelection);
     }
   };
 
@@ -151,8 +131,6 @@ const SeatSelection = ({
     }
 
     try {
-      console.log('🔍 [SeatSelection] Creating reservation for seats:', selectedSeatsList);
-      
       setSelectedSeats(selectedSeatsList);
 
       const reservationData = {
@@ -163,7 +141,6 @@ const SeatSelection = ({
       await createTempReservation(reservationData);
       navigate(`/booking/summary/${routeId}`);
     } catch (error) {
-      console.error('❌ [SeatSelection] Error creating reservation:', error);
       alert('Gagal membuat reservasi. Silakan coba lagi.');
     }
   };
@@ -196,7 +173,7 @@ const SeatSelection = ({
             className={`seat ${getSeatClass(`${row}A`)}`}
             onClick={() => handleSeatClick(`${row}A`)}
             data-seat={`${row}A`}
-            style={{ cursor: 'pointer' }} // Ensure cursor is pointer
+            style={{ cursor: 'pointer' }}
           >
             {row}A
           </div>
@@ -248,7 +225,7 @@ const SeatSelection = ({
     return layout;
   };
 
-  // Get seat CSS class - IMPROVED
+  // Get seat CSS class
   const getSeatClass = (seatNumber) => {
     // Check if seat is selected first
     if (selectedSeatsList.includes(seatNumber)) {
@@ -257,7 +234,6 @@ const SeatSelection = ({
     
     // Then check seat status
     const status = seatStatuses[seatNumber];
-    console.log('🎨 [SeatSelection] Getting class for', seatNumber, 'status:', status);
     
     switch (status) {
       case 'available':
@@ -397,20 +373,6 @@ const SeatSelection = ({
             )}
           </div>
         </div>
-      </div>
-      
-      {/* Enhanced Debug Info */}
-      <div className="mt-4 p-4 bg-gray-100 rounded text-xs font-mono">
-        <p><strong>🔍 Debug Info:</strong></p>
-        <p><strong>Available Seats from API:</strong> {JSON.stringify(availableSeats)}</p>
-        <p><strong>Processed Seat Statuses:</strong> {JSON.stringify(seatStatuses)}</p>
-        <p><strong>Selected Seats:</strong> {JSON.stringify(selectedSeatsList)}</p>
-        <p><strong>Sample Seat Status Check:</strong></p>
-        <ul className="ml-4">
-          <li>1A: {seatStatuses['1A'] || 'undefined'}</li>
-          <li>1B: {seatStatuses['1B'] || 'undefined'}</li>
-          <li>2A: {seatStatuses['2A'] || 'undefined'}</li>
-        </ul>
       </div>
     </div>
   );

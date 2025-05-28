@@ -20,10 +20,10 @@ const HomePage = () => {
                 </h1>
                 <p className="text-lg mb-6">
                   Temukan jadwal, rute, dan pemesanan tiket bus terbaik dengan harga terjangkau.
-                  Nikmati perjalanan aman dan nyaman bersama kami.
+                  Nikmati perjalanan aman dan nyaman bersama Almira.
                 </p>
                 <Link
-                  to="/search-results" // Path yang ada di aplikasi
+                  to="/search-results" 
                   className="inline-block px-6 py-3 bg-white text-blue-600 font-bold rounded-lg shadow-md hover:bg-gray-100 transition duration-300"
                 >
                   Pesan Sekarang
@@ -51,16 +51,16 @@ const HomePage = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Pemesanan Mudah</h3>
                 <p className="text-gray-600">
-                  Proses pemesanan tiket yang cepat dan mudah. Hanya dengan beberapa klik, tiket Anda siap digunakan.
+                  Kini proses pemesanan tiket yang cepat dan mudah. Hanya dengan beberapa klik, Anda siap mencapai tujuan.
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="text-blue-600 text-4xl mb-4">
                   <i className="fas fa-bus"></i>
                 </div>
-                <h3 className="text-xl font-bold mb-2">Banyak Pilihan Rute</h3>
+                <h3 className="text-xl font-bold mb-2">Pilihan Rute Yang Fleksibel</h3>
                 <p className="text-gray-600">
-                  Tersedia banyak pilihan rute ke berbagai destinasi dengan jadwal keberangkatan yang fleksibel.
+                  Sekarang anda bisa melihat jadwal keberangkatan bus secara langsung.
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -69,7 +69,7 @@ const HomePage = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Harga Terbaik</h3>
                 <p className="text-gray-600">
-                  Dapatkan tiket dengan harga terbaik dan nikmati berbagai promo menarik secara berkala.
+                  Harga bus yang bisa dilihat secara langsung untuk kemudahan pembelian tiket.
                 </p>
               </div>
             </div>
@@ -81,7 +81,7 @@ const HomePage = () => {
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold mb-4">Siap untuk perjalanan selanjutnya?</h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto">
-              Pesan tiket bus Anda sekarang dan nikmati kemudahan serta kenyamanan perjalanan dengan TicketBus!
+              Pesan tiket bus Anda sekarang dan nikmati kemudahan serta kenyamanan perjalanan dengan Almira!
             </p>
             <Link
               to="/search-results"

@@ -10,19 +10,13 @@ import {
 // Get booking summary from reservation
 export const getBookingSummary = (reservationId) => async dispatch => {
   try {
-    console.log('🔍 Fetching booking summary for reservation:', reservationId);
-    
     const res = await axios.get(`/api/booking/summary/${reservationId}`);
-    
-    console.log('✅ Booking summary fetched:', res.data);
 
     dispatch({
       type: GET_BOOKING_SUMMARY,
       payload: res.data.data
     });
   } catch (err) {
-    console.error('❌ Get booking summary error:', err.response);
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat mengambil ringkasan booking';
@@ -37,8 +31,6 @@ export const getBookingSummary = (reservationId) => async dispatch => {
 // Create booking from reservation (convert reservation to ticket)
 export const createBookingFromReservation = (bookingData) => async dispatch => {
   try {
-    console.log('🔍 Creating booking from reservation:', bookingData);
-    
     const config = {
       headers: {
         'Content-Type': 'application/json'
@@ -46,8 +38,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
     };
 
     const res = await axios.post('/api/booking/from-reservation', bookingData, config);
-    
-    console.log('✅ Booking created from reservation:', res.data);
 
     dispatch({
       type: CREATE_BOOKING_SUCCESS,
@@ -58,8 +48,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
 
     return res.data.data;
   } catch (err) {
-    console.error('❌ Create booking from reservation error:', err.response);
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat membuat booking';

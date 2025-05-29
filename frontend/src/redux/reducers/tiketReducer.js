@@ -21,7 +21,6 @@ const tiketReducer = (state = initialState, action) => {
 
   switch (type) {
     case GET_TICKETS:
-      console.log('🔍 [tiketReducer] GET_TICKETS:', payload);
       return {
         ...state,
         tickets: payload || [],
@@ -30,7 +29,6 @@ const tiketReducer = (state = initialState, action) => {
       };
       
     case GET_TICKET:
-      console.log('🔍 [tiketReducer] GET_TICKET:', payload);
       return {
         ...state,
         selectedTicket: payload,
@@ -39,8 +37,6 @@ const tiketReducer = (state = initialState, action) => {
       };
       
     case GET_AVAILABLE_SEATS:
-      console.log('🔍 [tiketReducer] GET_AVAILABLE_SEATS:', payload);
-      
       // If payload is null, we're starting to load
       if (payload === null) {
         return {
@@ -58,7 +54,6 @@ const tiketReducer = (state = initialState, action) => {
       };
       
     case SET_SELECTED_SEATS:
-      console.log('🔍 [tiketReducer] SET_SELECTED_SEATS:', payload);
       return {
         ...state,
         selectedSeats: payload || [],
@@ -66,7 +61,6 @@ const tiketReducer = (state = initialState, action) => {
       };
       
     case CLEAR_SELECTED_SEATS:
-      console.log('🔍 [tiketReducer] CLEAR_SELECTED_SEATS');
       return {
         ...state,
         selectedSeats: [],
@@ -74,7 +68,6 @@ const tiketReducer = (state = initialState, action) => {
       };
       
     case TICKET_ERROR:
-      console.error('❌ [tiketReducer] TICKET_ERROR:', payload);
       return {
         ...state,
         error: payload,

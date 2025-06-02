@@ -4,9 +4,11 @@ const {
   handleNotification,
   checkPaymentStatus,
   cancelPayment,
-  getPaymentMethods
+  getPaymentMethods,
+  getWebhookStats,
+  cleanupWebhookLogs
 } = require('../controllers/pembayaranController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -37,5 +39,18 @@ router.get('/status/:id_tiket', checkPaymentStatus);
 // @desc    Cancel payment for a ticket
 // @access  Private
 router.put('/cancel/:id_tiket', cancelPayment);
+
+// Admin routes - require admin role
+router.use(authorize('admin'));
+
+// @route   GET /api/pembayaran/webhook/stats
+// @desc    Get webhook statistics and monitoring data
+// @access  Admin only
+router.get('/webhook/stats', getWebhookStats);
+
+// @route   POST /api/pembayaran/webhook/cleanup
+// @desc    Clean up old webhook logs
+// @access  Admin only
+router.post('/webhook/cleanup', cleanupWebhookLogs);
 
 module.exports = router;

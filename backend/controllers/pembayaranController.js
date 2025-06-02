@@ -166,18 +166,16 @@ exports.createPaymentToken = async (req, res) => {
 
 // Handle Midtrans webhook notification
 exports.handleNotification = async (req, res) => {
+  const webhookLogger = require('../utils/webhookLogger');
+  
   try {
     const notification = req.body;
     const orderId = notification.order_id;
     const transactionStatus = notification.transaction_status;
     const fraudStatus = notification.fraud_status;
 
-    console.log('📨 [Midtrans Webhook] Received notification:', {
-      orderId,
-      transactionStatus,
-      fraudStatus,
-      paymentType: notification.payment_type
-    });
+    // Log webhook received
+    webhookLogger.logWebhookReceived(notification);
 
     // Verify notification authenticity
     const hash = crypto
@@ -186,7 +184,7 @@ exports.handleNotification = async (req, res) => {
       .digest('hex');
 
     if (hash !== notification.signature_key) {
-      console.error('❌ [Midtrans Webhook] Invalid signature');
+      webhookLogger.logInvalidSignature(orderId, notification.signature_key, hash);
       return res.status(401).json({
         success: false,
         message: 'Invalid signature'
@@ -216,7 +214,7 @@ exports.handleNotification = async (req, res) => {
     });
 
     if (!payment) {
-      console.error('❌ [Midtrans Webhook] Payment not found for order:', orderId);
+      webhookLogger.logWebhookError(orderId, new Error('Payment not found'), notification);
       return res.status(404).json({
         success: false,
         message: 'Payment record not found'
@@ -250,21 +248,43 @@ exports.handleNotification = async (req, res) => {
     }
 
     // Update payment record
+    const oldPaymentStatus = payment.status;
     payment.status = newPaymentStatus;
     payment.waktu_pembayaran = new Date();
     payment.response_midtrans = JSON.stringify(notification);
+    payment.payment_type = notification.payment_type;
+    if (notification.va_numbers && notification.va_numbers[0]) {
+      payment.va_number = notification.va_numbers[0].va_number;
+      payment.bank = notification.va_numbers[0].bank;
+    }
     await payment.save();
 
     // Update ticket status
     const ticket = payment.Tiket;
+    const oldTicketStatus = ticket.status_tiket;
     ticket.status_tiket = newTicketStatus;
     await ticket.save();
 
-    console.log('✅ [Midtrans Webhook] Updated payment and ticket status:', {
-      orderId,
-      paymentStatus: newPaymentStatus,
-      ticketStatus: newTicketStatus
-    });
+    // Log status changes
+    webhookLogger.logPaymentStatusChange(
+      ticket.id_tiket, 
+      orderId, 
+      oldPaymentStatus, 
+      newPaymentStatus, 
+      notification.payment_type
+    );
+
+    webhookLogger.logWebhookSuccess(orderId, oldTicketStatus, newTicketStatus);
+
+    // Log successful payment completion
+    if (newPaymentStatus === 'completed') {
+      webhookLogger.logPaymentCompleted(
+        ticket.id_tiket,
+        orderId,
+        notification.gross_amount,
+        notification.payment_type
+      );
+    }
 
     // TODO: Send email confirmation if payment completed
     if (newPaymentStatus === 'completed') {
@@ -278,7 +298,8 @@ exports.handleNotification = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Midtrans Webhook] Error processing notification:', error);
+    const webhookLogger = require('../utils/webhookLogger');
+    webhookLogger.logWebhookError(req.body?.order_id || 'unknown', error, req.body);
     
     res.status(500).json({
       success: false,
@@ -482,6 +503,57 @@ exports.getPaymentMethods = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil metode pembayaran'
+    });
+  }
+};
+
+// Get webhook statistics (admin only)
+exports.getWebhookStats = async (req, res) => {
+  try {
+    const webhookLogger = require('../utils/webhookLogger');
+    const days = parseInt(req.query.days) || 7;
+    
+    const stats = webhookLogger.getWebhookStats(days);
+    const recentWebhooks = webhookLogger.getRecentWebhooks(10);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        statistics: stats,
+        recent_webhooks: recentWebhooks,
+        midtrans_environment: config.environment
+      }
+    });
+
+  } catch (error) {
+    console.error('Get webhook stats error:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengambil statistik webhook'
+    });
+  }
+};
+
+// Manual webhook cleanup (admin only)
+exports.cleanupWebhookLogs = async (req, res) => {
+  try {
+    const webhookLogger = require('../utils/webhookLogger');
+    const days = parseInt(req.body.days) || 30;
+    
+    webhookLogger.cleanOldLogs(days);
+
+    res.status(200).json({
+      success: true,
+      message: `Log lama (>${days} hari) berhasil dibersihkan`
+    });
+
+  } catch (error) {
+    console.error('Cleanup webhook logs error:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat membersihkan log'
     });
   }
 };

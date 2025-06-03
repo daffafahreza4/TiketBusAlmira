@@ -9,9 +9,8 @@ Almira TicketBus adalah sebuah aplikasi pemesanan tiket bus secara online yang d
 ## Fitur Utama
 1.Autentikasi pengguna
 2.Pencarian rute berdasarkan asal, tujuan, dan tanggal
-3.Pemilihan kursi
-4.Pemesanan tiket
-5.Pembayaran online
-6.Manajemen profil pengguna
-7.Notifikasi email dan SMS
-8.Dashboard admin untuk manajemen bus dan rute
+3.Pemesanan tiket & kursi
+4.Pembayaran online
+5.Manajemen profil pengguna
+6.Notifikasi email dan SMS
+7.Dashboard admin untuk manajemen bus dan rute

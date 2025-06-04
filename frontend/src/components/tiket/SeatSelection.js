@@ -22,6 +22,7 @@ const SeatSelection = ({
   const [selectedSeatsList, setSelectedSeatsList] = useState(selectedSeats || []);
   const [totalPrice, setTotalPrice] = useState(0);
   const [seatStatuses, setSeatStatuses] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Generate all possible seats (1A-10D = 40 seats)
   const generateAllSeats = () => {
@@ -123,7 +124,7 @@ const SeatSelection = ({
     }
   };
 
-  // Handle submit
+  // FIXED: Handle submit with proper data structure
   const handleSubmit = async () => {
     if (selectedSeatsList.length === 0) {
       alert('Silakan pilih minimal 1 kursi');
@@ -131,6 +132,7 @@ const SeatSelection = ({
     }
 
     try {
+      setIsSubmitting(true);
       setSelectedSeats(selectedSeatsList);
 
       const reservationData = {
@@ -138,10 +140,31 @@ const SeatSelection = ({
         nomor_kursi: selectedSeatsList
       };
 
-      await createTempReservation(reservationData);
-      navigate(`/booking/summary/${routeId}`);
+      console.log('🔍 [SeatSelection] Creating reservation with:', reservationData);
+      
+      const result = await createTempReservation(reservationData);
+      
+      console.log('✅ [SeatSelection] Reservation result:', result);
+
+      if (result.success) {
+        // FIXED: Navigate with proper route structure
+        if (result.reservations && result.reservations.length > 0) {
+          // Case 1: Multiple reservations created
+          const firstReservation = result.reservations[0];
+          navigate(`/booking/summary/${routeId}?reservation=${firstReservation.id_reservasi}`);
+        } else if (result.ticket) {
+          // Case 2: Direct ticket created
+          navigate(`/ticket/${result.ticket.id_tiket}`);
+        } else {
+          // Case 3: Simple navigation
+          navigate(`/booking/summary/${routeId}`);
+        }
+      }
     } catch (error) {
+      console.error('❌ [SeatSelection] Error creating reservation:', error);
       alert('Gagal membuat reservasi. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -360,14 +383,21 @@ const SeatSelection = ({
                 
                 <button
                   onClick={handleSubmit}
-                  disabled={selectedSeatsList.length === 0}
+                  disabled={selectedSeatsList.length === 0 || isSubmitting}
                   className={`w-full mt-6 py-3 font-bold rounded-lg transition duration-300 ${
-                    selectedSeatsList.length === 0
+                    selectedSeatsList.length === 0 || isSubmitting
                       ? 'bg-gray-400 text-white cursor-not-allowed'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                 >
-                  {selectedSeatsList.length === 0 ? 'Pilih Kursi' : 'Lanjutkan Reservasi'}
+                  {isSubmitting ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Memproses...
+                    </div>
+                  ) : selectedSeatsList.length === 0 ? 
+                    'Pilih Kursi' : 'Lanjutkan Reservasi'
+                  }
                 </button>
               </>
             )}

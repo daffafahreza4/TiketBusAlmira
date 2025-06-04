@@ -8,7 +8,7 @@ import {
   CLEAR_RESERVASI
 } from '../types';
 
-// Create temporary reservation (fallback to direct booking if temp reservation not available)
+// Create temporary reservation (FIXED VERSION)
 export const createTempReservation = (reservationData) => async dispatch => {
   try {
     console.log('🔍 [reservasiActions] Creating reservation:', reservationData);
@@ -31,31 +31,43 @@ export const createTempReservation = (reservationData) => async dispatch => {
       });
 
       dispatch(setAlert('Kursi berhasil direservasi', 'success'));
-      return res.data.data;
       
-    } catch (tempError) {
-      console.log('⚠️ [reservasiActions] Temp reservation not available, trying direct booking...');
-      
-      // Fallback: Create regular reservation/booking
-      const bookingData = {
-        id_rute: reservationData.id_rute,
-        nomor_kursi: reservationData.nomor_kursi,
-        nama_penumpang: 'Temporary',
-        email: 'temp@temp.com',
-        no_telepon: '0000000000'
+      // FIXED: Return proper reservation data structure
+      return {
+        success: true,
+        reservations: res.data.data.reservations || res.data.data,
+        route: res.data.data.route,
+        reservedSeats: res.data.data.reservedSeats || reservationData.nomor_kursi
       };
       
-      const res = await axios.post('/api/tiket', bookingData, config);
+    } catch (tempError) {
+      console.log('⚠️ [reservasiActions] Temp reservation not available, using direct booking...');
       
-      console.log('✅ [reservasiActions] Direct booking created:', res.data);
+      // Fallback: Create ticket directly
+      const ticketData = {
+        id_rute: reservationData.id_rute,
+        nomor_kursi: reservationData.nomor_kursi[0], // Take first seat for compatibility
+        metode_pembayaran: 'midtrans'
+      };
+      
+      const res = await axios.post('/api/booking/direct', ticketData, config);
+      
+      console.log('✅ [reservasiActions] Direct ticket created:', res.data);
       
       dispatch({
         type: CREATE_RESERVASI,
         payload: res.data.data
       });
 
-      dispatch(setAlert('Kursi berhasil dipesan', 'success'));
-      return res.data.data;
+      dispatch(setAlert('Tiket berhasil dibuat', 'success'));
+      
+      // Return ticket data in reservation format
+      return {
+        success: true,
+        ticket: res.data.data.ticket,
+        route: res.data.data.ticket?.Rute,
+        reservedSeats: [res.data.data.ticket?.nomor_kursi]
+      };
     }
   } catch (err) {
     console.error('❌ [reservasiActions] Create reservation error:', err.response);
@@ -75,42 +87,49 @@ export const createTempReservation = (reservationData) => async dispatch => {
   }
 };
 
-// Create a new reservation (original function kept for compatibility)
-export const createReservation = (reservationData, navigate) => async dispatch => {
+// Get booking summary (NEW ACTION)
+export const getBookingSummary = (reservationId) => async dispatch => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // Create reservation/booking
-    const res = await axios.post('/api/tiket', reservationData, config);
+    console.log('🔍 [reservasiActions] Fetching booking summary for:', reservationId);
     
-    // Display success message
-    dispatch(setAlert('Reservasi berhasil dibuat', 'success'));
+    // Try booking summary endpoint first
+    try {
+      const res = await axios.get(`/api/booking/summary/${reservationId}`);
+      console.log('✅ [reservasiActions] Booking summary fetched:', res.data);
 
-    // Dispatch action to update state
-    dispatch({
-      type: CREATE_RESERVASI,
-      payload: res.data.data
-    });
+      dispatch({
+        type: GET_RESERVASI,
+        payload: res.data.data
+      });
+      
+      return res.data.data;
+    } catch (summaryError) {
+      console.log('⚠️ [reservasiActions] Booking summary not available, trying reservasi...');
+      
+      // Fallback to reservation endpoint
+      const res = await axios.get(`/api/reservasi/${reservationId}`);
+      console.log('✅ [reservasiActions] Reservation data fetched:', res.data);
 
-    // Redirect to ticket detail page if navigate provided
-    if (navigate && res.data.data.id_tiket) {
-      navigate(`/ticket/${res.data.data.id_tiket}`);
+      dispatch({
+        type: GET_RESERVASI,
+        payload: res.data.data
+      });
+      
+      return res.data.data;
     }
   } catch (err) {
+    console.error('❌ [reservasiActions] Get booking summary error:', err.response);
+    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
-      : 'Terjadi kesalahan saat membuat reservasi';
-
-    dispatch(setAlert(errorMsg, 'danger'));
-
+      : 'Terjadi kesalahan saat mengambil ringkasan booking';
+    
     dispatch({
       type: RESERVASI_ERROR,
       payload: errorMsg
     });
+    
+    throw err;
   }
 };
 
@@ -141,45 +160,6 @@ export const getUserReservations = () => async dispatch => {
     }
   } catch (err) {
     console.error('❌ [reservasiActions] Get user reservations error:', err.response);
-    
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat mengambil data reservasi';
-    
-    dispatch({
-      type: RESERVASI_ERROR,
-      payload: errorMsg
-    });
-  }
-};
-
-// Get reservation by ID
-export const getReservationById = (reservationId) => async dispatch => {
-  try {
-    console.log('🔍 [reservasiActions] Fetching reservation by ID:', reservationId);
-    
-    // Try reservasi endpoint first, fallback to ticket
-    try {
-      const res = await axios.get(`/api/reservasi/${reservationId}`);
-      console.log('✅ [reservasiActions] Reservation fetched:', res.data);
-
-      dispatch({
-        type: GET_RESERVASI,
-        payload: res.data.data
-      });
-    } catch (reservasiError) {
-      console.log('⚠️ [reservasiActions] Reservasi endpoint not available, trying ticket...');
-      
-      const res = await axios.get(`/api/tiket/${reservationId}`);
-      console.log('✅ [reservasiActions] Ticket fetched as reservation:', res.data);
-
-      dispatch({
-        type: GET_RESERVASI,
-        payload: res.data.data
-      });
-    }
-  } catch (err) {
-    console.error('❌ [reservasiActions] Get reservation by ID error:', err.response);
     
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 

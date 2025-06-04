@@ -30,7 +30,7 @@ const SeatSelection = ({
     for (let row = 1; row <= 10; row++) {
       ['A', 'B', 'C', 'D'].forEach(col => {
         const seatNumber = `${row}${col}`;
-        allSeats[seatNumber] = 'available'; // Default: all seats available
+        allSeats[seatNumber] = 'available';
       });
     }
     return allSeats;
@@ -40,7 +40,20 @@ const SeatSelection = ({
   useEffect(() => {
     const defaultSeats = generateAllSeats();
     setSeatStatuses(defaultSeats);
-  }, []);
+    
+    // Try to restore seats from sessionStorage
+    try {
+      const storedSeats = sessionStorage.getItem('selectedSeats');
+      if (storedSeats) {
+        const seats = JSON.parse(storedSeats);
+        console.log('🔍 [SeatSelection] Restored seats from storage:', seats);
+        setSelectedSeatsList(seats);
+        setSelectedSeats(seats);
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not restore seats from storage:', error);
+    }
+  }, [setSelectedSeats]);
 
   // Fetch available seats when component mounts
   useEffect(() => {
@@ -58,30 +71,24 @@ const SeatSelection = ({
 
   // Process seat data from backend
   useEffect(() => {
-    // Start with all seats available
     const statusMap = generateAllSeats();
     
     if (availableSeats) {
-      // Case 1: Array of available seat numbers ['1A', '1B', '2A', ...]
       if (Array.isArray(availableSeats)) {
-        // Mark all seats as booked first
         Object.keys(statusMap).forEach(seat => {
           statusMap[seat] = 'booked';
         });
         
-        // Then mark available seats
         availableSeats.forEach(seat => {
           if (statusMap.hasOwnProperty(seat)) {
             statusMap[seat] = 'available';
           }
         });
       } 
-      // Case 2: Object with seats array
       else if (availableSeats.seats && Array.isArray(availableSeats.seats)) {
         availableSeats.seats.forEach(seatData => {
           if (seatData.seat_number) {
             let status = seatData.status || 'available';
-            // Simplify: reserved and my_reservation become 'booked'
             if (status === 'reserved' || status === 'my_reservation') {
               status = 'booked';
             }
@@ -89,7 +96,6 @@ const SeatSelection = ({
           }
         });
       }
-      // Case 3: Object with direct seat mapping
       else if (typeof availableSeats === 'object') {
         Object.keys(availableSeats).forEach(seat => {
           let status = availableSeats[seat];
@@ -108,61 +114,95 @@ const SeatSelection = ({
   const handleSeatClick = (seatNumber) => {
     const seatStatus = seatStatuses[seatNumber];
     
-    // Only allow clicking available seats
     if (seatStatus !== 'available') {
       return;
     }
 
+    let newSelection;
     if (selectedSeatsList.includes(seatNumber)) {
-      // Remove seat from selection
-      const newSelection = selectedSeatsList.filter(seat => seat !== seatNumber);
-      setSelectedSeatsList(newSelection);
+      newSelection = selectedSeatsList.filter(seat => seat !== seatNumber);
     } else {
-      // Add seat to selection
-      const newSelection = [...selectedSeatsList, seatNumber];
-      setSelectedSeatsList(newSelection);
+      newSelection = [...selectedSeatsList, seatNumber];
+    }
+    
+    console.log('🔍 [SeatSelection] Seat clicked:', seatNumber, 'New selection:', newSelection);
+    
+    // Update all state immediately
+    setSelectedSeatsList(newSelection);
+    setSelectedSeats(newSelection);
+    
+    // Store in sessionStorage immediately
+    try {
+      sessionStorage.setItem('selectedSeats', JSON.stringify(newSelection));
+      console.log('✅ [SeatSelection] Stored seats in sessionStorage:', newSelection);
+    } catch (error) {
+      console.warn('⚠️ Could not store in sessionStorage:', error);
     }
   };
 
-  // FIXED: Handle submit with proper data structure
+  // CRITICAL FIX: Ensure seats are properly passed to BookingSummary
   const handleSubmit = async () => {
     if (selectedSeatsList.length === 0) {
       alert('Silakan pilih minimal 1 kursi');
       return;
     }
 
+    console.log('🔍 [SeatSelection] Starting submit with seats:', selectedSeatsList);
+
     try {
       setIsSubmitting(true);
+      
+      // CRITICAL: Ensure seats are stored in all possible places
       setSelectedSeats(selectedSeatsList);
-
-      const reservationData = {
-        id_rute: routeId,
-        nomor_kursi: selectedSeatsList
-      };
-
-      console.log('🔍 [SeatSelection] Creating reservation with:', reservationData);
       
-      const result = await createTempReservation(reservationData);
-      
-      console.log('✅ [SeatSelection] Reservation result:', result);
+      try {
+        sessionStorage.setItem('selectedSeats', JSON.stringify(selectedSeatsList));
+        sessionStorage.setItem('routeId', routeId);
+      } catch (error) {
+        console.warn('⚠️ Could not store in sessionStorage:', error);
+      }
 
-      if (result.success) {
-        // FIXED: Navigate with proper route structure
-        if (result.reservations && result.reservations.length > 0) {
-          // Case 1: Multiple reservations created
-          const firstReservation = result.reservations[0];
-          navigate(`/booking/summary/${routeId}?reservation=${firstReservation.id_reservasi}`);
-        } else if (result.ticket) {
-          // Case 2: Direct ticket created
-          navigate(`/ticket/${result.ticket.id_tiket}`);
-        } else {
-          // Case 3: Simple navigation
-          navigate(`/booking/summary/${routeId}`);
+      // Create URL with seat data
+      const seatsParam = selectedSeatsList.join(',');
+      
+      // Try to create reservation first
+      try {
+        const reservationData = {
+          id_rute: routeId,
+          nomor_kursi: selectedSeatsList
+        };
+
+        console.log('🔍 [SeatSelection] Creating reservation:', reservationData);
+        
+        const result = await createTempReservation(reservationData);
+        
+        if (result.success) {
+          let navigationUrl;
+          
+          if (result.reservations && result.reservations.length > 0) {
+            const firstReservation = result.reservations[0];
+            navigationUrl = `/booking/summary/${routeId}?reservation=${firstReservation.id_reservasi}&seats=${seatsParam}`;
+          } else if (result.ticket) {
+            navigate(`/ticket/${result.ticket.id_tiket}`);
+            return;
+          } else {
+            navigationUrl = `/booking/summary/${routeId}?seats=${seatsParam}`;
+          }
+          
+          console.log('🔍 [SeatSelection] Navigating to:', navigationUrl);
+          navigate(navigationUrl);
         }
+      } catch (reservationError) {
+        console.warn('⚠️ [SeatSelection] Reservation failed, navigating directly:', reservationError);
+        
+        // Even if reservation fails, navigate with seat data
+        const directUrl = `/booking/summary/${routeId}?seats=${seatsParam}`;
+        console.log('🔍 [SeatSelection] Direct navigation to:', directUrl);
+        navigate(directUrl);
       }
     } catch (error) {
-      console.error('❌ [SeatSelection] Error creating reservation:', error);
-      alert('Gagal membuat reservasi. Silakan coba lagi.');
+      console.error('❌ [SeatSelection] Error in submit:', error);
+      alert('Gagal memproses. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
@@ -250,22 +290,20 @@ const SeatSelection = ({
 
   // Get seat CSS class
   const getSeatClass = (seatNumber) => {
-    // Check if seat is selected first
     if (selectedSeatsList.includes(seatNumber)) {
-      return 'seat-selected'; // Gray - selected by user
+      return 'seat-selected';
     }
     
-    // Then check seat status
     const status = seatStatuses[seatNumber];
     
     switch (status) {
       case 'available':
-        return 'seat-available'; // Green - can be selected
+        return 'seat-available';
       case 'booked':
       case 'reserved':
       case 'my_reservation':
       default:
-        return 'seat-booked'; // Red - cannot be selected
+        return 'seat-booked';
     }
   };
 
@@ -296,7 +334,7 @@ const SeatSelection = ({
             </div>
           )}
           
-          {/* Legend - 3 colors only */}
+          {/* Legend */}
           <div className="mb-6 flex justify-center space-x-6 flex-wrap">
             <div className="flex items-center mb-2">
               <div className="seat-available w-6 h-6 mr-2"></div>
@@ -355,7 +393,7 @@ const SeatSelection = ({
                       {selectedSeatsList.map(seat => (
                         <span 
                           key={seat} 
-                          className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded"
+                          className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium"
                         >
                           {seat}
                         </span>
@@ -365,12 +403,12 @@ const SeatSelection = ({
                   
                   <div className="flex justify-between mb-2">
                     <span>Jumlah Kursi</span>
-                    <span>{selectedSeatsList.length}</span>
+                    <span className="font-medium">{selectedSeatsList.length}</span>
                   </div>
                   
                   <div className="flex justify-between mb-2">
                     <span>Harga per Kursi</span>
-                    <span>{formatCurrency(route.harga)}</span>
+                    <span className="font-medium">{formatCurrency(route.harga)}</span>
                   </div>
                 </div>
                 
@@ -396,9 +434,30 @@ const SeatSelection = ({
                       Memproses...
                     </div>
                   ) : selectedSeatsList.length === 0 ? 
-                    'Pilih Kursi' : 'Lanjutkan Reservasi'
+                    'Pilih Kursi' : `Lanjut dengan ${selectedSeatsList.length} Kursi`
                   }
                 </button>
+                
+                {/* Current Status */}
+                {selectedSeatsList.length > 0 && (
+                  <div className="mt-4 p-3 bg-green-50 rounded text-sm">
+                    <p className="font-semibold text-green-800">Status:</p>
+                    <p className="text-green-700">
+                      ✅ {selectedSeatsList.length} kursi dipilih: {selectedSeatsList.join(', ')}
+                    </p>
+                    <p className="text-green-700">
+                      💰 Total: {formatCurrency(totalPrice)}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Storage Debug Info */}
+                <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                  <p className="font-semibold mb-1">Debug Info:</p>
+                  <p>Redux: {JSON.stringify(selectedSeats)}</p>
+                  <p>Local: {JSON.stringify(selectedSeatsList)}</p>
+                  <p>SessionStorage: {sessionStorage.getItem('selectedSeats') || 'none'}</p>
+                </div>
               </>
             )}
           </div>

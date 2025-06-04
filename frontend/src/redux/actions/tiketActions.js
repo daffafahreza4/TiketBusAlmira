@@ -65,23 +65,59 @@ export const getAvailableSeats = routeId => async dispatch => {
   }
 };
 
-// Set selected seats
-export const setSelectedSeats = seats => {
+// Set selected seats - FIXED with better logging and validation
+export const setSelectedSeats = seats => dispatch => {
   console.log('🔍 [tiketActions] Setting selected seats:', seats);
   
-  return {
+  // Validate and normalize seats data
+  let normalizedSeats = [];
+  
+  if (Array.isArray(seats)) {
+    normalizedSeats = seats.filter(seat => seat && seat.trim() !== '');
+  } else if (seats && typeof seats === 'string') {
+    normalizedSeats = [seats.trim()];
+  }
+  
+  console.log('✅ [tiketActions] Normalized seats:', normalizedSeats);
+  
+  // Store in sessionStorage as backup
+  try {
+    sessionStorage.setItem('selectedSeats', JSON.stringify(normalizedSeats));
+  } catch (error) {
+    console.warn('⚠️ [tiketActions] Could not store seats in sessionStorage:', error);
+  }
+  
+  dispatch({
     type: SET_SELECTED_SEATS,
-    payload: seats
-  };
+    payload: normalizedSeats
+  });
 };
 
-// Clear selected seats
-export const clearSelectedSeats = () => {
+// Get selected seats from storage as backup
+export const getSelectedSeatsFromStorage = () => {
+  try {
+    const storedSeats = sessionStorage.getItem('selectedSeats');
+    return storedSeats ? JSON.parse(storedSeats) : [];
+  } catch (error) {
+    console.warn('⚠️ [tiketActions] Could not read seats from sessionStorage:', error);
+    return [];
+  }
+};
+
+// Clear selected seats - FIXED
+export const clearSelectedSeats = () => dispatch => {
   console.log('🔍 [tiketActions] Clearing selected seats');
   
-  return {
+  // Clear from sessionStorage as well
+  try {
+    sessionStorage.removeItem('selectedSeats');
+  } catch (error) {
+    console.warn('⚠️ [tiketActions] Could not clear seats from sessionStorage:', error);
+  }
+  
+  dispatch({
     type: CLEAR_SELECTED_SEATS
-  };
+  });
 };
 
 // Get all tickets for user

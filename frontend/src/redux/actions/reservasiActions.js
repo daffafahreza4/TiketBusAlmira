@@ -32,12 +32,14 @@ export const createTempReservation = (reservationData) => async dispatch => {
 
       dispatch(setAlert('Kursi berhasil direservasi', 'success'));
       
-      // FIXED: Return proper reservation data structure
+      // FIXED: Return proper reservation data structure with seats preserved
       return {
         success: true,
         reservations: res.data.data.reservations || res.data.data,
         route: res.data.data.route,
-        reservedSeats: res.data.data.reservedSeats || reservationData.nomor_kursi
+        reservedSeats: res.data.data.reservedSeats || reservationData.nomor_kursi,
+        // Keep original seat data
+        originalSeats: reservationData.nomor_kursi
       };
       
     } catch (tempError) {
@@ -46,7 +48,8 @@ export const createTempReservation = (reservationData) => async dispatch => {
       // Fallback: Create ticket directly
       const ticketData = {
         id_rute: reservationData.id_rute,
-        nomor_kursi: reservationData.nomor_kursi[0], // Take first seat for compatibility
+        nomor_kursi: Array.isArray(reservationData.nomor_kursi) ? 
+          reservationData.nomor_kursi[0] : reservationData.nomor_kursi, // Take first seat for compatibility
         metode_pembayaran: 'midtrans'
       };
       
@@ -61,12 +64,13 @@ export const createTempReservation = (reservationData) => async dispatch => {
 
       dispatch(setAlert('Tiket berhasil dibuat', 'success'));
       
-      // Return ticket data in reservation format
+      // Return ticket data in reservation format with all seats preserved
       return {
         success: true,
         ticket: res.data.data.ticket,
         route: res.data.data.ticket?.Rute,
-        reservedSeats: [res.data.data.ticket?.nomor_kursi]
+        reservedSeats: reservationData.nomor_kursi, // FIXED: Keep all original seats
+        originalSeats: reservationData.nomor_kursi
       };
     }
   } catch (err) {
@@ -87,7 +91,7 @@ export const createTempReservation = (reservationData) => async dispatch => {
   }
 };
 
-// Get booking summary (NEW ACTION)
+// Get booking summary (FIXED VERSION)
 export const getBookingSummary = (reservationId) => async dispatch => {
   try {
     console.log('🔍 [reservasiActions] Fetching booking summary for:', reservationId);
@@ -97,12 +101,25 @@ export const getBookingSummary = (reservationId) => async dispatch => {
       const res = await axios.get(`/api/booking/summary/${reservationId}`);
       console.log('✅ [reservasiActions] Booking summary fetched:', res.data);
 
+      const summaryData = res.data.data;
+      
+      // FIXED: Ensure seat data is properly formatted
+      if (summaryData && summaryData.nomor_kursi) {
+        if (typeof summaryData.nomor_kursi === 'string') {
+          // If it's a comma-separated string, split it
+          summaryData.nomor_kursi = summaryData.nomor_kursi.split(',').map(seat => seat.trim());
+        } else if (!Array.isArray(summaryData.nomor_kursi)) {
+          // If it's a single value, make it an array
+          summaryData.nomor_kursi = [summaryData.nomor_kursi];
+        }
+      }
+
       dispatch({
         type: GET_RESERVASI,
-        payload: res.data.data
+        payload: summaryData
       });
       
-      return res.data.data;
+      return summaryData;
     } catch (summaryError) {
       console.log('⚠️ [reservasiActions] Booking summary not available, trying reservasi...');
       
@@ -110,12 +127,25 @@ export const getBookingSummary = (reservationId) => async dispatch => {
       const res = await axios.get(`/api/reservasi/${reservationId}`);
       console.log('✅ [reservasiActions] Reservation data fetched:', res.data);
 
+      const reservationData = res.data.data;
+      
+      // FIXED: Ensure seat data is properly formatted
+      if (reservationData && reservationData.nomor_kursi) {
+        if (typeof reservationData.nomor_kursi === 'string') {
+          // If it's a comma-separated string, split it
+          reservationData.nomor_kursi = reservationData.nomor_kursi.split(',').map(seat => seat.trim());
+        } else if (!Array.isArray(reservationData.nomor_kursi)) {
+          // If it's a single value, make it an array
+          reservationData.nomor_kursi = [reservationData.nomor_kursi];
+        }
+      }
+
       dispatch({
         type: GET_RESERVASI,
-        payload: res.data.data
+        payload: reservationData
       });
       
-      return res.data.data;
+      return reservationData;
     }
   } catch (err) {
     console.error('❌ [reservasiActions] Get booking summary error:', err.response);

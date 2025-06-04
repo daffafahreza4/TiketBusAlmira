@@ -13,6 +13,21 @@ const initialState = {
   error: null
 };
 
+// Helper function to normalize seat data
+const normalizeSeatData = (seats) => {
+  if (!seats) return [];
+  
+  if (Array.isArray(seats)) {
+    return seats.filter(seat => seat && seat !== '');
+  }
+  
+  if (typeof seats === 'string') {
+    return seats.split(',').map(seat => seat.trim()).filter(seat => seat !== '');
+  }
+  
+  return [seats].filter(seat => seat && seat !== '');
+};
+
 const reservasiReducer = (state = initialState, action) => {
   const { type, payload } = action;
 
@@ -26,17 +41,36 @@ const reservasiReducer = (state = initialState, action) => {
       if (payload) {
         // Case 1: Direct reservation data
         if (payload.reservations && Array.isArray(payload.reservations)) {
-          newReservation = payload.reservations[0]; // Take first reservation
+          newReservation = {
+            ...payload.reservations[0],
+            nomor_kursi: normalizeSeatData(payload.reservations[0]?.nomor_kursi || payload.originalSeats)
+          };
         }
         // Case 2: Single reservation object
         else if (payload.id_reservasi || payload.id_tiket) {
-          newReservation = payload;
+          newReservation = {
+            ...payload,
+            nomor_kursi: normalizeSeatData(payload.nomor_kursi || payload.originalSeats)
+          };
         }
         // Case 3: Nested structure
         else if (payload.data) {
-          newReservation = payload.data;
+          newReservation = {
+            ...payload.data,
+            nomor_kursi: normalizeSeatData(payload.data.nomor_kursi || payload.originalSeats)
+          };
+        }
+        
+        // FIXED: Preserve original seat data if available
+        if (payload.originalSeats && newReservation) {
+          newReservation.nomor_kursi = normalizeSeatData(payload.originalSeats);
+        }
+        if (payload.reservedSeats && newReservation) {
+          newReservation.nomor_kursi = normalizeSeatData(payload.reservedSeats);
         }
       }
+      
+      console.log('✅ [reservasiReducer] Processed reservation with seats:', newReservation?.nomor_kursi);
       
       return {
         ...state,
@@ -58,18 +92,32 @@ const reservasiReducer = (state = initialState, action) => {
       if (payload) {
         if (Array.isArray(payload)) {
           // Array of reservations
-          fetchedList = payload;
-          fetchedData = payload[0] || null; // Set first as current
+          fetchedList = payload.map(item => ({
+            ...item,
+            nomor_kursi: normalizeSeatData(item.nomor_kursi)
+          }));
+          fetchedData = fetchedList[0] || null; // Set first as current
         } else if (payload.reservations && Array.isArray(payload.reservations)) {
           // Object with reservations array
-          fetchedList = payload.reservations;
-          fetchedData = payload; // Keep full payload as current
+          fetchedList = payload.reservations.map(item => ({
+            ...item,
+            nomor_kursi: normalizeSeatData(item.nomor_kursi)
+          }));
+          fetchedData = {
+            ...payload,
+            nomor_kursi: normalizeSeatData(payload.nomor_kursi || payload.reservedSeats)
+          };
         } else {
           // Single reservation object
-          fetchedData = payload;
-          fetchedList = [payload];
+          fetchedData = {
+            ...payload,
+            nomor_kursi: normalizeSeatData(payload.nomor_kursi || payload.reservedSeats)
+          };
+          fetchedList = [fetchedData];
         }
       }
+      
+      console.log('✅ [reservasiReducer] Processed fetched data with seats:', fetchedData?.nomor_kursi);
       
       return {
         ...state,
@@ -82,15 +130,20 @@ const reservasiReducer = (state = initialState, action) => {
     case CANCEL_RESERVASI:
       console.log('🔍 [reservasiReducer] CANCEL_RESERVASI:', payload);
       
+      const cancelledReservation = payload ? {
+        ...payload,
+        nomor_kursi: normalizeSeatData(payload.nomor_kursi)
+      } : payload;
+      
       return {
         ...state,
-        currentReservation: payload,
+        currentReservation: cancelledReservation,
         reservations: state.reservations.map(res => {
           // Handle different ID fields
           const resId = res.id_reservasi || res.id_tiket;
-          const payloadId = payload.id_reservasi || payload.id_tiket;
+          const payloadId = payload?.id_reservasi || payload?.id_tiket;
           
-          return resId === payloadId ? payload : res;
+          return resId === payloadId ? cancelledReservation : res;
         }),
         loading: false,
         error: null

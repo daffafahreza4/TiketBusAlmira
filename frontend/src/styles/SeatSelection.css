@@ -80,10 +80,9 @@
   background-color: #f9fafb;
 }
 
-/* Remove all complex animations and indicators */
+/* Remove all complex animations and indicators
 .seat-selected {
   /* No animation */
-}
 
 /* Legend improvements */
 .seat-legend {

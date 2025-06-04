@@ -7,6 +7,7 @@ import ReservationTimer from './ReservationTimer';
 import { getBookingSummary} from '../../redux/actions/reservasiActions';
 import { createBookingFromReservation } from '../../redux/actions/bookingActions';
 import { getRouteById } from '../../redux/actions/ruteActions';
+import { setAlert } from '../../redux/actions/alertActions';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 
 const BookingSummary = ({ 
@@ -18,7 +19,8 @@ const BookingSummary = ({
   error,
   getBookingSummary,
   createBookingFromReservation,
-  getRouteById
+  getRouteById,
+  setAlert
 }) => {
   const { routeId } = useParams();
   const [searchParams] = useSearchParams();
@@ -35,6 +37,7 @@ const BookingSummary = ({
   const [summaryData, setSummaryData] = useState(null);
   const [finalSeats, setFinalSeats] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [seatConflictError, setSeatConflictError] = useState(null);
 
   // Helper function to extract seats - FIXED: Memoized to prevent re-renders
   const extractSeatsFromSources = useCallback(() => {
@@ -99,7 +102,7 @@ const BookingSummary = ({
         }
         
         // Load reservation data if available
-        if (reservationId) {
+        if (reservationId && reservationId !== 'temp') {
           const summary = await getBookingSummary(reservationId);
           setSummaryData(summary);
         }
@@ -173,7 +176,7 @@ const BookingSummary = ({
   useEffect(() => {
     if (!isDataLoaded) return; // Wait for data to load
     if (finalSeats.length > 0) return; // We have seats, no need to redirect
-    if (reservationId) return; // Has reservation, might have seats in API
+    if (reservationId && reservationId !== 'temp') return; // Has reservation, might have seats in API
     
     console.log('⚠️ [BookingSummary] No seats found and no reservation, redirecting to booking');
     navigate(`/booking/${routeId}`);
@@ -193,15 +196,18 @@ const BookingSummary = ({
     e.preventDefault();
     
     if (!agreeTerms) {
-      alert('Anda harus menyetujui syarat dan ketentuan');
+      setAlert('Anda harus menyetujui syarat dan ketentuan', 'danger');
       return;
     }
 
     if (finalSeats.length === 0) {
-      alert('Data kursi tidak ditemukan. Silakan pilih kursi terlebih dahulu.');
+      setAlert('Data kursi tidak ditemukan. Silakan pilih kursi terlebih dahulu.', 'danger');
       navigate(`/booking/${routeId}`);
       return;
     }
+
+    // Clear any previous seat conflict errors
+    setSeatConflictError(null);
 
     try {
       setSubmitting(true);
@@ -219,14 +225,40 @@ const BookingSummary = ({
 
       const result = await createBookingFromReservation(bookingData);
       
-      if (result && result.id_tiket) {
-        navigate(`/ticket/${result.id_tiket}`);
-      } else {
-        navigate('/my-tickets');
+      if (result && result.success) {
+        // Handle successful booking
+        if (result.tickets && result.tickets.length > 0) {
+          // Multiple tickets created
+          navigate(`/ticket/${result.tickets[0].id_tiket}`);
+        } else if (result.ticket && result.ticket.id_tiket) {
+          // Single ticket created
+          navigate(`/ticket/${result.ticket.id_tiket}`);
+        } else if (result.id_tiket) {
+          // Direct ticket ID
+          navigate(`/ticket/${result.id_tiket}`);
+        } else {
+          navigate('/my-tickets');
+        }
       }
     } catch (error) {
       console.error('❌ [BookingSummary] Error creating booking:', error);
-      alert('Gagal membuat booking. Silakan coba lagi.');
+      
+      // Handle specific seat conflict errors
+      if (error.type === 'SEAT_CONFLICT' || error.status === 409) {
+        setSeatConflictError({
+          message: error.message,
+          conflictSeats: error.conflictSeats || []
+        });
+        
+        // Show option to select different seats
+        setTimeout(() => {
+          if (window.confirm('Kursi yang Anda pilih sudah tidak tersedia. Apakah Anda ingin memilih kursi lain?')) {
+            navigate(`/booking/${routeId}`);
+          }
+        }, 1000);
+      } else {
+        setAlert('Gagal membuat booking. Silakan coba lagi.', 'danger');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -234,6 +266,7 @@ const BookingSummary = ({
 
   const handleReservationExpired = () => {
     console.log('⏰ [BookingSummary] Reservation expired');
+    setAlert('Waktu reservasi telah habis. Silakan pilih kursi kembali.', 'warning');
     navigate('/search-results');
   };
 
@@ -288,8 +321,38 @@ const BookingSummary = ({
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Seat Conflict Error Alert */}
+      {seatConflictError && (
+        <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <i className="fas fa-exclamation-triangle text-red-500"></i>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium">Kursi Tidak Tersedia</h3>
+              <div className="mt-2 text-sm">
+                <p>{seatConflictError.message}</p>
+                {seatConflictError.conflictSeats.length > 0 && (
+                  <p className="mt-1">
+                    Kursi yang bermasalah: {seatConflictError.conflictSeats.join(', ')}
+                  </p>
+                )}
+              </div>
+              <div className="mt-3">
+                <button
+                  onClick={() => navigate(`/booking/${routeId}`)}
+                  className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 transition-colors"
+                >
+                  Pilih Kursi Lain
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reservation Timer */}
-      {summaryData?.waktu_expired && (
+      {summaryData?.waktu_expired && !seatConflictError && (
         <div className="mb-6">
           <ReservationTimer 
             expiryTime={summaryData.waktu_expired}
@@ -318,6 +381,7 @@ const BookingSummary = ({
                     onChange={onChange}
                     className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
                     required
+                    disabled={submitting}
                   />
                 </div>
                 
@@ -330,6 +394,7 @@ const BookingSummary = ({
                     onChange={onChange}
                     className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
                     required
+                    disabled={submitting}
                   />
                 </div>
               </div>
@@ -343,6 +408,7 @@ const BookingSummary = ({
                   onChange={onChange}
                   className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
                   required
+                  disabled={submitting}
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Nomor telepon akan digunakan untuk konfirmasi perjalanan
@@ -358,6 +424,7 @@ const BookingSummary = ({
                     onChange={onChange}
                     className="mr-2 mt-1"
                     required
+                    disabled={submitting}
                   />
                   <span className="text-sm">
                     Saya setuju dengan{' '}
@@ -374,9 +441,9 @@ const BookingSummary = ({
               
               <button
                 type="submit"
-                disabled={!agreeTerms || submitting || seatCount === 0}
+                disabled={!agreeTerms || submitting || seatCount === 0 || seatConflictError}
                 className={`w-full py-3 font-bold rounded-lg transition duration-300 ${
-                  !agreeTerms || submitting || seatCount === 0
+                  !agreeTerms || submitting || seatCount === 0 || seatConflictError
                     ? 'bg-gray-400 text-white cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
@@ -386,6 +453,8 @@ const BookingSummary = ({
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                     Memproses...
                   </div>
+                ) : seatConflictError ? (
+                  'Pilih Kursi Lain'
                 ) : seatCount === 0 ? (
                   'Tidak ada kursi dipilih'
                 ) : (
@@ -442,9 +511,16 @@ const BookingSummary = ({
                   finalSeats.map((seat, index) => (
                     <span 
                       key={index}
-                      className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium"
+                      className={`inline-block px-2 py-1 rounded text-sm font-medium ${
+                        seatConflictError && seatConflictError.conflictSeats.includes(seat)
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
                     >
                       {seat}
+                      {seatConflictError && seatConflictError.conflictSeats.includes(seat) && (
+                        <i className="fas fa-exclamation-triangle ml-1"></i>
+                      )}
                     </span>
                   ))
                 ) : (
@@ -503,32 +579,40 @@ const BookingSummary = ({
             </div>
             
             {/* Reservation Status */}
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="flex items-center text-blue-800">
-                <i className="fas fa-info-circle mr-2"></i>
-                <span className="font-medium text-sm">Status: Direservasi</span>
+            <div className={`p-3 rounded-lg ${seatConflictError ? 'bg-red-50' : 'bg-blue-50'}`}>
+              <div className={`flex items-center ${seatConflictError ? 'text-red-800' : 'text-blue-800'}`}>
+                <i className={`${seatConflictError ? 'fas fa-exclamation-triangle' : 'fas fa-info-circle'} mr-2`}></i>
+                <span className="font-medium text-sm">
+                  {seatConflictError ? 'Kursi Tidak Tersedia' : 'Status: Direservasi'}
+                </span>
               </div>
-              <p className="text-xs text-blue-600 mt-1">
-                Kursi Anda telah direservasi. Selesaikan pembayaran sebelum waktu habis.
+              <p className={`text-xs mt-1 ${seatConflictError ? 'text-red-600' : 'text-blue-600'}`}>
+                {seatConflictError 
+                  ? 'Kursi yang Anda pilih sudah tidak tersedia. Silakan pilih kursi lain.'
+                  : 'Kursi Anda telah direservasi. Selesaikan pembayaran sebelum waktu habis.'
+                }
               </p>
-              {minutesRemaining > 0 && (
+              {minutesRemaining > 0 && !seatConflictError && (
                 <p className="text-xs text-blue-600 mt-1">
                   Sisa waktu: {minutesRemaining} menit
                 </p>
               )}
             </div>
             
-            {/* Debug Info */}
-            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-              <p className="font-semibold mb-2">Debug Info:</p>
-              <p>URL Seats: {searchParams.get('seats') || 'none'}</p>
-              <p>Redux Seats: {JSON.stringify(selectedSeats)}</p>
-              <p>Final Seats: {JSON.stringify(finalSeats)}</p>
-              <p>Seat Count: {seatCount}</p>
-              <p>Route ID: {routeId}</p>
-              <p>Reservation ID: {reservationId || 'none'}</p>
-              <p>Is Data Loaded: {isDataLoaded.toString()}</p>
-            </div>
+            {/* Debug Info - Only show in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                <p className="font-semibold mb-2">Debug Info:</p>
+                <p>URL Seats: {searchParams.get('seats') || 'none'}</p>
+                <p>Redux Seats: {JSON.stringify(selectedSeats)}</p>
+                <p>Final Seats: {JSON.stringify(finalSeats)}</p>
+                <p>Seat Count: {seatCount}</p>
+                <p>Route ID: {routeId}</p>
+                <p>Reservation ID: {reservationId || 'none'}</p>
+                <p>Is Data Loaded: {isDataLoaded.toString()}</p>
+                <p>Seat Conflict: {seatConflictError ? 'Yes' : 'No'}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -545,7 +629,8 @@ BookingSummary.propTypes = {
   error: PropTypes.string,
   getBookingSummary: PropTypes.func.isRequired,
   createBookingFromReservation: PropTypes.func.isRequired,
-  getRouteById: PropTypes.func.isRequired
+  getRouteById: PropTypes.func.isRequired,
+  setAlert: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -560,5 +645,6 @@ const mapStateToProps = state => ({
 export default connect(mapStateToProps, { 
   getBookingSummary,
   createBookingFromReservation,
-  getRouteById
+  getRouteById,
+  setAlert
 })(BookingSummary);

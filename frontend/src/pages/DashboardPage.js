@@ -16,13 +16,14 @@ import UpcomingTicketsWidget from '../components/dashboard/UpcomingTicketsWidget
 import RecentTicketsWidget from '../components/dashboard/RecentTicketsWidget';
 import PaymentStatusWidget from '../components/dashboard/PaymentStatusWidget';
 
-
 // Actions
 import { getUserTickets } from '../redux/actions/tiketActions';
 
 const DashboardPage = ({
   auth: { user, isAuthenticated, loading: authLoading },
-  tiket: { tickets, loading: ticketLoading },
+  tickets,
+  ticketLoading,
+  ticketError,
   getUserTickets
 }) => {
   // Fetch user tickets when component mounts
@@ -39,6 +40,15 @@ const DashboardPage = ({
 
   // Calculate if we're loading anything
   const isLoading = authLoading || ticketLoading;
+
+  // Debug logging to help identify data structure issues
+  console.log('🔍 [DashboardPage] Debug info:', {
+    tickets: tickets,
+    ticketsLength: tickets?.length,
+    ticketLoading,
+    isLoading,
+    ticketError
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -59,6 +69,14 @@ const DashboardPage = ({
                 Selamat datang kembali, {user?.username || 'User'}!
               </p>
             </div>
+            
+            {/* Show error if tickets failed to load */}
+            {ticketError && (
+              <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <p className="font-medium">Error loading tickets:</p>
+                <p className="text-sm">{ticketError}</p>
+              </div>
+            )}
             
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
@@ -89,6 +107,24 @@ const DashboardPage = ({
                     loading={isLoading} 
                   />
                 </div>
+                
+                {/* Debug info - only show in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+                    <h4 className="font-bold mb-2">Debug Info:</h4>
+                    <p className="text-sm">Tickets Count: {tickets?.length || 0}</p>
+                    <p className="text-sm">Loading: {isLoading.toString()}</p>
+                    <p className="text-sm">Error: {ticketError || 'None'}</p>
+                    {tickets && tickets.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">Sample Ticket Structure:</p>
+                        <pre className="text-xs bg-white p-2 rounded mt-1 overflow-auto max-h-32">
+                          {JSON.stringify(tickets[0], null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -105,13 +141,21 @@ const DashboardPage = ({
 
 DashboardPage.propTypes = {
   auth: PropTypes.object.isRequired,
-  tiket: PropTypes.object.isRequired,
+  tickets: PropTypes.array,
+  ticketLoading: PropTypes.bool,
+  ticketError: PropTypes.string,
   getUserTickets: PropTypes.func.isRequired
 };
 
-const mapStateToProps = state => ({
-  auth: state.auth,
-  tiket: state.tiket
-});
+const mapStateToProps = state => {
+  console.log('🔍 [DashboardPage] Redux state.tiket:', state.tiket);
+  
+  return {
+    auth: state.auth,
+    tickets: state.tiket.tickets || [], // FIXED: Correctly access tickets array
+    ticketLoading: state.tiket.loading || false,
+    ticketError: state.tiket.error || null
+  };
+};
 
 export default connect(mapStateToProps, { getUserTickets })(DashboardPage);

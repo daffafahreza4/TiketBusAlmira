@@ -18,7 +18,7 @@ exports.getMyTickets = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi' ]
+              attributes: ['nama_bus', 'total_kursi']
             }
           ]
         },
@@ -29,13 +29,50 @@ exports.getMyTickets = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Transform data to ensure consistent structure
+    const transformedTickets = tickets.map(ticket => {
+      const ticketData = ticket.toJSON();
+      
+      // Ensure rute property exists (lowercase for frontend consistency)
+      if (ticketData.Rute && !ticketData.rute) {
+        ticketData.rute = {
+          ...ticketData.Rute,
+          nama_bus: ticketData.Rute.Bus?.nama_bus || 'N/A',
+          total_kursi: ticketData.Rute.Bus?.total_kursi || 0
+        };
+      }
+      
+      // Ensure user property exists (lowercase for frontend consistency)
+      if (ticketData.User && !ticketData.user) {
+        ticketData.user = ticketData.User;
+      }
+      
+      // Ensure pembayaran property exists (lowercase for frontend consistency)
+      if (ticketData.Pembayaran && !ticketData.pembayaran) {
+        ticketData.pembayaran = ticketData.Pembayaran;
+      }
+      
+      return ticketData;
+    });
+
+    console.log('✅ [getMyTickets] Transformed tickets structure:', {
+      count: transformedTickets.length,
+      sampleStructure: transformedTickets[0] ? {
+        id_tiket: transformedTickets[0].id_tiket,
+        hasRute: !!transformedTickets[0].rute,
+        hasRuteAsal: !!transformedTickets[0].rute?.asal,
+        hasUser: !!transformedTickets[0].user,
+        hasPembayaran: !!transformedTickets[0].pembayaran
+      } : 'No tickets'
+    });
+
     res.status(200).json({
       success: true,
-      count: tickets.length,
-      data: tickets
+      count: transformedTickets.length,
+      data: transformedTickets
     });
   } catch (error) {
-    console.error('Get my tickets error:', error);
+    console.error('❌ [getMyTickets] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

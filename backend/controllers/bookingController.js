@@ -624,3 +624,97 @@ exports.createTicket = async (req, res) => {
     });
   }
 };
+
+// Get grouped tickets by ID (NEW FUNCTION)
+exports.getGroupedTicketById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the main ticket
+    const mainTicket = await Tiket.findOne({
+      where: {
+        id_tiket: id,
+        id_user: req.user.id_user
+      },
+      include: [
+        {
+          model: User,
+          attributes: ['id_user', 'username', 'email', 'no_telepon']
+        },
+        {
+          model: Rute,
+          include: [
+            {
+              model: Bus,
+              attributes: ['nama_bus', 'total_kursi']
+            }
+          ]
+        },
+        {
+          model: Pembayaran
+        }
+      ]
+    });
+
+    if (!mainTicket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tiket tidak ditemukan'
+      });
+    }
+
+    // Find all tickets with same booking time and route (group tickets)
+    const groupedTickets = await Tiket.findAll({
+      where: {
+        id_user: req.user.id_user,
+        id_rute: mainTicket.id_rute,
+        tanggal_pemesanan: mainTicket.tanggal_pemesanan,
+        status_tiket: mainTicket.status_tiket
+      },
+      include: [
+        {
+          model: User,
+          attributes: ['id_user', 'username', 'email', 'no_telepon']
+        },
+        {
+          model: Rute,
+          include: [
+            {
+              model: Bus,
+              attributes: ['nama_bus', 'total_kursi']
+            }
+          ]
+        },
+        {
+          model: Pembayaran
+        }
+      ],
+      order: [['nomor_kursi', 'ASC']]
+    });
+
+    // Combine seat numbers and total payment
+    const allSeats = groupedTickets.map(ticket => ticket.nomor_kursi);
+    const totalPayment = groupedTickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0);
+
+    // Create combined ticket object
+    const combinedTicket = {
+      ...mainTicket.toJSON(),
+      nomor_kursi: allSeats,
+      total_bayar: totalPayment,
+      ticket_count: groupedTickets.length,
+      all_tickets: groupedTickets.map(t => t.toJSON())
+    };
+
+    res.status(200).json({
+      success: true,
+      data: combinedTicket
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};

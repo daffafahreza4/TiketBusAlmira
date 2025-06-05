@@ -6,12 +6,12 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
-import { getTicketById } from '../redux/actions/tiketActions';
+import { getGroupedTicketById } from '../redux/actions/tiketActions';
 import { cancelReservation } from '../redux/actions/reservasiActions';
 import { formatCurrency, formatDate, formatTime, formatStatus } from '../utils/formatters';
 
 const TicketDetailPage = ({
-  getTicketById,
+  getGroupedTicketById,
   cancelReservation,
   ticket,
   loading,
@@ -22,9 +22,9 @@ const TicketDetailPage = ({
 
   useEffect(() => {
     if (id) {
-      getTicketById(id);
+      getGroupedTicketById(id); 
     }
-  }, [getTicketById, id]);
+  }, [getGroupedTicketById, id]);
 
   // Helper function to safely access route data
   const getRouteData = (ticketData) => {
@@ -206,7 +206,27 @@ const TicketDetailPage = ({
 
                     <div className="flex border-b pb-3">
                       <div className="w-1/3 text-gray-600">Nomor Kursi</div>
-                      <div className="w-2/3 font-semibold">{ticket.nomor_kursi || 'N/A'}</div>
+                      <div className="w-2/3 font-semibold">
+                        {Array.isArray(ticket.nomor_kursi) ? (
+                          <div className="flex flex-wrap gap-2">
+                            {ticket.nomor_kursi.map((seat, index) => (
+                              <span
+                                key={index}
+                                className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium"
+                              >
+                                {seat}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          ticket.nomor_kursi || 'N/A'
+                        )}
+                        {ticket.ticket_count > 1 && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {ticket.ticket_count} kursi dalam 1 pemesanan
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex">
@@ -370,4 +390,4 @@ const mapStateToProps = state => ({
   error: state.tiket.error
 });
 
-export default connect(mapStateToProps, { getTicketById, cancelReservation })(TicketDetailPage);
+export default connect(mapStateToProps, { getGroupedTicketById, cancelReservation })(TicketDetailPage);

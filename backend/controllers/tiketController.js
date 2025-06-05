@@ -128,6 +128,107 @@ exports.getTicketById = async (req, res) => {
   }
 };
 
+// Get grouped ticket by ID (NEW FUNCTION)
+exports.getGroupedTicketById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the main ticket
+    const mainTicket = await Tiket.findOne({
+      where: {
+        id_tiket: id,
+        id_user: req.user.id_user
+      },
+      include: [
+        {
+          model: User,
+          attributes: ['id_user', 'username', 'email', 'no_telepon']
+        },
+        {
+          model: Rute,
+          include: [
+            {
+              model: Bus,
+              attributes: ['nama_bus', 'total_kursi']
+            }
+          ]
+        },
+        {
+          model: Pembayaran
+        }
+      ]
+    });
+
+    if (!mainTicket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tiket tidak ditemukan'
+      });
+    }
+
+    // Find grouped tickets (same booking session)
+    const timeWindow = 2 * 60 * 1000; // 2 minutes window
+    const bookingTime = new Date(mainTicket.tanggal_pemesanan);
+    const startTime = new Date(bookingTime.getTime() - timeWindow);
+    const endTime = new Date(bookingTime.getTime() + timeWindow);
+
+    const groupedTickets = await Tiket.findAll({
+      where: {
+        id_user: req.user.id_user,
+        id_rute: mainTicket.id_rute,
+        tanggal_pemesanan: {
+          [Op.between]: [startTime, endTime]
+        }
+      },
+      include: [
+        {
+          model: User,
+          attributes: ['id_user', 'username', 'email', 'no_telepon']
+        },
+        {
+          model: Rute,
+          include: [
+            {
+              model: Bus,
+              attributes: ['nama_bus', 'total_kursi']
+            }
+          ]
+        },
+        {
+          model: Pembayaran
+        }
+      ],
+      order: [['nomor_kursi', 'ASC']]
+    });
+
+    // Combine data
+    const allSeats = groupedTickets.map(ticket => ticket.nomor_kursi).sort();
+    const totalPayment = groupedTickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar || 0), 0);
+
+    // Create combined response
+    const combinedTicket = {
+      ...mainTicket.toJSON(),
+      nomor_kursi: allSeats,
+      total_bayar: totalPayment,
+      ticket_count: groupedTickets.length,
+      is_grouped: groupedTickets.length > 1,
+      all_ticket_ids: groupedTickets.map(t => t.id_tiket)
+    };
+
+    res.status(200).json({
+      success: true,
+      data: combinedTicket
+    });
+
+  } catch (error) {
+    console.error('Get grouped ticket error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
 // Get available seats for a route (Enhanced with reservation check)
 exports.getAvailableSeats = async (req, res) => {
   try {

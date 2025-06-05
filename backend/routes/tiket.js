@@ -4,7 +4,8 @@ const {
   getTicketById, 
   getAvailableSeats,
   cancelTicket,
-  checkSeatAvailability 
+  checkSeatAvailability,
+  getGroupedTicketById 
 } = require('../controllers/tiketController');
 const { protect } = require('../middleware/auth');
 
@@ -22,6 +23,7 @@ router.post('/check-seat-availability/:routeId', checkSeatAvailability);
 
 // Cancel ticket by ID
 router.put('/cancel/:id', cancelTicket);
+router.get('/grouped/:id', getGroupedTicketById);
 
 // Get ticket by ID for authenticated user
 router.get('/:id', getTicketById);

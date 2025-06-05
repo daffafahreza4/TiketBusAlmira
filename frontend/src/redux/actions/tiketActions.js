@@ -17,12 +17,12 @@ export const getAvailableSeats = routeId => async dispatch => {
       type: GET_AVAILABLE_SEATS,
       payload: null // Clear previous data
     });
-    
+
     const res = await axios.get(`/api/tiket/available-seats/${routeId}`);
 
     // Handle different response structures from backend
     let seatData = null;
-    
+
     if (res.data.success && res.data.data) {
       seatData = res.data.data;
     } else if (res.data.data) {
@@ -40,7 +40,7 @@ export const getAvailableSeats = routeId => async dispatch => {
     });
   } catch (err) {
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data kursi';
-    
+
     dispatch(setAlert(errorMsg, 'danger'));
     dispatch({
       type: TICKET_ERROR,
@@ -54,13 +54,13 @@ export const checkSeatAvailability = (routeId, seats) => async dispatch => {
   try {
     const config = { headers: { 'Content-Type': 'application/json' } };
     const body = JSON.stringify({ seats });
-    
+
     const res = await axios.post(`/api/tiket/check-seat-availability/${routeId}`, body, config);
-    
+
     return res.data.data;
   } catch (err) {
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengecek ketersediaan kursi';
-    
+
     dispatch(setAlert(errorMsg, 'danger'));
     throw err;
   }
@@ -70,20 +70,20 @@ export const checkSeatAvailability = (routeId, seats) => async dispatch => {
 export const setSelectedSeats = seats => dispatch => {
   // Validate and normalize seats data
   let normalizedSeats = [];
-  
+
   if (Array.isArray(seats)) {
     normalizedSeats = seats.filter(seat => seat && seat.trim() !== '');
   } else if (seats && typeof seats === 'string') {
     normalizedSeats = [seats.trim()];
   }
-  
+
   // Store in sessionStorage as backup
   try {
     sessionStorage.setItem('selectedSeats', JSON.stringify(normalizedSeats));
   } catch (error) {
     // Silently handle sessionStorage errors
   }
-  
+
   dispatch({
     type: SET_SELECTED_SEATS,
     payload: normalizedSeats
@@ -108,7 +108,7 @@ export const clearSelectedSeats = () => dispatch => {
   } catch (error) {
     // Silently handle sessionStorage errors
   }
-  
+
   dispatch({
     type: CLEAR_SELECTED_SEATS
   });
@@ -125,7 +125,7 @@ export const getUserTickets = () => async dispatch => {
     });
   } catch (err) {
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data tiket';
-    
+
     dispatch({
       type: TICKET_ERROR,
       payload: errorMsg
@@ -144,11 +144,39 @@ export const getTicketById = id => async dispatch => {
     });
   } catch (err) {
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data tiket';
-    
+
     dispatch({
       type: TICKET_ERROR,
       payload: errorMsg
     });
+  }
+};
+
+// Tambahkan action baru untuk grouped tickets
+export const getGroupedTicketById = id => async dispatch => {
+  try {
+    const res = await axios.get(`/api/tiket/grouped/${id}`);
+
+    dispatch({
+      type: GET_TICKET,
+      payload: res.data.data
+    });
+  } catch (err) {
+    // Fallback to regular ticket if grouped fails
+    try {
+      const res = await axios.get(`/api/tiket/${id}`);
+      dispatch({
+        type: GET_TICKET,
+        payload: res.data.data
+      });
+    } catch (fallbackErr) {
+      const errorMsg = fallbackErr.response?.data?.message || 'Terjadi kesalahan saat mengambil data tiket';
+
+      dispatch({
+        type: TICKET_ERROR,
+        payload: errorMsg
+      });
+    }
   }
 };
 
@@ -161,17 +189,17 @@ export const cancelTicket = (ticketId) => async dispatch => {
 
     // Refresh user tickets
     dispatch(getUserTickets());
-    
+
     return res.data.data;
   } catch (err) {
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat membatalkan tiket';
-    
+
     dispatch(setAlert(errorMsg, 'danger'));
     dispatch({
       type: TICKET_ERROR,
       payload: errorMsg
     });
-    
+
     throw err;
   }
 };

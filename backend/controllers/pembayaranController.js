@@ -288,7 +288,7 @@ exports.handleNotification = async (req, res) => {
 
     // TODO: Send email confirmation if payment completed
     if (newPaymentStatus === 'completed') {
-      console.log('🎫 [Midtrans Webhook] Payment completed, should send confirmation email');
+      console.log('Payment completed, should send confirmation email');
       // This will be implemented in Task 3
     }
 
@@ -348,7 +348,7 @@ exports.checkPaymentStatus = async (req, res) => {
         const statusResponse = await core.transaction.status(payment.transaction_id);
         midtransStatus = statusResponse;
       } catch (midtransError) {
-        console.warn('⚠️ Could not fetch status from Midtrans:', midtransError.message);
+        console.warn('Could not fetch status from Midtrans:', midtransError.message);
       }
     }
 
@@ -423,7 +423,7 @@ exports.cancelPayment = async (req, res) => {
       try {
         await core.transaction.cancel(payment.transaction_id);
       } catch (midtransError) {
-        console.warn('⚠️ Could not cancel transaction in Midtrans:', midtransError.message);
+        console.warn('Could not cancel transaction in Midtrans:', midtransError.message);
       }
     }
 

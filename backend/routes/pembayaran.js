@@ -12,45 +12,31 @@ const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// @route   GET /api/pembayaran/methods
-// @desc    Get available payment methods
-// @access  Public
+// Get available payment methods
 router.get('/methods', getPaymentMethods);
 
-// @route   POST /api/pembayaran/notification
-// @desc    Handle Midtrans webhook notification
-// @access  Public (Midtrans webhook)
+// Handle Midtrans webhook notification
 router.post('/notification', handleNotification);
 
 // Protected routes - require authentication
 router.use(protect);
 
-// @route   POST /api/pembayaran/create
-// @desc    Create payment token (Snap token)
-// @access  Private
+// Create payment token (Snap token)
 router.post('/create', createPaymentToken);
 
-// @route   GET /api/pembayaran/status/:id_tiket
-// @desc    Check payment status for a ticket
-// @access  Private
+// Check payment status for a ticket
 router.get('/status/:id_tiket', checkPaymentStatus);
 
-// @route   PUT /api/pembayaran/cancel/:id_tiket
-// @desc    Cancel payment for a ticket
-// @access  Private
+// Cancel payment for a ticket
 router.put('/cancel/:id_tiket', cancelPayment);
 
 // Admin routes - require admin role
 router.use(authorize('admin'));
 
-// @route   GET /api/pembayaran/webhook/stats
-// @desc    Get webhook statistics and monitoring data
-// @access  Admin only
+// Get webhook statistics and monitoring data
 router.get('/webhook/stats', getWebhookStats);
 
-// @route   POST /api/pembayaran/webhook/cleanup
-// @desc    Clean up old webhook logs
-// @access  Admin only
+// Clean up old webhook logs
 router.post('/webhook/cleanup', cleanupWebhookLogs);
 
 module.exports = router;

@@ -70,7 +70,7 @@ class WebhookLogger {
     });
 
     this.writeToFile(this.webhookLogFile, logEntry);
-    console.log('📨 [Webhook] Notification received:', notification.order_id);
+    console.log('Webhook notification received:', notification.order_id);
   }
 
   /**
@@ -85,7 +85,7 @@ class WebhookLogger {
 
     this.writeToFile(this.webhookLogFile, logEntry);
     this.writeToFile(this.paymentLogFile, logEntry);
-    console.log('✅ [Webhook] Processed successfully:', orderId);
+    console.log('Webhook processed successfully:', orderId);
   }
 
   /**
@@ -101,7 +101,7 @@ class WebhookLogger {
 
     this.writeToFile(this.webhookLogFile, logEntry);
     this.writeToFile(this.errorLogFile, logEntry);
-    console.error('❌ [Webhook] Processing failed:', orderId, error.message);
+    console.error('Webhook processing failed:', orderId, error.message);
   }
 
   /**
@@ -117,7 +117,7 @@ class WebhookLogger {
 
     this.writeToFile(this.webhookLogFile, logEntry);
     this.writeToFile(this.errorLogFile, logEntry);
-    console.error('🔒 [Webhook] Invalid signature for:', orderId);
+    console.error('Invalid webhook signature for:', orderId);
   }
 
   /**
@@ -133,7 +133,7 @@ class WebhookLogger {
     });
 
     this.writeToFile(this.paymentLogFile, logEntry);
-    console.log(`💳 [Payment] Status changed: ${orderId} (${oldStatus} → ${newStatus})`);
+    console.log(`Payment status changed: ${orderId} (${oldStatus} → ${newStatus})`);
   }
 
   /**
@@ -149,7 +149,7 @@ class WebhookLogger {
 
     this.writeToFile(this.paymentLogFile, logEntry);
     this.writeToFile(this.errorLogFile, logEntry);
-    console.warn('⏰ [Payment] Timeout:', orderId);
+    console.warn('Payment timeout:', orderId);
   }
 
   /**
@@ -165,7 +165,7 @@ class WebhookLogger {
     });
 
     this.writeToFile(this.paymentLogFile, logEntry);
-    console.log('🎉 [Payment] Completed successfully:', orderId);
+    console.log('Payment completed successfully:', orderId);
   }
 
   /**
@@ -262,7 +262,7 @@ class WebhookLogger {
         });
 
         fs.writeFileSync(logFile, filteredLines.join('\n') + '\n');
-        console.log(`🧹 Cleaned old logs from ${path.basename(logFile)}`);
+        console.log(`Cleaned old logs from ${path.basename(logFile)}`);
       } catch (error) {
         console.error(`Failed to clean ${logFile}:`, error);
       }

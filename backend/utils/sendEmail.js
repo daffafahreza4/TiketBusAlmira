@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
   // Buat transporter
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: process.env.EMAIL_SERVICE,
     auth: {
       user: process.env.EMAIL_USER,

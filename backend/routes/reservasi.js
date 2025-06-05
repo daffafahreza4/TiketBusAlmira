@@ -13,29 +13,19 @@ const router = express.Router();
 // Protect all routes - user must be authenticated
 router.use(protect);
 
-// @route   POST /api/reservasi/temp
-// @desc    Create temporary reservation (hold seats for 1 hour)
-// @access  Private
+// Create temporary reservation (hold seats for 1 hour)
 router.post('/temp', createTempReservation);
 
-// @route   GET /api/reservasi/user
-// @desc    Get all reservations for authenticated user
-// @access  Private
+// Get all reservations for authenticated user
 router.get('/user', getUserReservations);
 
-// @route   GET /api/reservasi/route/:routeId
-// @desc    Get all active reservations for a specific route
-// @access  Private
+// Get all active reservations for a specific route
 router.get('/route/:routeId', getRouteReservations);
 
-// @route   GET /api/reservasi/:id
-// @desc    Get specific reservation by ID
-// @access  Private
+// Get specific reservation by ID
 router.get('/:id', getReservationById);
 
-// @route   PUT /api/reservasi/cancel/:id
-// @desc    Cancel specific reservation
-// @access  Private
+// Cancel specific reservation
 router.put('/cancel/:id', cancelReservation);
 
 module.exports = router;

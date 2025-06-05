@@ -10,11 +10,11 @@ exports.createTicketFromReservation = async (req, res) => {
   try {
     const { id_reservasi, metode_pembayaran = 'midtrans', nomor_kursi, id_rute } = req.body;
 
-    console.log('🔍 [createTicketFromReservation] Request body:', req.body);
+    console.log('Request body:', req.body);
 
     // Handle temporary reservation (when id_reservasi is 'temp')
     if (id_reservasi === 'temp' && nomor_kursi && id_rute) {
-      console.log('🔍 [createTicketFromReservation] Creating ticket directly without reservation');
+      console.log('Creating ticket directly without reservation');
       
       // Validate required fields
       if (!id_rute || !nomor_kursi || !Array.isArray(nomor_kursi) || nomor_kursi.length === 0) {
@@ -168,7 +168,7 @@ exports.createTicketFromReservation = async (req, res) => {
         )
       );
 
-      console.log('✅ [createTicketFromReservation] Multiple tickets created successfully');
+      console.log('Multiple tickets created successfully');
 
       return res.status(201).json({
         success: true,
@@ -318,7 +318,7 @@ exports.createTicketFromReservation = async (req, res) => {
       ]
     });
 
-    console.log('✅ [createTicketFromReservation] Ticket created from reservation successfully');
+    console.log('Ticket created from reservation successfully');
 
     res.status(201).json({
       success: true,
@@ -342,7 +342,7 @@ exports.createTicketFromReservation = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('❌ [createTicketFromReservation] Error:', error);
+    console.error('Error:', error);
 
     res.status(500).json({
       success: false,
@@ -449,7 +449,7 @@ exports.getBookingSummary = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [getBookingSummary] Error:', error);
+    console.error('Error:', error);
 
     res.status(500).json({
       success: false,
@@ -465,7 +465,7 @@ exports.createTicket = async (req, res) => {
   try {
     const { id_rute, nomor_kursi, metode_pembayaran = 'midtrans' } = req.body;
 
-    console.log('🔍 [createTicket] Request body:', req.body);
+    console.log('Request body:', req.body);
 
     // Validate required fields
     if (!id_rute || !nomor_kursi) {
@@ -593,7 +593,7 @@ exports.createTicket = async (req, res) => {
       ]
     });
 
-    console.log('✅ [createTicket] Direct ticket created successfully');
+    console.log('Direct ticket created successfully');
 
     res.status(201).json({
       success: true,
@@ -615,7 +615,7 @@ exports.createTicket = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('❌ [createTicket] Error:', error);
+    console.error('Error:', error);
 
     res.status(500).json({
       success: false,

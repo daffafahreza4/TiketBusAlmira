@@ -10,7 +10,7 @@ const {
   verifySMSCode,
   makeAdmin
 } = require('../controllers/authController');
-const { protect, authorize } = require('../middleware/auth'); // Tambahkan authorize
+const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 

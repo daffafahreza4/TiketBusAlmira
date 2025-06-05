@@ -23,7 +23,7 @@ const stopCleanupJob = () => {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    console.log('🛑 [cleanupJob] Cleanup job stopped');
+    console.log('Cleanup job stopped');
   }
 };
 
@@ -35,12 +35,12 @@ const runCleanup = async () => {
     const result = await checkExpiredReservations();
     
     if (result.success && result.deletedCount > 0) {
-      console.log('✅ [cleanupJob] Cleanup completed:', {
+      console.log('Cleanup completed:', {
         deletedCount: result.deletedCount
       });
     }
   } catch (error) {
-    console.error('❌ [cleanupJob] Cleanup error:', error.message);
+    console.error('Cleanup error:', error.message);
   }
 };
 
@@ -59,7 +59,7 @@ const getCleanupStatus = () => {
  * Manual cleanup trigger (for testing or manual intervention)
  */
 const triggerManualCleanup = async () => {
-  console.log('🔧 [cleanupJob] Manual cleanup triggered');
+  console.log('Manual cleanup triggered');
   return await runCleanup();
 };
 

@@ -55,7 +55,7 @@ exports.getMyTickets = async (req, res) => {
       return ticketData;
     });
 
-    console.log('✅ [getMyTickets] Transformed tickets structure:', {
+    console.log('Transformed tickets structure:', {
       count: transformedTickets.length,
       sampleStructure: transformedTickets[0] ? {
         id_tiket: transformedTickets[0].id_tiket,
@@ -72,7 +72,7 @@ exports.getMyTickets = async (req, res) => {
       data: transformedTickets
     });
   } catch (error) {
-    console.error('❌ [getMyTickets] Error:', error);
+    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

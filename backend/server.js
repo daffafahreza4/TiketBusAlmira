@@ -33,8 +33,8 @@ app.use('/api/reservasi', reservasiRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/pembayaran', pembayaranRoutes);
 
-console.log('🔍 Server starting WITH booking routes...');
-console.log('💳 Midtrans Environment:', process.env.MIDTRANS_ENVIRONMENT || 'sandbox');
+console.log('Server starting with booking routes...');
+console.log('Midtrans Environment:', process.env.MIDTRANS_ENVIRONMENT || 'sandbox');
 
 // Definisikan rute dasar
 app.get('/', (req, res) => {
@@ -89,7 +89,7 @@ const server = app.listen(PORT, async () => {
     console.log('Cleanup job started');
 
     // Log configured features
-    console.log('🎯 Available features:');
+    console.log('Available features:');
     console.log('   - Authentication:', !!process.env.JWT_SECRET);
     console.log('   - Payment (Midtrans):', !!(process.env.MIDTRANS_SERVER_KEY && process.env.MIDTRANS_CLIENT_KEY));
     console.log('   - Email notifications:', !!process.env.EMAIL_USER);
@@ -108,10 +108,10 @@ process.on('unhandledRejection', (err, promise) => {
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully...');
+  console.log('SIGTERM received, shutting down gracefully...');
   stopCleanupJob();
   server.close(() => {
-    console.log('✅ Server shut down successfully');
+    console.log('Server shut down successfully');
     process.exit(0);
   });
 });

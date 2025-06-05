@@ -1,4 +1,3 @@
-// File: backend/routes/tiket.js (Final Enhanced Version)
 const express = require('express');
 const { 
   getMyTickets, 
@@ -13,24 +12,16 @@ const router = express.Router();
 // Protect all routes
 router.use(protect);
 
-// @route   GET /api/tiket/my-tickets
-// @desc    Get all tickets for authenticated user
-// @access  Private
+// Get all tickets for authenticated user
 router.get('/my-tickets', getMyTickets);
 
-// @route   GET /api/tiket/available-seats/:routeId
-// @desc    Get available seats for a route (with reservation status)
-// @access  Private
+// Get available seats for a route (with reservation status)
 router.get('/available-seats/:routeId', getAvailableSeats);
 
-// @route   PUT /api/tiket/cancel/:id
-// @desc    Cancel ticket by ID
-// @access  Private
+// Cancel ticket by ID
 router.put('/cancel/:id', cancelTicket);
 
-// @route   GET /api/tiket/:id
-// @desc    Get ticket by ID for authenticated user
-// @access  Private
+// Get ticket by ID for authenticated user
 router.get('/:id', getTicketById);
 
 module.exports = router;

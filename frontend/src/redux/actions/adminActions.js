@@ -13,26 +13,16 @@ import {
 // Get admin dashboard stats
 export const getAdminDashboardStats = () => async dispatch => {
   try {
-    console.log('🔍 Fetching admin dashboard stats...'); // Debug log
-    
     const res = await axios.get('/api/admin/dashboard/stats');
     
-    console.log('✅ Admin stats received:', res.data); // Debug log
-
     dispatch({
       type: GET_ADMIN_STATS,
       payload: res.data.data
     });
   } catch (err) {
-    console.error('❌ Admin stats error:', err.response); // Debug log
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data admin';
     
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat mengambil data admin';
-    
-    // ✅ Tampilkan error ke user
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: ADMIN_ERROR,
       payload: errorMsg
@@ -50,12 +40,9 @@ export const getAllUsers = () => async dispatch => {
       payload: res.data.data
     });
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat mengambil data user';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data user';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: ADMIN_ERROR,
       payload: errorMsg
@@ -75,12 +62,9 @@ export const deleteUser = (userId) => async dispatch => {
     
     dispatch(setAlert('User berhasil dihapus', 'success'));
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat menghapus user';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat menghapus user';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: ADMIN_ERROR,
       payload: errorMsg
@@ -100,12 +84,9 @@ export const makeUserAdmin = (userId) => async dispatch => {
     
     dispatch(setAlert('User berhasil dijadikan admin', 'success'));
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat membuat admin';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat membuat admin';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: ADMIN_ERROR,
       payload: errorMsg
@@ -117,9 +98,7 @@ export const makeUserAdmin = (userId) => async dispatch => {
 export const updateUser = (userId, userData) => async dispatch => {
   try {
     const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     };
 
     const res = await axios.put(`/api/admin/users/${userId}`, userData, config);
@@ -131,12 +110,9 @@ export const updateUser = (userId, userData) => async dispatch => {
     
     dispatch(setAlert('User berhasil diperbarui', 'success'));
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat memperbarui user';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat memperbarui user';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: ADMIN_ERROR,
       payload: errorMsg
@@ -145,8 +121,4 @@ export const updateUser = (userId, userData) => async dispatch => {
 };
 
 // Clear admin data
-export const clearAdminData = () => {
-  return {
-    type: CLEAR_ADMIN_DATA
-  };
-};
+export const clearAdminData = () => ({ type: CLEAR_ADMIN_DATA });

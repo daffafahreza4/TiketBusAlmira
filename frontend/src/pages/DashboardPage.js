@@ -7,16 +7,10 @@ import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
-
-// Import dashboard styles
 import '../styles/Dashboard.css';
-
-// Dashboard widgets
 import UpcomingTicketsWidget from '../components/dashboard/UpcomingTicketsWidget';
 import RecentTicketsWidget from '../components/dashboard/RecentTicketsWidget';
 import PaymentStatusWidget from '../components/dashboard/PaymentStatusWidget';
-
-// Actions
 import { getUserTickets } from '../redux/actions/tiketActions';
 
 const DashboardPage = ({
@@ -28,9 +22,7 @@ const DashboardPage = ({
 }) => {
   // Fetch user tickets when component mounts
   useEffect(() => {
-    if (isAuthenticated) {
-      getUserTickets();
-    }
+    if (isAuthenticated) getUserTickets();
   }, [getUserTickets, isAuthenticated]);
 
   // Redirect if not authenticated
@@ -40,15 +32,6 @@ const DashboardPage = ({
 
   // Calculate if we're loading anything
   const isLoading = authLoading || ticketLoading;
-
-  // Debug logging to help identify data structure issues
-  console.log('🔍 [DashboardPage] Debug info:', {
-    tickets: tickets,
-    ticketsLength: tickets?.length,
-    ticketLoading,
-    isLoading,
-    ticketError
-  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -108,7 +91,6 @@ const DashboardPage = ({
                   />
                 </div>
                 
-                {/* Debug info - only show in development */}
                 {process.env.NODE_ENV === 'development' && (
                   <div className="mt-6 p-4 bg-gray-100 rounded-lg">
                     <h4 className="font-bold mb-2">Debug Info:</h4>
@@ -131,7 +113,6 @@ const DashboardPage = ({
         </main>
       </div>
       
-      {/* Footer positioned properly */}
       <div className="ml-0 md:ml-64">
         <Footer />
       </div>
@@ -147,15 +128,11 @@ DashboardPage.propTypes = {
   getUserTickets: PropTypes.func.isRequired
 };
 
-const mapStateToProps = state => {
-  console.log('🔍 [DashboardPage] Redux state.tiket:', state.tiket);
-  
-  return {
-    auth: state.auth,
-    tickets: state.tiket.tickets || [], // FIXED: Correctly access tickets array
-    ticketLoading: state.tiket.loading || false,
-    ticketError: state.tiket.error || null
-  };
-};
+const mapStateToProps = state => ({
+  auth: state.auth,
+  tickets: state.tiket.tickets || [],
+  ticketLoading: state.tiket.loading || false,
+  ticketError: state.tiket.error || null
+});
 
 export default connect(mapStateToProps, { getUserTickets })(DashboardPage);

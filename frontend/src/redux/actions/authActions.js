@@ -38,11 +38,7 @@ export const loadUser = () => async dispatch => {
 // Register User
 export const register = formData => async dispatch => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const config = { headers: { 'Content-Type': 'application/json' } };
 
     const body = JSON.stringify({
       username: formData.name,
@@ -67,7 +63,8 @@ export const register = formData => async dispatch => {
     
     dispatch(setAlert('Registrasi berhasil', 'success'));
   } catch (err) {
-    const errors = err.response && err.response.data.errors;
+    const errors = err.response?.data?.errors;
+    
     if (errors) {
       errors.forEach(error => dispatch(setAlert(error.msg, 'danger')));
     } else {
@@ -84,16 +81,10 @@ export const register = formData => async dispatch => {
 // Login User
 export const login = (email, password) => async dispatch => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
+    const config = { headers: { 'Content-Type': 'application/json' } };
     const body = JSON.stringify({ email, password });
 
     const res = await axios.post('/api/auth/login', body, config);
-
     const token = res.data.data?.token;
 
     if (!token) {

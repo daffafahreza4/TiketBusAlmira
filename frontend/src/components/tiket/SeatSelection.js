@@ -29,47 +29,38 @@ const SeatSelection = ({
     const allSeats = {};
     for (let row = 1; row <= 10; row++) {
       ['A', 'B', 'C', 'D'].forEach(col => {
-        const seatNumber = `${row}${col}`;
-        allSeats[seatNumber] = 'available';
+        allSeats[`${row}${col}`] = 'available';
       });
     }
     return allSeats;
   };
 
-  // Initialize seats on component mount
   useEffect(() => {
     const defaultSeats = generateAllSeats();
     setSeatStatuses(defaultSeats);
     
-    // Try to restore seats from sessionStorage
     try {
       const storedSeats = sessionStorage.getItem('selectedSeats');
       if (storedSeats) {
         const seats = JSON.parse(storedSeats);
-        console.log('🔍 [SeatSelection] Restored seats from storage:', seats);
         setSelectedSeatsList(seats);
         setSelectedSeats(seats);
       }
     } catch (error) {
-      console.warn('⚠️ Could not restore seats from storage:', error);
+      console.warn('Could not restore seats from storage:', error);
     }
   }, [setSelectedSeats]);
 
-  // Fetch available seats when component mounts
   useEffect(() => {
-    if (routeId) {
-      getAvailableSeats(routeId);
-    }
+    if (routeId) getAvailableSeats(routeId);
   }, [getAvailableSeats, routeId]);
 
-  // Update total price when seats selected
   useEffect(() => {
     if (route && selectedSeatsList) {
       setTotalPrice(route.harga * selectedSeatsList.length);
     }
   }, [route, selectedSeatsList]);
 
-  // Process seat data from backend
   useEffect(() => {
     const statusMap = generateAllSeats();
     
@@ -114,9 +105,7 @@ const SeatSelection = ({
   const handleSeatClick = (seatNumber) => {
     const seatStatus = seatStatuses[seatNumber];
     
-    if (seatStatus !== 'available') {
-      return;
-    }
+    if (seatStatus !== 'available') return;
 
     let newSelection;
     if (selectedSeatsList.includes(seatNumber)) {
@@ -125,18 +114,13 @@ const SeatSelection = ({
       newSelection = [...selectedSeatsList, seatNumber];
     }
     
-    console.log('🔍 [SeatSelection] Seat clicked:', seatNumber, 'New selection:', newSelection);
-    
-    // Update all state immediately
     setSelectedSeatsList(newSelection);
     setSelectedSeats(newSelection);
     
-    // Store in sessionStorage immediately
     try {
       sessionStorage.setItem('selectedSeats', JSON.stringify(newSelection));
-      console.log('✅ [SeatSelection] Stored seats in sessionStorage:', newSelection);
     } catch (error) {
-      console.warn('⚠️ Could not store in sessionStorage:', error);
+      console.warn('Could not store in sessionStorage:', error);
     }
   };
 
@@ -146,8 +130,6 @@ const SeatSelection = ({
       alert('Silakan pilih minimal 1 kursi');
       return;
     }
-
-    console.log('🔍 [SeatSelection] Starting submit with seats:', selectedSeatsList);
 
     try {
       setIsSubmitting(true);
@@ -159,7 +141,7 @@ const SeatSelection = ({
         sessionStorage.setItem('selectedSeats', JSON.stringify(selectedSeatsList));
         sessionStorage.setItem('routeId', routeId);
       } catch (error) {
-        console.warn('⚠️ Could not store in sessionStorage:', error);
+        console.warn('Could not store in sessionStorage:', error);
       }
 
       // Create URL with seat data
@@ -172,8 +154,6 @@ const SeatSelection = ({
           nomor_kursi: selectedSeatsList
         };
 
-        console.log('🔍 [SeatSelection] Creating reservation:', reservationData);
-        
         const result = await createTempReservation(reservationData);
         
         if (result.success) {
@@ -189,28 +169,23 @@ const SeatSelection = ({
             navigationUrl = `/booking/summary/${routeId}?seats=${seatsParam}`;
           }
           
-          console.log('🔍 [SeatSelection] Navigating to:', navigationUrl);
           navigate(navigationUrl);
         }
       } catch (reservationError) {
-        console.warn('⚠️ [SeatSelection] Reservation failed, navigating directly:', reservationError);
+        console.warn('Reservation failed, navigating directly:', reservationError);
         
-        // Even if reservation fails, navigate with seat data
         const directUrl = `/booking/summary/${routeId}?seats=${seatsParam}`;
-        console.log('🔍 [SeatSelection] Direct navigation to:', directUrl);
         navigate(directUrl);
       }
     } catch (error) {
-      console.error('❌ [SeatSelection] Error in submit:', error);
+      console.error('Error in submit:', error);
       alert('Gagal memproses. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) {
-    return <Spinner />;
-  }
+  if (loading) return <Spinner />;
 
   if (error) {
     return (
@@ -251,10 +226,7 @@ const SeatSelection = ({
         </div>
       );
       
-      // Aisle
-      rowSeats.push(
-        <div key={`aisle-${row}`} className="w-8"></div>
-      );
+      rowSeats.push(<div key={`aisle-${row}`} className="w-8"></div>);
       
       // Right side seats (C & D)
       rowSeats.push(
@@ -451,13 +423,14 @@ const SeatSelection = ({
                   </div>
                 )}
                 
-                {/* Storage Debug Info */}
-                <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                  <p className="font-semibold mb-1">Debug Info:</p>
-                  <p>Redux: {JSON.stringify(selectedSeats)}</p>
-                  <p>Local: {JSON.stringify(selectedSeatsList)}</p>
-                  <p>SessionStorage: {sessionStorage.getItem('selectedSeats') || 'none'}</p>
-                </div>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                    <p className="font-semibold mb-1">Debug Info:</p>
+                    <p>Redux: {JSON.stringify(selectedSeats)}</p>
+                    <p>Local: {JSON.stringify(selectedSeatsList)}</p>
+                    <p>SessionStorage: {sessionStorage.getItem('selectedSeats') || 'none'}</p>
+                  </div>
+                )}
               </>
             )}
           </div>

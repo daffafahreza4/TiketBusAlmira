@@ -18,12 +18,8 @@ const ticketAdminReducer = (state = initialState, action) => {
   const { type, payload } = action;
 
   switch (type) {
+    // Load all tickets for admin management
     case GET_ADMIN_TICKETS:
-      console.log('🔍 [ticketAdminReducer] GET_ADMIN_TICKETS:', {
-        payloadLength: payload?.length,
-        currentTicketsLength: state.tickets.length
-      });
-      
       return {
         ...state,
         tickets: payload || [],
@@ -31,11 +27,8 @@ const ticketAdminReducer = (state = initialState, action) => {
         error: null
       };
       
+    // Load specific ticket details
     case GET_ADMIN_TICKET:
-      console.log('🔍 [ticketAdminReducer] GET_ADMIN_TICKET:', {
-        ticketId: payload?.id_tiket
-      });
-      
       return {
         ...state,
         selectedTicket: payload,
@@ -43,51 +36,42 @@ const ticketAdminReducer = (state = initialState, action) => {
         error: null
       };
       
+    // Update ticket status in both list and selected state
     case UPDATE_TICKET_STATUS_SUCCESS:
-      console.log('🔍 [ticketAdminReducer] UPDATE_TICKET_STATUS_SUCCESS:', {
-        ticketId: payload?.id_tiket,
-        newStatus: payload?.status_tiket
-      });
-      
       return {
         ...state,
         tickets: state.tickets.map(ticket =>
           ticket.id_tiket === payload.id_tiket ? payload : ticket
         ),
-        selectedTicket: state.selectedTicket && state.selectedTicket.id_tiket === payload.id_tiket 
+        selectedTicket: state.selectedTicket?.id_tiket === payload.id_tiket 
           ? payload 
           : state.selectedTicket,
         loading: false,
         error: null
       };
       
+    // Remove ticket from list and clear if it was selected
     case DELETE_ADMIN_TICKET_SUCCESS:
-      console.log('🔍 [ticketAdminReducer] DELETE_ADMIN_TICKET_SUCCESS:', {
-        deletedTicketId: payload
-      });
-      
       return {
         ...state,
         tickets: state.tickets.filter(ticket => ticket.id_tiket !== payload),
-        selectedTicket: state.selectedTicket && state.selectedTicket.id_tiket === payload 
+        selectedTicket: state.selectedTicket?.id_tiket === payload 
           ? null 
           : state.selectedTicket,
         loading: false,
         error: null
       };
       
+    // Handle ticket admin errors
     case TICKET_ADMIN_ERROR:
-      console.error('❌ [ticketAdminReducer] TICKET_ADMIN_ERROR:', payload);
-      
       return {
         ...state,
         error: payload,
         loading: false
       };
       
+    // Clear selected ticket and reset loading state
     case CLEAR_TICKET_ADMIN:
-      console.log('🔍 [ticketAdminReducer] CLEAR_TICKET_ADMIN');
-      
       return {
         ...state,
         selectedTicket: null,

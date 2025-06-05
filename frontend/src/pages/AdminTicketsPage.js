@@ -8,28 +8,14 @@ import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import AdminTicketList from '../components/admin/AdminTicketList';
 
-const AdminTicketsPage = ({
-  auth: { user, isAuthenticated, loading: authLoading }
-}) => {
-  console.log('🔍 [AdminTicketsPage] Rendering with auth state:', {
-    isAuthenticated,
-    userRole: user?.role,
-    authLoading
-  });
-
-  // Redirect if not authenticated
+const AdminTicketsPage = ({ auth: { user, isAuthenticated, loading: authLoading } }) => {
   if (!isAuthenticated && !authLoading) {
-    console.log('❌ [AdminTicketsPage] Not authenticated, redirecting to login');
     return <Navigate to="/login" />;
   }
 
-  // Redirect if not admin
   if (isAuthenticated && user && user.role !== 'admin') {
-    console.log('❌ [AdminTicketsPage] Not admin user, redirecting to dashboard');
     return <Navigate to="/dashboard" />;
   }
-
-  console.log('✅ [AdminTicketsPage] Rendering admin tickets page');
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -59,7 +45,6 @@ const AdminTicketsPage = ({
         </main>
       </div>
       
-      {/* Footer positioned properly */}
       <div className="ml-0 md:ml-64">
         <Footer />
       </div>

@@ -10,13 +10,7 @@ import {
 // Create booking from reservation (convert reservation to ticket)
 export const createBookingFromReservation = (bookingData) => async dispatch => {
   try {
-    console.log('🔍 [bookingActions] Creating booking from reservation:', bookingData);
-    
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const config = { headers: { 'Content-Type': 'application/json' } };
 
     // Enhanced booking data with better structure
     const enhancedBookingData = {
@@ -27,13 +21,9 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
       metode_pembayaran: 'midtrans'
     };
 
-    console.log('🔍 [bookingActions] Enhanced booking data:', enhancedBookingData);
-
     // Try the booking endpoint first
     try {
       const res = await axios.post('/api/booking/from-reservation', enhancedBookingData, config);
-      
-      console.log('✅ [bookingActions] Booking created from reservation:', res.data);
 
       dispatch({
         type: CREATE_BOOKING_SUCCESS,
@@ -41,7 +31,7 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
       });
 
       // Handle multiple tickets response
-      if (res.data.data.tickets && res.data.data.tickets.length > 0) {
+      if (res.data.data.tickets?.length > 0) {
         const ticketCount = res.data.data.tickets.length;
         dispatch(setAlert(`${ticketCount} tiket berhasil dibuat! Lanjutkan ke pembayaran.`, 'success'));
         return {
@@ -59,8 +49,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
         };
       }
     } catch (bookingError) {
-      console.log('⚠️ [bookingActions] Booking endpoint error:', bookingError.response?.data);
-      
       // Check if it's a seat conflict error
       if (bookingError.response?.status === 409) {
         const errorMessage = bookingError.response.data.message || 'Kursi sudah dipesan atau direservasi';
@@ -77,8 +65,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
       
       // For 500 errors, try fallback
       if (bookingError.response?.status === 500) {
-        console.log('⚠️ [bookingActions] Server error, trying direct ticket creation...');
-        
         // Fallback: Create ticket directly with single seat for compatibility
         const fallbackData = {
           id_rute: enhancedBookingData.id_rute,
@@ -88,8 +74,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
         
         try {
           const res = await axios.post('/api/booking/direct', fallbackData, config);
-          
-          console.log('✅ [bookingActions] Direct ticket created:', res.data);
 
           dispatch({
             type: CREATE_BOOKING_SUCCESS,
@@ -104,8 +88,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
             id_tiket: res.data.data.ticket?.id_tiket
           };
         } catch (directError) {
-          console.error('❌ [bookingActions] Direct booking also failed:', directError.response?.data);
-          
           // Handle direct booking errors
           if (directError.response?.status === 409) {
             const errorMessage = directError.response.data.message || 'Kursi sudah dipesan atau direservasi';
@@ -126,8 +108,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
       throw bookingError;
     }
   } catch (err) {
-    console.error('❌ [bookingActions] Create booking error:', err);
-    
     // Handle specific error types
     if (err.type === 'SEAT_CONFLICT') {
       dispatch({
@@ -140,7 +120,6 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
     const errorMsg = err.response?.data?.message || err.message || 'Terjadi kesalahan saat membuat booking';
 
     dispatch(setAlert(errorMsg, 'danger'));
-
     dispatch({
       type: BOOKING_ERROR,
       payload: errorMsg
@@ -153,13 +132,9 @@ export const createBookingFromReservation = (bookingData) => async dispatch => {
 // Get booking summary from reservation
 export const getBookingSummary = (reservationId) => async dispatch => {
   try {
-    console.log('🔍 [bookingActions] Fetching booking summary for:', reservationId);
-    
     // Try the booking summary endpoint first
     try {
       const res = await axios.get(`/api/booking/summary/${reservationId}`);
-      
-      console.log('✅ [bookingActions] Booking summary fetched:', res.data);
 
       dispatch({
         type: GET_BOOKING_SUMMARY,
@@ -168,12 +143,8 @@ export const getBookingSummary = (reservationId) => async dispatch => {
       
       return res.data.data;
     } catch (summaryError) {
-      console.log('⚠️ [bookingActions] Booking summary not available, trying reservation endpoint...');
-      
       // Fallback: Get reservation data
       const res = await axios.get(`/api/reservasi/${reservationId}`);
-      
-      console.log('✅ [bookingActions] Reservation data fetched as summary:', res.data);
 
       dispatch({
         type: GET_BOOKING_SUMMARY,
@@ -183,8 +154,6 @@ export const getBookingSummary = (reservationId) => async dispatch => {
       return res.data.data;
     }
   } catch (err) {
-    console.error('❌ [bookingActions] Get booking summary error:', err.response);
-    
     const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil ringkasan booking';
     
     dispatch({
@@ -198,10 +167,4 @@ export const getBookingSummary = (reservationId) => async dispatch => {
 };
 
 // Clear booking data
-export const clearBookingData = () => {
-  console.log('🔍 [bookingActions] Clearing booking data');
-  
-  return {
-    type: CLEAR_BOOKING
-  };
-};
+export const clearBookingData = () => ({ type: CLEAR_BOOKING });

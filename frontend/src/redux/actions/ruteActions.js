@@ -20,9 +20,7 @@ export const getRutes = () => async dispatch => {
   } catch (err) {
     dispatch({
       type: RUTE_ERROR,
-      payload: err.response && err.response.data.message 
-        ? err.response.data.message 
-        : 'Terjadi kesalahan saat mengambil data rute'
+      payload: err.response?.data?.message || 'Terjadi kesalahan saat mengambil data rute'
     });
   }
 };
@@ -39,16 +37,10 @@ export const getRouteById = id => async dispatch => {
   } catch (err) {
     dispatch({
       type: RUTE_ERROR,
-      payload: err.response && err.response.data.message 
-        ? err.response.data.message 
-        : 'Terjadi kesalahan saat mengambil data rute'
+      payload: err.response?.data?.message || 'Terjadi kesalahan saat mengambil data rute'
     });
   }
 };
 
 // Clear route
-export const clearRoute = () => {
-  return {
-    type: CLEAR_RUTE
-  };
-};
+export const clearRoute = () => ({ type: CLEAR_RUTE });

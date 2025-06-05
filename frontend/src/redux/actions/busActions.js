@@ -20,14 +20,9 @@ export const getAllBuses = () => async dispatch => {
       payload: res.data.data
     });
   } catch (err) {
-    console.error('❌ Get buses error:', err.response);
-    
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat mengambil data bus';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data bus';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: BUS_ERROR,
       payload: errorMsg
@@ -45,12 +40,9 @@ export const getBusById = (busId) => async dispatch => {
       payload: res.data.data
     });
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat mengambil data bus';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data bus';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: BUS_ERROR,
       payload: errorMsg
@@ -61,12 +53,7 @@ export const getBusById = (busId) => async dispatch => {
 // Create new bus
 export const createBus = (busData) => async dispatch => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
+    const config = { headers: { 'Content-Type': 'application/json' } };
     const res = await axios.post('/api/admin/buses', busData, config);
     
     dispatch({
@@ -79,12 +66,9 @@ export const createBus = (busData) => async dispatch => {
     // Refresh bus list
     dispatch(getAllBuses());
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat menambahkan bus';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat menambahkan bus';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: BUS_ERROR,
       payload: errorMsg
@@ -95,12 +79,7 @@ export const createBus = (busData) => async dispatch => {
 // Update bus
 export const updateBus = (busId, busData) => async dispatch => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
+    const config = { headers: { 'Content-Type': 'application/json' } };
     const res = await axios.put(`/api/admin/buses/${busId}`, busData, config);
     
     dispatch({
@@ -113,12 +92,9 @@ export const updateBus = (busId, busData) => async dispatch => {
     // Refresh bus list
     dispatch(getAllBuses());
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat memperbarui bus';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat memperbarui bus';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: BUS_ERROR,
       payload: errorMsg
@@ -141,12 +117,9 @@ export const deleteBus = (busId) => async dispatch => {
     // Refresh bus list
     dispatch(getAllBuses());
   } catch (err) {
-    const errorMsg = err.response && err.response.data.message 
-      ? err.response.data.message 
-      : 'Terjadi kesalahan saat menghapus bus';
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat menghapus bus';
     
     dispatch(setAlert(errorMsg, 'danger'));
-    
     dispatch({
       type: BUS_ERROR,
       payload: errorMsg
@@ -155,8 +128,4 @@ export const deleteBus = (busId) => async dispatch => {
 };
 
 // Clear bus data
-export const clearBusData = () => {
-  return {
-    type: CLEAR_BUS
-  };
-};
+export const clearBusData = () => ({ type: CLEAR_BUS });

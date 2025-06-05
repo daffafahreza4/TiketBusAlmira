@@ -13,7 +13,7 @@ const initialState = {
   error: null
 };
 
-// Helper function to normalize seat data
+// Helper function to normalize seat data into consistent array format
 const normalizeSeatData = (seats) => {
   if (!seats) return [];
   
@@ -32,14 +32,12 @@ const reservasiReducer = (state = initialState, action) => {
   const { type, payload } = action;
 
   switch (type) {
+    // Handle new reservation creation with flexible payload structure
     case CREATE_RESERVASI:
-      console.log('🔍 [reservasiReducer] CREATE_RESERVASI:', payload);
-      
-      // Handle different payload structures
       let newReservation = null;
       
       if (payload) {
-        // Case 1: Direct reservation data
+        // Case 1: Multiple reservations array
         if (payload.reservations && Array.isArray(payload.reservations)) {
           newReservation = {
             ...payload.reservations[0],
@@ -53,7 +51,7 @@ const reservasiReducer = (state = initialState, action) => {
             nomor_kursi: normalizeSeatData(payload.nomor_kursi || payload.originalSeats)
           };
         }
-        // Case 3: Nested structure
+        // Case 3: Nested data structure
         else if (payload.data) {
           newReservation = {
             ...payload.data,
@@ -61,7 +59,7 @@ const reservasiReducer = (state = initialState, action) => {
           };
         }
         
-        // FIXED: Preserve original seat data if available
+        // Preserve original seat data if available
         if (payload.originalSeats && newReservation) {
           newReservation.nomor_kursi = normalizeSeatData(payload.originalSeats);
         }
@@ -69,8 +67,6 @@ const reservasiReducer = (state = initialState, action) => {
           newReservation.nomor_kursi = normalizeSeatData(payload.reservedSeats);
         }
       }
-      
-      console.log('✅ [reservasiReducer] Processed reservation with seats:', newReservation?.nomor_kursi);
       
       return {
         ...state,
@@ -82,10 +78,8 @@ const reservasiReducer = (state = initialState, action) => {
         error: null
       };
       
+    // Handle fetching reservations with flexible payload structure
     case GET_RESERVASI:
-      console.log('🔍 [reservasiReducer] GET_RESERVASI:', payload);
-      
-      // Handle different payload structures for fetching
       let fetchedData = null;
       let fetchedList = [];
       
@@ -117,8 +111,6 @@ const reservasiReducer = (state = initialState, action) => {
         }
       }
       
-      console.log('✅ [reservasiReducer] Processed fetched data with seats:', fetchedData?.nomor_kursi);
-      
       return {
         ...state,
         reservations: fetchedList,
@@ -127,9 +119,8 @@ const reservasiReducer = (state = initialState, action) => {
         error: null
       };
       
+    // Handle reservation cancellation
     case CANCEL_RESERVASI:
-      console.log('🔍 [reservasiReducer] CANCEL_RESERVASI:', payload);
-      
       const cancelledReservation = payload ? {
         ...payload,
         nomor_kursi: normalizeSeatData(payload.nomor_kursi)
@@ -149,23 +140,21 @@ const reservasiReducer = (state = initialState, action) => {
         error: null
       };
       
+    // Handle reservation-related errors
     case RESERVASI_ERROR:
-      console.error('❌ [reservasiReducer] RESERVASI_ERROR:', payload);
-      
       return {
         ...state,
         error: payload,
         loading: false
       };
       
+    // Clear current reservation (keep loading state false to prevent UI flicker)
     case CLEAR_RESERVASI:
-      console.log('🔍 [reservasiReducer] CLEAR_RESERVASI');
-      
       return {
         ...state,
         currentReservation: null,
         error: null,
-        loading: false // Don't reset to loading when clearing
+        loading: false
       };
       
     default:

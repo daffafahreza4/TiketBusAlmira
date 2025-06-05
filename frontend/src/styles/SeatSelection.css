@@ -56,7 +56,18 @@
 }
 
 .driver-area {
-  position: relative;
+  background: linear-gradient;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 16px;
+  width: 100px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: calc(50% + 20px);
 }
 
 .seats-container {

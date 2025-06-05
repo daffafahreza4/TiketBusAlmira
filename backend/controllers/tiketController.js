@@ -32,7 +32,7 @@ exports.getMyTickets = async (req, res) => {
     // Transform data to ensure consistent structure
     const transformedTickets = tickets.map(ticket => {
       const ticketData = ticket.toJSON();
-      
+
       // Ensure rute property exists (lowercase for frontend consistency)
       if (ticketData.Rute && !ticketData.rute) {
         ticketData.rute = {
@@ -41,17 +41,17 @@ exports.getMyTickets = async (req, res) => {
           total_kursi: ticketData.Rute.Bus?.total_kursi || 0
         };
       }
-      
+
       // Ensure user property exists (lowercase for frontend consistency)
       if (ticketData.User && !ticketData.user) {
         ticketData.user = ticketData.User;
       }
-      
+
       // Ensure pembayaran property exists (lowercase for frontend consistency)
       if (ticketData.Pembayaran && !ticketData.pembayaran) {
         ticketData.pembayaran = ticketData.Pembayaran;
       }
-      
+
       return ticketData;
     });
 
@@ -98,7 +98,7 @@ exports.getTicketById = async (req, res) => {
           include: [
             {
               model: Bus,
-              attributes: ['nama_bus', 'total_kursi' ]
+              attributes: ['nama_bus', 'total_kursi']
             }
           ]
         },
@@ -132,15 +132,15 @@ exports.getTicketById = async (req, res) => {
 exports.getAvailableSeats = async (req, res) => {
   try {
     const { routeId } = req.params;
-    
+
     // Get route and bus information
     const route = await Rute.findByPk(routeId, {
-      include: [{ 
+      include: [{
         model: Bus,
         attributes: ['nama_bus', 'total_kursi']
       }]
     });
-    
+
     if (!route) {
       return res.status(404).json({
         success: false,
@@ -169,30 +169,36 @@ exports.getAvailableSeats = async (req, res) => {
       },
       attributes: ['nomor_kursi', 'id_user', 'waktu_expired']
     });
-    
+
     const totalSeats = route.Bus.total_kursi;
     const seatsPerRow = 4; // Assuming 4 seats per row (A, B, C, D)
     const totalRows = Math.ceil(totalSeats / seatsPerRow);
-    
+
     // Generate all possible seats
+    // Generate all possible seats (1-40 for 2-2 configuration)
     const allSeats = [];
-    for (let row = 1; row <= totalRows; row++) {
-      const seatsInRow = Math.min(seatsPerRow, totalSeats - allSeats.length);
-      const seatLetters = ['A', 'B', 'C', 'D'];
-      
-      for (let i = 0; i < seatsInRow; i++) {
-        allSeats.push({
-          number: `${row}${seatLetters[i]}`,
-          row: row,
-          position: seatLetters[i],
-          status: 'available'
-        });
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
+      const row = Math.ceil(seatNum / 4);
+      const positionInRow = ((seatNum - 1) % 4) + 1;
+      let seatPosition;
+
+      if (positionInRow <= 2) {
+        seatPosition = positionInRow === 1 ? 'window-left' : 'aisle-left';
+      } else {
+        seatPosition = positionInRow === 3 ? 'aisle-right' : 'window-right';
       }
+
+      allSeats.push({
+        number: seatNum.toString(),
+        row: row,
+        position: seatPosition,
+        status: 'available'
+      });
     }
-    
+
     // Mark booked seats
     const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
-    
+
     // Mark reserved seats
     const reservedSeatInfo = reservedSeats.reduce((acc, seat) => {
       acc[seat.nomor_kursi] = {
@@ -209,8 +215,8 @@ exports.getAvailableSeats = async (req, res) => {
       } else if (reservedSeatInfo[seat.number]) {
         const reservationInfo = reservedSeatInfo[seat.number];
         // SEMUA reservasi (termasuk my_reservation) = 'booked' untuk frontend
-        return { 
-          ...seat, 
+        return {
+          ...seat,
           status: 'booked', // Ubah dari 'reserved'/'my_reservation' jadi 'booked'
           expiredAt: reservationInfo.expiredAt
         };

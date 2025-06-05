@@ -30,10 +30,8 @@ const SeatSelection = ({
   // Generate all possible seats (1A-10D = 40 seats)
   const generateAllSeats = () => {
     const allSeats = {};
-    for (let row = 1; row <= 10; row++) {
-      ['A', 'B', 'C', 'D'].forEach(col => {
-        allSeats[`${row}${col}`] = 'available';
-      });
+    for (let seatNum = 1; seatNum <= 40; seatNum++) {
+      allSeats[seatNum.toString()] = 'available';
     }
     return allSeats;
   };
@@ -261,6 +259,7 @@ const SeatSelection = ({
   }
 
   // Generate bus layout
+  // Generate bus layout with 2-2 configuration
   const generateBusLayout = () => {
     const rows = 10;
     const layout = [];
@@ -268,54 +267,62 @@ const SeatSelection = ({
     for (let row = 1; row <= rows; row++) {
       const rowSeats = [];
 
-      // Left side seats (A & B)
+      // Calculate seat numbers for this row (2-2 configuration)
+      const leftSeat1 = ((row - 1) * 4) + 1;
+      const leftSeat2 = ((row - 1) * 4) + 2;
+      const rightSeat1 = ((row - 1) * 4) + 3;
+      const rightSeat2 = ((row - 1) * 4) + 4;
+
+      // Left side seats (2 seats)
       rowSeats.push(
-        <div key={`${row}A`} className="flex gap-1">
+        <div key={`left-${row}`} className="flex gap-1">
           <div
-            className={`seat ${getSeatClass(`${row}A`)}`}
-            onClick={() => handleSeatClick(`${row}A`)}
-            data-seat={`${row}A`}
+            className={`seat ${getSeatClass(leftSeat1.toString())}`}
+            onClick={() => handleSeatClick(leftSeat1.toString())}
+            data-seat={leftSeat1}
             style={{ cursor: 'pointer' }}
           >
-            {row}A
+            {leftSeat1}
           </div>
           <div
-            className={`seat ${getSeatClass(`${row}B`)}`}
-            onClick={() => handleSeatClick(`${row}B`)}
-            data-seat={`${row}B`}
+            className={`seat ${getSeatClass(leftSeat2.toString())}`}
+            onClick={() => handleSeatClick(leftSeat2.toString())}
+            data-seat={leftSeat2}
             style={{ cursor: 'pointer' }}
           >
-            {row}B
+            {leftSeat2}
           </div>
         </div>
       );
 
+      // Aisle (gang tengah)
       rowSeats.push(<div key={`aisle-${row}`} className="w-8"></div>);
 
-      // Right side seats (C & D)
+      // Right side seats (2 seats)
       rowSeats.push(
-        <div key={`${row}C`} className="flex gap-1">
+        <div key={`right-${row}`} className="flex gap-1">
           <div
-            className={`seat ${getSeatClass(`${row}C`)}`}
-            onClick={() => handleSeatClick(`${row}C`)}
-            data-seat={`${row}C`}
+            className={`seat ${getSeatClass(rightSeat1.toString())}`}
+            onClick={() => handleSeatClick(rightSeat1.toString())}
+            data-seat={rightSeat1}
             style={{ cursor: 'pointer' }}
           >
-            {row}C
+            {rightSeat1}
           </div>
           <div
-            className={`seat ${getSeatClass(`${row}D`)}`}
-            onClick={() => handleSeatClick(`${row}D`)}
-            data-seat={`${row}D`}
+            className={`seat ${getSeatClass(rightSeat2.toString())}`}
+            onClick={() => handleSeatClick(rightSeat2.toString())}
+            data-seat={rightSeat2}
             style={{ cursor: 'pointer' }}
           >
-            {row}D
+            {rightSeat2}
           </div>
         </div>
       );
 
       layout.push(
         <div key={`row-${row}`} className="flex justify-center items-center mb-2">
+          <span className="w-8 text-xs text-gray-500 text-center">{row}</span>
           {rowSeats}
         </div>
       );

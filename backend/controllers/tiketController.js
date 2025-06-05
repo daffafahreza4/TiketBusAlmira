@@ -208,13 +208,14 @@ exports.getAvailableSeats = async (req, res) => {
         return { ...seat, status: 'booked' };
       } else if (reservedSeatInfo[seat.number]) {
         const reservationInfo = reservedSeatInfo[seat.number];
+        // SEMUA reservasi (termasuk my_reservation) = 'booked' untuk frontend
         return { 
           ...seat, 
-          status: reservationInfo.isMyReservation ? 'my_reservation' : 'reserved',
+          status: 'booked', // Ubah dari 'reserved'/'my_reservation' jadi 'booked'
           expiredAt: reservationInfo.expiredAt
         };
       }
-      return seat;
+      return { ...seat, status: 'available' };
     });
 
     // Calculate statistics
@@ -239,12 +240,83 @@ exports.getAvailableSeats = async (req, res) => {
         seatLayout: {
           rows: totalRows,
           seatsPerRow: seatsPerRow
-        }
+        },
+        // TAMBAHKAN: Format yang mudah di-parse frontend
+        seatStatuses: seatsWithStatus.reduce((acc, seat) => {
+          acc[seat.number] = seat.status;
+          return acc;
+        }, {})
       }
     });
 
   } catch (error) {
     console.error('Get available seats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Tambahkan fungsi untuk check real-time seat availability
+exports.checkSeatAvailability = async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { seats } = req.body; // Array of seats to check
+
+    if (!seats || !Array.isArray(seats)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Seats array is required'
+      });
+    }
+
+    // Check booked seats from tickets
+    const bookedSeats = await Tiket.findAll({
+      where: {
+        id_rute: routeId,
+        nomor_kursi: {
+          [Op.in]: seats
+        },
+        status_tiket: {
+          [Op.in]: ['pending', 'confirmed', 'completed']
+        }
+      },
+      attributes: ['nomor_kursi']
+    });
+
+    // Check reserved seats (active reservations)
+    const reservedSeats = await ReservasiSementara.findAll({
+      where: {
+        id_rute: routeId,
+        nomor_kursi: {
+          [Op.in]: seats
+        },
+        waktu_expired: {
+          [Op.gt]: new Date()
+        }
+      },
+      attributes: ['nomor_kursi', 'id_user']
+    });
+
+    const unavailableSeats = [
+      ...bookedSeats.map(seat => seat.nomor_kursi),
+      ...reservedSeats.filter(seat => seat.id_user !== req.user?.id_user).map(seat => seat.nomor_kursi)
+    ];
+
+    const conflictSeats = seats.filter(seat => unavailableSeats.includes(seat));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        available: conflictSeats.length === 0,
+        conflictSeats,
+        requestedSeats: seats
+      }
+    });
+
+  } catch (error) {
+    console.error('Check seat availability error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

@@ -49,6 +49,23 @@ export const getAvailableSeats = routeId => async dispatch => {
   }
 };
 
+// Tambahkan action untuk check seat availability
+export const checkSeatAvailability = (routeId, seats) => async dispatch => {
+  try {
+    const config = { headers: { 'Content-Type': 'application/json' } };
+    const body = JSON.stringify({ seats });
+    
+    const res = await axios.post(`/api/tiket/check-seat-availability/${routeId}`, body, config);
+    
+    return res.data.data;
+  } catch (err) {
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengecek ketersediaan kursi';
+    
+    dispatch(setAlert(errorMsg, 'danger'));
+    throw err;
+  }
+};
+
 // Set selected seats - FIXED with better logging and validation
 export const setSelectedSeats = seats => dispatch => {
   // Validate and normalize seats data

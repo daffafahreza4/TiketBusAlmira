@@ -3,7 +3,8 @@ const {
   getMyTickets, 
   getTicketById, 
   getAvailableSeats,
-  cancelTicket
+  cancelTicket,
+  checkSeatAvailability 
 } = require('../controllers/tiketController');
 const { protect } = require('../middleware/auth');
 
@@ -17,6 +18,7 @@ router.get('/my-tickets', getMyTickets);
 
 // Get available seats for a route (with reservation status)
 router.get('/available-seats/:routeId', getAvailableSeats);
+router.post('/check-seat-availability/:routeId', checkSeatAvailability);
 
 // Cancel ticket by ID
 router.put('/cancel/:id', cancelTicket);

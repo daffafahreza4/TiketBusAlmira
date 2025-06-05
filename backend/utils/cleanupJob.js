@@ -13,7 +13,7 @@ const startCleanupJob = () => {
   // Then run every 5 minutes (300,000 milliseconds)
   cleanupInterval = setInterval(() => {
     runCleanup();
-  }, 5 * 60 * 1000); // 5 minutes
+  }, 2 * 60 * 1000); // 5 minutes
 };
 
 /**
@@ -51,7 +51,7 @@ const getCleanupStatus = () => {
   return {
     isRunning: cleanupInterval !== null,
     intervalId: cleanupInterval,
-    nextRunIn: cleanupInterval ? '< 5 minutes' : 'Not scheduled'
+    nextRunIn: cleanupInterval ? '< 2 minutes' : 'Not scheduled'
   };
 };
 

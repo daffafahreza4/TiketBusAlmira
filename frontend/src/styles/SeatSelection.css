@@ -9,49 +9,44 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
-  position: relative;
   border: 2px solid;
 }
 
-/* 1. HIJAU - Available seats (bisa dipilih) */
+/* ABU-ABU - Kursi Tersedia */
 .seat-available {
-  background-color: #6b7280;
-  color: white;
-  border-color: #4b5563;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
+  background-color: #9ca3af !important;
+  color: white !important;
+  border-color: #6b7280 !important;
 }
 
 .seat-available:hover {
-  background-color: #bbf7d0;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #6b7280 !important;
+  transform: translateY(-1px) !important;
 }
 
-/* 2. ABU-ABU - Selected seats (dipilih user) */
+/* HIJAU - Kursi Dipilih User */
 .seat-selected {
-  background-color: #dcfce7;
-  color: #16a34a;
-  border-color: #16a34a;
+  background-color: #10b981 !important;
+  color: white !important;
+  border-color: #059669 !important;
 }
 
 .seat-selected:hover {
-  background-color: #4b5563;
+  background-color: #059669 !important;
 }
 
-/* 3. MERAH - Booked/Reserved seats (tidak bisa dipilih) */
+/* MERAH - Kursi Tidak Tersedia */
 .seat-booked {
-  background-color: #fecaca;
-  color: #dc2626;
-  border-color: #dc2626;
-  cursor: not-allowed;
-  opacity: 0.8;
+  background-color: #ef4444 !important;
+  color: white !important;
+  border-color: #dc2626 !important;
+  cursor: not-allowed !important;
+  opacity: 0.9 !important;
 }
 
 .seat-booked:hover {
-  transform: none;
-  box-shadow: none;
+  background-color: #ef4444 !important;
+  transform: none !important;
 }
 
 /* Bus layout styling */
@@ -64,52 +59,8 @@
   position: relative;
 }
 
-.driver-area::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 8px;
-  background-color: #9ca3af;
-  border-radius: 4px 4px 0 0;
-}
-
 .seats-container {
   background-color: #f9fafb;
-}
-
-/* Remove all complex animations and indicators
-.seat-selected {
-  /* No animation */
-
-/* Legend improvements */
-.seat-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.seat-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.seat-legend-item .seat {
-  width: 24px;
-  height: 24px;
-  font-size: 10px;
-  cursor: default;
-}
-
-.seat-legend-item .seat:hover {
-  transform: none;
-  box-shadow: none;
 }
 
 /* Responsiveness */
@@ -119,10 +70,6 @@
     height: 35px;
     font-size: 11px;
   }
-  
-  .bus-layout {
-    max-width: 100%;
-  }
 }
 
 @media (max-width: 480px) {
@@ -131,23 +78,4 @@
     height: 30px;
     font-size: 10px;
   }
-}
-
-/* Debug styling */
-.debug-info {
-  background-color: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 12px;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color: #374151;
-  margin-top: 16px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.debug-info p {
-  margin: 4px 0;
-  word-break: break-all;
 }

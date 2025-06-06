@@ -72,43 +72,57 @@ const SeatSelection = ({
     }
   }, [route, selectedSeatsList]);
 
-  // PERBAIKAN: useEffect untuk seat colors
+  // PERBAIKAN: useEffect untuk seat colors - Logic yang diperbaiki
   useEffect(() => {
-    const statusMap = generateAllSeats();
+    const statusMap = generateAllSeats(); // Default semua seats = 'available'
 
     if (availableSeats) {
-      // PERBAIKAN: Reset semua ke 'booked' dulu, baru set yang available
-      Object.keys(statusMap).forEach(seat => {
-        statusMap[seat] = 'booked'; // Default: MERAH
-      });
-
+      // PERBAIKAN: Jangan reset semua ke 'booked' dulu
+      // Biarkan default 'available' dari generateAllSeats()
+      
       if (Array.isArray(availableSeats)) {
+        // Format: ['1', '2', '3', ...]
         availableSeats.forEach(seat => {
           if (statusMap.hasOwnProperty(seat)) {
-            statusMap[seat] = 'available'; // ABU-ABU
+            statusMap[seat] = 'available';
+          }
+        });
+        
+        // Set sisanya ke 'booked' jika tidak ada dalam array
+        Object.keys(statusMap).forEach(seat => {
+          if (!availableSeats.includes(seat)) {
+            statusMap[seat] = 'booked';
           }
         });
       }
       else if (availableSeats.seats && Array.isArray(availableSeats.seats)) {
+        // Format: [{number: '1', status: 'available'}, ...]
+        // Reset semua ke 'booked' dulu untuk format ini
+        Object.keys(statusMap).forEach(seat => {
+          statusMap[seat] = 'booked';
+        });
+        
         availableSeats.seats.forEach(seatData => {
           const seatNumber = seatData.number || seatData.seat_number;
           if (seatNumber && statusMap.hasOwnProperty(seatNumber)) {
-            // HANYA available yang abu-abu, sisanya tetap merah
-            if (seatData.status === 'available') {
-              statusMap[seatNumber] = 'available';
-            }
-            // reserved, booked, my_reservation = tetap 'booked' (merah)
+            statusMap[seatNumber] = seatData.status === 'available' ? 'available' : 'booked';
+          }
+        });
+      }
+      else if (availableSeats.seatStatuses) {
+        // TAMBAH: Handle seatStatuses format
+        // Format: {seatStatuses: {'1': 'available', '2': 'booked', ...}}
+        Object.keys(availableSeats.seatStatuses).forEach(seat => {
+          if (statusMap.hasOwnProperty(seat)) {
+            statusMap[seat] = availableSeats.seatStatuses[seat];
           }
         });
       }
       else if (typeof availableSeats === 'object') {
+        // Format: {'1': 'available', '2': 'booked', ...}
         Object.keys(availableSeats).forEach(seat => {
           if (statusMap.hasOwnProperty(seat)) {
-            // HANYA available yang abu-abu
-            if (availableSeats[seat] === 'available') {
-              statusMap[seat] = 'available';
-            }
-            // sisanya tetap 'booked' (merah)
+            statusMap[seat] = availableSeats[seat];
           }
         });
       }

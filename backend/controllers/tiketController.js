@@ -132,7 +132,7 @@ exports.getTicketById = async (req, res) => {
 exports.getGroupedTicketById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Get the main ticket
     const mainTicket = await Tiket.findOne({
       where: {
@@ -331,6 +331,7 @@ exports.getAvailableSeats = async (req, res) => {
     const reservedCount = seatsWithStatus.filter(seat => seat.status === 'reserved').length;
     const myReservationCount = seatsWithStatus.filter(seat => seat.status === 'my_reservation').length;
 
+    // PERBAIKAN: Enhanced response structure
     res.status(200).json({
       success: true,
       data: {
@@ -348,11 +349,15 @@ exports.getAvailableSeats = async (req, res) => {
           rows: totalRows,
           seatsPerRow: seatsPerRow
         },
-        // TAMBAHKAN: Format yang mudah di-parse frontend
+        // TAMBAH: Format yang mudah di-parse frontend
         seatStatuses: seatsWithStatus.reduce((acc, seat) => {
           acc[seat.number] = seat.status;
           return acc;
-        }, {})
+        }, {}),
+        // TAMBAH: Array sederhana untuk backward compatibility
+        availableSeats: seatsWithStatus
+          .filter(seat => seat.status === 'available')
+          .map(seat => seat.number)
       }
     });
 
@@ -406,11 +411,13 @@ exports.checkSeatAvailability = async (req, res) => {
       attributes: ['nomor_kursi', 'id_user']
     });
 
-    const unavailableSeats = [
-      ...bookedSeats.map(seat => seat.nomor_kursi),
-      ...reservedSeats.filter(seat => seat.id_user !== req.user?.id_user).map(seat => seat.nomor_kursi)
-    ];
+    const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
+    const reservedSeatNumbers = reservedSeats
+      .filter(seat => seat.id_user !== req.user?.id_user)
+      .map(seat => seat.nomor_kursi);
 
+    // PERBAIKAN: Fix variable reference dan logic
+    const unavailableSeats = [...bookedSeatNumbers, ...reservedSeatNumbers];
     const conflictSeats = seats.filter(seat => unavailableSeats.includes(seat));
 
     res.status(200).json({
@@ -418,7 +425,9 @@ exports.checkSeatAvailability = async (req, res) => {
       data: {
         available: conflictSeats.length === 0,
         conflictSeats,
-        requestedSeats: seats
+        requestedSeats: seats,
+        bookedSeats: bookedSeatNumbers,
+        reservedSeats: reservedSeatNumbers
       }
     });
 

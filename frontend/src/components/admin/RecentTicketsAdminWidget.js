@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { formatDate, formatTime, formatCurrency, formatStatus } from '../../utils/formatters';
 
-const RecentTicketsAdminWidget = ({ recentTickets, loading }) => {
+const RecentTicketsAdminWidget = ({ recentTickets = [], loading = false }) => {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -69,11 +69,6 @@ const RecentTicketsAdminWidget = ({ recentTickets, loading }) => {
 RecentTicketsAdminWidget.propTypes = {
   recentTickets: PropTypes.array,
   loading: PropTypes.bool
-};
-
-RecentTicketsAdminWidget.defaultProps = {
-  recentTickets: [],
-  loading: false
 };
 
 export default RecentTicketsAdminWidget;

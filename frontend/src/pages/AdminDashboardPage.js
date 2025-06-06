@@ -88,7 +88,7 @@ const AdminDashboardPage = ({
                     <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
                     <div className="space-y-3">
 
-                      <Link to="/search-results" className="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                      <Link to="/admin/buses" className="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                         <i className="fas fa-plus mr-3 text-blue-600"></i>
                         Tambah Bus Baru
                       </Link>
@@ -98,9 +98,9 @@ const AdminDashboardPage = ({
                         Tambah Rute Baru
                       </Link>
 
-                      <Link to="/" className="block w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                      <Link to="/admin/users" className="block w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
                         <i className="fas fa-chart-bar mr-3 text-purple-600"></i>
-                        Lihat Laporan
+                        Users
                       </Link>
                     </div>
                   </div>

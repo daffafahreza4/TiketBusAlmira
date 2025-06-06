@@ -8,6 +8,7 @@ import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
 import SeatSelection from '../components/tiket/SeatSelection';
 import { getRouteById } from '../redux/actions/ruteActions';
+import '../styles/SeatSelection.css';
 
 // Import CSS untuk seat selection
 import '../styles/SeatSelection.css';

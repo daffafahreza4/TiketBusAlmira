@@ -24,18 +24,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
       {/* Show different links based on user role */}
       {auth.user?.role === 'admin' ? (
         // Admin links
-        <>
-          <li className="hidden md:block">
-            <Link to="/admin/users" className="text-white hover:text-gray-200 transition-colors duration-200">
-              Kelola User
-            </Link>
-          </li>
-          <li className="hidden md:block">
-            <Link to="/admin/tickets" className="text-white hover:text-gray-200 transition-colors duration-200">
-              Kelola Tiket
-            </Link>
-          </li>
-        </>
+        <></>
       ) : (
         // Regular user links
         <>

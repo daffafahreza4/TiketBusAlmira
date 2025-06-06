@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { formatCurrency } from '../../utils/formatters';
 
-const AdminStatsWidget = ({ stats, loading }) => {
+const AdminStatsWidget = ({ stats = {}, loading = false }) => {
   const statsData = [
     {
       name: 'Total Users',
@@ -74,11 +74,6 @@ const AdminStatsWidget = ({ stats, loading }) => {
 AdminStatsWidget.propTypes = {
   stats: PropTypes.object.isRequired,
   loading: PropTypes.bool
-};
-
-AdminStatsWidget.defaultProps = {
-  stats: {},
-  loading: false
 };
 
 export default AdminStatsWidget;

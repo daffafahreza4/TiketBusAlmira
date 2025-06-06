@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { formatDate } from '../../utils/formatters';
 
-const NotificationWidget = ({ notifications, loading }) => {
+const NotificationWidget = ({ notifications = [], loading = false }) => {
   // Placeholder untuk notifikasi
   const defaultNotifications = [
     {

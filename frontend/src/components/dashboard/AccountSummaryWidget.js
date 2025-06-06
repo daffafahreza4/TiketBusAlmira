@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { formatCurrency } from '../../utils/formatters';
 
-const AccountSummaryWidget = ({ user, tickets, loading }) => {
+const AccountSummaryWidget = ({ user, tickets = [], loading = false }) => {
   // Calculate statistics
   const getStats = () => {
     if (!tickets || tickets.length === 0) {

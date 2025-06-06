@@ -6,13 +6,12 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
-import { getGroupedTicketById } from '../redux/actions/tiketActions';
-import { cancelReservation } from '../redux/actions/reservasiActions';
+import { getGroupedTicketById, cancelTicket } from '../redux/actions/tiketActions';
 import { formatCurrency, formatDate, formatTime, formatStatus } from '../utils/formatters';
 
 const TicketDetailPage = ({
   getGroupedTicketById,
-  cancelReservation,
+  cancelTicket,
   ticket,
   loading,
   error
@@ -46,9 +45,16 @@ const TicketDetailPage = ({
     window.open(`/ticket/print/${id}`, '_blank');
   };
 
-  const handleCancelTicket = () => {
-    cancelReservation(id);
-    setShowCancelModal(false);
+  const handleCancelTicket = async () => {
+    try {
+      await cancelTicket(id);
+      setShowCancelModal(false);
+      // Refresh ticket data setelah cancel
+      getGroupedTicketById(id);
+    } catch (error) {
+      console.error('Error cancelling ticket:', error);
+      setShowCancelModal(false);
+    }
   };
 
   if (loading) {
@@ -317,7 +323,8 @@ const TicketDetailPage = ({
                   </button>
                 )}
 
-                {(ticket.status_tiket === 'confirmed' || ticket.status_tiket === 'pending') && (
+                {(ticket.status_tiket === 'confirmed' || ticket.status_tiket === 'pending') && 
+                 !['cancelled', 'expired', 'completed'].includes(ticket.status_tiket) && (
                   <button
                     onClick={() => setShowCancelModal(true)}
                     className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
@@ -337,8 +344,7 @@ const TicketDetailPage = ({
               <ul className="list-disc pl-6 text-yellow-800 space-y-1">
                 <li>Harap tiba di terminal minimal 30 menit sebelum keberangkatan.</li>
                 <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
-                <li>Pembatalan tiket harus dilakukan minimal 24 jam sebelum keberangkatan.</li>
-                <li>Bagasi yang diperbolehkan maksimal 20kg per penumpang.</li>
+                <li>Pembatalan tiket harus dilakukan minimal 30 menit sebelum keberangkatan.</li>
               </ul>
             </div>
           </div>
@@ -377,8 +383,8 @@ const TicketDetailPage = ({
 };
 
 TicketDetailPage.propTypes = {
-  getTicketById: PropTypes.func.isRequired,
-  cancelReservation: PropTypes.func.isRequired,
+  getGroupedTicketById: PropTypes.func.isRequired,
+  cancelTicket: PropTypes.func.isRequired,
   ticket: PropTypes.object,
   loading: PropTypes.bool,
   error: PropTypes.string
@@ -390,4 +396,4 @@ const mapStateToProps = state => ({
   error: state.tiket.error
 });
 
-export default connect(mapStateToProps, { getGroupedTicketById, cancelReservation })(TicketDetailPage);
+export default connect(mapStateToProps, { getGroupedTicketById, cancelTicket })(TicketDetailPage);

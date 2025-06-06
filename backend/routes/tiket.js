@@ -1,11 +1,12 @@
 const express = require('express');
+const autoCleanupMiddleware = require('../middleware/autoCleanup');
 const { 
   getMyTickets, 
   getTicketById, 
   getAvailableSeats,
   cancelTicket,
   checkSeatAvailability,
-  getGroupedTicketById 
+  getGroupedTicketById
 } = require('../controllers/tiketController');
 const { protect } = require('../middleware/auth');
 
@@ -18,8 +19,8 @@ router.use(protect);
 router.get('/my-tickets', getMyTickets);
 
 // Get available seats for a route (with reservation status)
-router.get('/available-seats/:routeId', getAvailableSeats);
-router.post('/check-seat-availability/:routeId', checkSeatAvailability);
+router.get('/available-seats/:routeId', autoCleanupMiddleware, getAvailableSeats);
+router.post('/check-seat-availability/:routeId', autoCleanupMiddleware, checkSeatAvailability);
 
 // Cancel ticket by ID
 router.put('/cancel/:id', cancelTicket);

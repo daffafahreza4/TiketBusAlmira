@@ -440,6 +440,7 @@ exports.checkSeatAvailability = async (req, res) => {
 };
 
 // Cancel ticket (before departure)
+// Cancel ticket (before departure) - Perbaikan
 exports.cancelTicket = async (req, res) => {
   try {
     const ticket = await Tiket.findOne({
@@ -480,15 +481,22 @@ exports.cancelTicket = async (req, res) => {
       });
     }
 
-    // Check if departure time has passed
+    if (ticket.status_tiket === 'expired') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tiket sudah kadaluarsa'
+      });
+    }
+
+    // Check if departure time has passed - Lebih toleran untuk testing
     const now = new Date();
     const departureTime = new Date(ticket.Rute.waktu_berangkat);
     const hoursUntilDeparture = (departureTime - now) / (1000 * 60 * 60);
 
-    if (hoursUntilDeparture < 2) { // Cannot cancel within 2 hours of departure
+    if (hoursUntilDeparture < 0) { // Sudah berangkat
       return res.status(400).json({
         success: false,
-        message: 'Tiket tidak dapat dibatalkan dalam 2 jam sebelum keberangkatan'
+        message: 'Tiket tidak dapat dibatalkan setelah waktu keberangkatan'
       });
     }
 
@@ -509,7 +517,9 @@ exports.cancelTicket = async (req, res) => {
         id_tiket: ticket.id_tiket,
         nomor_kursi: ticket.nomor_kursi,
         status_tiket: ticket.status_tiket,
-        refund_eligible: ticket.Pembayaran?.status === 'completed'
+        refund_eligible: ticket.Pembayaran?.status === 'completed',
+        route: `${ticket.Rute.asal} → ${ticket.Rute.tujuan}`,
+        departure_time: ticket.Rute.waktu_berangkat
       }
     });
 

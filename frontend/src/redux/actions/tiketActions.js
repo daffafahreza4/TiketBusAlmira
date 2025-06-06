@@ -187,6 +187,15 @@ export const cancelTicket = (ticketId) => async dispatch => {
 
     dispatch(setAlert('Tiket berhasil dibatalkan', 'success'));
 
+    // Update selected ticket jika sedang dilihat
+    dispatch({
+      type: GET_TICKET,
+      payload: {
+        ...res.data.data,
+        status_tiket: 'cancelled'
+      }
+    });
+
     // Refresh user tickets
     dispatch(getUserTickets());
 

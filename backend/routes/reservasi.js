@@ -1,4 +1,5 @@
 const express = require('express');
+const autoCleanupMiddleware = require('../middleware/autoCleanup');
 const {
   createTempReservation,
   getUserReservations,
@@ -14,7 +15,7 @@ const router = express.Router();
 router.use(protect);
 
 // Create temporary reservation (hold seats for 1 hour)
-router.post('/temp', createTempReservation);
+router.post('/temp', autoCleanupMiddleware, createTempReservation);
 
 // Get all reservations for authenticated user
 router.get('/user', getUserReservations);

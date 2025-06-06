@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 
-const ReservationTimer = ({ 
-  expiryTime, 
+const ReservationTimer = ({
+  expiryTime,
   onExpired,
   showWarning = true,
   redirectOnExpiry = true,
@@ -17,11 +17,11 @@ const ReservationTimer = ({
   // Calculate time remaining
   const calculateTimeLeft = useCallback(() => {
     if (!expiryTime) return 0;
-    
+
     const now = new Date().getTime();
     const expiry = new Date(expiryTime).getTime();
     const difference = expiry - now;
-    
+
     return Math.max(0, difference);
   }, [expiryTime]);
 
@@ -30,11 +30,11 @@ const ReservationTimer = ({
     const timer = setInterval(() => {
       const remaining = calculateTimeLeft();
       setTimeLeft(remaining);
-      
+
       if (remaining <= 0 && !isExpired) {
         setIsExpired(true);
         setShowExpiredModal(true);
-        
+
         if (onExpired) {
           onExpired();
         }
@@ -44,11 +44,11 @@ const ReservationTimer = ({
     // Initial calculation
     const remaining = calculateTimeLeft();
     setTimeLeft(remaining);
-    
+
     if (remaining <= 0) {
       setIsExpired(true);
       setShowExpiredModal(true);
-      
+
       if (onExpired) {
         onExpired();
       }
@@ -62,27 +62,27 @@ const ReservationTimer = ({
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    
+
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Get timer color based on time remaining
   const getTimerColor = () => {
     const minutes = Math.floor(timeLeft / 60000);
-    
-    if (minutes <= 5) return 'text-red-600 bg-red-50 border-red-200';
-    if (minutes <= 15) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+
+    if (minutes <= 2) return 'text-red-600 bg-red-50 border-red-200';
+    if (minutes <= 10) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     return 'text-green-600 bg-green-50 border-green-200';
   };
 
   // Get warning message
   const getWarningMessage = () => {
     const minutes = Math.floor(timeLeft / 60000);
-    
-    if (minutes <= 5) {
+
+    if (minutes <= 2) {
       return 'Waktu reservasi hampir habis! Segera selesaikan pembayaran.';
     }
-    if (minutes <= 15) {
+    if (minutes <= 10) {
       return 'Perhatian: Waktu reservasi Anda tinggal sedikit.';
     }
     return null;
@@ -91,7 +91,7 @@ const ReservationTimer = ({
   // Handle modal close and redirect
   const handleExpiredModalClose = () => {
     setShowExpiredModal(false);
-    
+
     if (redirectOnExpiry) {
       navigate(redirectPath);
     }
@@ -120,7 +120,7 @@ const ReservationTimer = ({
               </p>
             </div>
           </div>
-          
+
           {!isExpired && (
             <div className="text-right">
               <p className="text-xs opacity-75">Berakhir pada</p>
@@ -133,22 +133,22 @@ const ReservationTimer = ({
             </div>
           )}
         </div>
-        
+
         {/* Progress bar */}
         {!isExpired && (
           <div className="mt-3">
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="h-2 rounded-full transition-all duration-1000 ease-linear"
                 style={{
-                  width: `${Math.max(0, Math.min(100, (timeLeft / 3600000) * 100))}%`,
+                  width: `${Math.max(0, Math.min(100, (timeLeft / 1800000) * 100))}%`,
                   backgroundColor: timeLeft <= 300000 ? '#dc2626' : timeLeft <= 900000 ? '#d97706' : '#16a34a'
                 }}
               />
             </div>
           </div>
         )}
-        
+
         {/* Warning message */}
         {showWarning && !isExpired && getWarningMessage() && (
           <div className="mt-3 p-2 bg-white bg-opacity-50 rounded text-xs">
@@ -163,16 +163,16 @@ const ReservationTimer = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center">
             <div className="text-6xl mb-4">⏰</div>
-            
+
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               Waktu Reservasi Habis
             </h2>
-            
+
             <p className="text-gray-600 mb-6">
-              Maaf, waktu reservasi kursi Anda telah berakhir. 
+              Maaf, waktu reservasi kursi Anda telah berakhir.
               Kursi yang Anda pilih sekarang tersedia untuk penumpang lain.
             </p>
-            
+
             <div className="space-y-3">
               <button
                 onClick={handleExpiredModalClose}
@@ -180,7 +180,7 @@ const ReservationTimer = ({
               >
                 Pilih Kursi Lagi
               </button>
-              
+
               <button
                 onClick={() => navigate('/')}
                 className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"

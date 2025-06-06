@@ -148,7 +148,7 @@ const BookingSummary = ({
     const newSummaryData = {
       id_reservasi: reservation?.id_reservasi || summaryData?.id_reservasi || 'temp',
       nomor_kursi: finalSeats,
-      waktu_expired: reservation?.waktu_expired || summaryData?.waktu_expired || new Date(Date.now() + 60 * 60 * 1000),
+      waktu_expired: reservation?.waktu_expired || summaryData?.waktu_expired || new Date(Date.now() + 30 * 60 * 1000),
       Rute: route,
       User: user,
       total_harga: route ? route.harga * finalSeats.length : 0,

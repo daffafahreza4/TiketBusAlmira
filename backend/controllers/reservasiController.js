@@ -30,7 +30,7 @@ exports.createTempReservation = async (req, res) => {
     }
 
     // Set expiration time (1 hour from now)
-    const waktu_expired = new Date(Date.now() + (60 * 60 * 1000)); // 1 hour
+    const waktu_expired = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutes
 
     // Check for existing reservations and confirmed tickets for these seats
     const existingReservations = await ReservasiSementara.findAll({

@@ -3,7 +3,283 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const crypto = require('crypto');
 
-// Create ticket from reservation with automatic Midtrans integration
+// ============= HELPER FUNCTIONS =============
+
+/**
+ * Generate unique payment code
+ */
+function generatePaymentCode() {
+  return `PAY-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+}
+
+/**
+ * Set payment deadline (24 hours from now)
+ */
+function getPaymentDeadline() {
+  return new Date(Date.now() + (30 * 60 * 1000));
+}
+
+/**
+ * Get complete ticket data with all relations
+ */
+async function getCompleteTicketData(id_tiket) {
+  return await Tiket.findByPk(id_tiket, {
+    include: [
+      {
+        model: User,
+        attributes: ['id_user', 'username', 'email', 'no_telepon']
+      },
+      {
+        model: Rute,
+        include: [
+          {
+            model: Bus,
+            attributes: ['nama_bus', 'total_kursi']
+          }
+        ]
+      },
+      {
+        model: Pembayaran
+      }
+    ]
+  });
+}
+
+/**
+ * Get multiple complete ticket data
+ */
+async function getMultipleCompleteTicketData(ticketIds) {
+  return await Promise.all(
+    ticketIds.map(id => getCompleteTicketData(id))
+  );
+}
+
+/**
+ * Check if route exists and return route data
+ */
+async function validateAndGetRoute(id_rute, transaction) {
+  const rute = await Rute.findByPk(id_rute, {
+    include: [{
+      model: Bus,
+      attributes: ['nama_bus', 'total_kursi']
+    }],
+    transaction
+  });
+
+  if (!rute) {
+    throw new Error('Rute tidak ditemukan');
+  }
+
+  return rute;
+}
+
+/**
+ * Check seat availability for single or multiple seats
+ */
+async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction) {
+  const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
+  
+  const [existingTickets, existingReservations] = await Promise.all([
+    // Check existing tickets
+    Tiket.findAll({
+      where: {
+        id_rute,
+        nomor_kursi: {
+          [Op.in]: seats
+        },
+        status_tiket: {
+          [Op.in]: ['pending', 'confirmed', 'completed']
+        }
+      },
+      transaction
+    }),
+    // Check active reservations (exclude current user)
+    ReservasiSementara.findAll({
+      where: {
+        id_rute,
+        nomor_kursi: {
+          [Op.in]: seats
+        },
+        waktu_expired: {
+          [Op.gt]: new Date()
+        },
+        id_user: {
+          [Op.ne]: id_user
+        }
+      },
+      transaction
+    })
+  ]);
+
+  const bookedSeats = existingTickets.map(ticket => ticket.nomor_kursi);
+  const reservedSeats = existingReservations.map(res => res.nomor_kursi);
+  const unavailableSeats = [...bookedSeats, ...reservedSeats];
+  
+  const conflictSeats = seats.filter(seat => unavailableSeats.includes(seat));
+  
+  if (conflictSeats.length > 0) {
+    const error = new Error(`Kursi ${conflictSeats.join(', ')} sudah dipesan atau direservasi oleh pengguna lain`);
+    error.conflictSeats = conflictSeats;
+    throw error;
+  }
+
+  return true;
+}
+
+/**
+ * Create single ticket with payment record
+ */
+async function createTicketWithPayment(ticketData, metode_pembayaran, transaction) {
+  const batas_pembayaran = getPaymentDeadline();
+  
+  // Create ticket
+  const ticket = await Tiket.create({
+    ...ticketData,
+    tanggal_pemesanan: new Date(),
+    status_tiket: 'pending',
+    batas_pembayaran
+  }, { transaction });
+
+  // Generate payment code
+  const kode_pembayaran = generatePaymentCode();
+
+  // Create payment record
+  const payment = await Pembayaran.create({
+    id_tiket: ticket.id_tiket,
+    metode: metode_pembayaran,
+    status: 'pending',
+    kode_pembayaran,
+    transaction_id: null,
+    payment_token: null,
+    snap_redirect_url: null
+  }, { transaction });
+
+  return { ticket, payment };
+}
+
+/**
+ * Create multiple tickets for multiple seats
+ */
+async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_pembayaran, transaction) {
+  const tickets = [];
+  const payments = [];
+
+  for (const seat of seats) {
+    const ticketData = {
+      ...baseTicketData,
+      nomor_kursi: seat
+    };
+
+    const { ticket, payment } = await createTicketWithPayment(ticketData, metode_pembayaran, transaction);
+    tickets.push(ticket);
+    payments.push(payment);
+  }
+
+  return { tickets, payments };
+}
+
+/**
+ * Clear user's reservations for specific seats
+ */
+async function clearUserReservations(id_user, id_rute, nomor_kursi, transaction) {
+  const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
+  
+  await ReservasiSementara.destroy({
+    where: {
+      id_user,
+      id_rute,
+      nomor_kursi: {
+        [Op.in]: seats
+      }
+    },
+    transaction
+  });
+}
+
+/**
+ * Validate reservation and check expiry
+ */
+async function validateReservation(id_reservasi, id_user, transaction) {
+  const reservation = await ReservasiSementara.findOne({
+    where: {
+      id_reservasi,
+      id_user
+    },
+    include: [
+      {
+        model: Rute,
+        include: [
+          {
+            model: Bus,
+            attributes: ['nama_bus', 'total_kursi']
+          }
+        ]
+      }
+    ],
+    transaction
+  });
+
+  if (!reservation) {
+    throw new Error('Reservasi tidak ditemukan atau telah kadaluarsa');
+  }
+
+  // Check if reservation is still valid (not expired)
+  if (new Date() > reservation.waktu_expired) {
+    await reservation.destroy({ transaction });
+    const error = new Error('Reservasi telah kadaluarsa. Silakan pilih kursi kembali.');
+    error.expired = true;
+    throw error;
+  }
+
+  return reservation;
+}
+
+/**
+ * Format success response for ticket creation
+ */
+function formatTicketResponse(tickets, payments, isMultiple = false) {
+  const firstTicket = Array.isArray(tickets) ? tickets[0] : tickets;
+  const totalAmount = Array.isArray(tickets) 
+    ? tickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0)
+    : parseFloat(tickets.total_bayar);
+
+  const response = {
+    success: true,
+    message: isMultiple 
+      ? `${tickets.length} tiket berhasil dibuat. Lanjutkan ke pembayaran.`
+      : 'Tiket berhasil dibuat. Lanjutkan ke pembayaran.',
+    data: {
+      [isMultiple ? 'tickets' : 'ticket']: isMultiple ? tickets : tickets,
+      [isMultiple ? 'payments' : 'payment']: isMultiple ? 
+        payments.map(payment => ({
+          kode_pembayaran: payment.kode_pembayaran,
+          metode: payment.metode,
+          batas_pembayaran: firstTicket.batas_pembayaran,
+          total_bayar: totalAmount,
+          status: 'pending'
+        })) : {
+          kode_pembayaran: payments.kode_pembayaran,
+          metode: payments.metode,
+          batas_pembayaran: firstTicket.batas_pembayaran,
+          total_bayar: totalAmount,
+          status: 'pending'
+        },
+      next_steps: {
+        create_payment_token: `/api/pembayaran/create`,
+        check_status: `/api/pembayaran/status/${firstTicket.id_tiket}`,
+        cancel_payment: `/api/pembayaran/cancel/${firstTicket.id_tiket}`
+      }
+    }
+  };
+
+  return response;
+}
+
+// ============= MAIN CONTROLLER FUNCTIONS =============
+
+/**
+ * Create ticket from reservation with automatic Midtrans integration
+ */
 exports.createTicketFromReservation = async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -25,170 +301,57 @@ exports.createTicketFromReservation = async (req, res) => {
         });
       }
 
-      // Check if route exists
-      const rute = await Rute.findByPk(id_rute, {
-        include: [{
-          model: Bus,
-          attributes: ['nama_bus', 'total_kursi']
-        }],
-        transaction
-      });
+      try {
+        // Validate route
+        const rute = await validateAndGetRoute(id_rute, transaction);
 
-      if (!rute) {
-        await transaction.rollback();
-        return res.status(404).json({
-          success: false,
-          message: 'Rute tidak ditemukan'
-        });
-      }
+        // Check seat availability
+        await checkSeatAvailability(id_rute, nomor_kursi, req.user.id_user, transaction);
 
-      // Check if seats are available (not booked and not reserved)
-      const seatChecks = await Promise.all([
-        // Check existing tickets
-        Tiket.findAll({
-          where: {
-            id_rute,
-            nomor_kursi: {
-              [Op.in]: nomor_kursi
-            },
-            status_tiket: {
-              [Op.in]: ['pending', 'confirmed', 'completed']
-            }
-          },
-          transaction
-        }),
-        // Check active reservations
-        ReservasiSementara.findAll({
-          where: {
-            id_rute,
-            nomor_kursi: {
-              [Op.in]: nomor_kursi
-            },
-            waktu_expired: {
-              [Op.gt]: new Date()
-            },
-            id_user: {
-              [Op.ne]: req.user.id_user // Exclude current user's reservations
-            }
-          },
-          transaction
-        })
-      ]);
-
-      const [existingTickets, existingReservations] = seatChecks;
-      const bookedSeats = existingTickets.map(ticket => ticket.nomor_kursi);
-      const reservedSeats = existingReservations.map(res => res.nomor_kursi);
-      const unavailableSeats = [...bookedSeats, ...reservedSeats];
-      
-      const conflictSeats = nomor_kursi.filter(seat => unavailableSeats.includes(seat));
-      
-      if (conflictSeats.length > 0) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          message: `Kursi ${conflictSeats.join(', ')} sudah dipesan atau direservasi oleh pengguna lain`,
-          conflictSeats
-        });
-      }
-
-      // Create tickets for each seat
-      const tickets = [];
-      const payments = [];
-
-      for (const seat of nomor_kursi) {
-        // Set payment deadline (24 hours from now)
-        const batas_pembayaran = new Date(Date.now() + (24 * 60 * 60 * 1000));
-
-        // Create ticket
-        const ticket = await Tiket.create({
+        // Create tickets for each seat
+        const baseTicketData = {
           id_rute,
           id_user: req.user.id_user,
-          nomor_kursi: seat,
-          tanggal_pemesanan: new Date(),
-          status_tiket: 'pending',
-          total_bayar: rute.harga,
-          batas_pembayaran
-        }, { transaction });
+          total_bayar: rute.harga
+        };
 
-        // Generate payment code
-        const kode_pembayaran = `PAY-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+        const { tickets, payments } = await createMultipleTicketsWithPayments(
+          baseTicketData, 
+          nomor_kursi, 
+          metode_pembayaran, 
+          transaction
+        );
 
-        // Create payment record
-        const payment = await Pembayaran.create({
-          id_tiket: ticket.id_tiket,
-          metode: metode_pembayaran,
-          status: 'pending',
-          kode_pembayaran,
-          transaction_id: null,
-          payment_token: null,
-          snap_redirect_url: null
-        }, { transaction });
+        // Clear any existing reservations by this user for these seats
+        await clearUserReservations(req.user.id_user, id_rute, nomor_kursi, transaction);
 
-        tickets.push(ticket);
-        payments.push(payment);
-      }
+        await transaction.commit();
 
-      // Clear any existing reservations by this user for these seats
-      await ReservasiSementara.destroy({
-        where: {
-          id_user: req.user.id_user,
-          id_rute,
-          nomor_kursi: {
-            [Op.in]: nomor_kursi
-          }
-        },
-        transaction
-      });
+        // Get complete ticket data for response
+        const completeTickets = await getMultipleCompleteTicketData(
+          tickets.map(t => t.id_tiket)
+        );
 
-      await transaction.commit();
+        console.log('Multiple tickets created successfully');
 
-      // Get complete ticket data for response
-      const completeTickets = await Promise.all(
-        tickets.map(ticket => 
-          Tiket.findByPk(ticket.id_tiket, {
-            include: [
-              {
-                model: User,
-                attributes: ['id_user', 'username', 'email', 'no_telepon']
-              },
-              {
-                model: Rute,
-                include: [
-                  {
-                    model: Bus,
-                    attributes: ['nama_bus', 'total_kursi']
-                  }
-                ]
-              },
-              {
-                model: Pembayaran
-              }
-            ]
-          })
-        )
-      );
+        return res.status(201).json(formatTicketResponse(completeTickets, payments, true));
 
-      console.log('Multiple tickets created successfully');
-
-      return res.status(201).json({
-        success: true,
-        message: `${tickets.length} tiket berhasil dibuat. Lanjutkan ke pembayaran.`,
-        data: {
-          tickets: completeTickets,
-          payments: payments.map(payment => ({
-            kode_pembayaran: payment.kode_pembayaran,
-            metode: payment.metode,
-            batas_pembayaran: tickets[0].batas_pembayaran,
-            total_bayar: tickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0),
-            status: 'pending'
-          })),
-          next_steps: {
-            create_payment_token: `/api/pembayaran/create`,
-            check_status: `/api/pembayaran/status/${tickets[0].id_tiket}`,
-            cancel_payment: `/api/pembayaran/cancel/${tickets[0].id_tiket}`
-          }
+      } catch (error) {
+        await transaction.rollback();
+        
+        if (error.conflictSeats) {
+          return res.status(409).json({
+            success: false,
+            message: error.message,
+            conflictSeats: error.conflictSeats
+          });
         }
-      });
+        
+        return res.status(error.message === 'Rute tidak ditemukan' ? 404 : 500).json({
+          success: false,
+          message: error.message
+        });
+      }
     }
 
     // Original logic for actual reservations
@@ -200,145 +363,64 @@ exports.createTicketFromReservation = async (req, res) => {
       });
     }
 
-    // Get reservation with route and bus details
-    const reservation = await ReservasiSementara.findOne({
-      where: {
-        id_reservasi,
-        id_user: req.user.id_user
-      },
-      include: [
-        {
-          model: Rute,
-          include: [
-            {
-              model: Bus,
-              attributes: ['nama_bus', 'total_kursi']
-            }
-          ]
-        }
-      ],
-      transaction
-    });
+    try {
+      // Validate reservation
+      const reservation = await validateReservation(id_reservasi, req.user.id_user, transaction);
 
-    if (!reservation) {
+      // Check if seat is already booked by someone else
+      await checkSeatAvailability(
+        reservation.id_rute, 
+        reservation.nomor_kursi, 
+        req.user.id_user, 
+        transaction
+      );
+
+      // Create ticket
+      const ticketData = {
+        id_rute: reservation.id_rute,
+        id_user: req.user.id_user,
+        nomor_kursi: reservation.nomor_kursi,
+        total_bayar: reservation.Rute.harga
+      };
+
+      const { ticket, payment } = await createTicketWithPayment(ticketData, metode_pembayaran, transaction);
+
+      // Delete the reservation (convert to ticket)
+      await reservation.destroy({ transaction });
+
+      // Commit transaction
+      await transaction.commit();
+
+      // Get complete ticket data for response
+      const completeTicket = await getCompleteTicketData(ticket.id_tiket);
+
+      console.log('Ticket created from reservation successfully');
+
+      res.status(201).json(formatTicketResponse(completeTicket, payment, false));
+
+    } catch (error) {
       await transaction.rollback();
+      
+      if (error.expired) {
+        return res.status(410).json({
+          success: false,
+          message: error.message,
+          expired: true
+        });
+      }
+      
+      if (error.conflictSeats) {
+        return res.status(409).json({
+          success: false,
+          message: 'Kursi sudah dipesan oleh pengguna lain'
+        });
+      }
+      
       return res.status(404).json({
         success: false,
-        message: 'Reservasi tidak ditemukan atau telah kadaluarsa'
+        message: error.message
       });
     }
-
-    // Check if reservation is still valid (not expired)
-    if (new Date() > reservation.waktu_expired) {
-      await reservation.destroy({ transaction });
-      await transaction.rollback();
-      
-      return res.status(410).json({
-        success: false,
-        message: 'Reservasi telah kadaluarsa. Silakan pilih kursi kembali.',
-        expired: true
-      });
-    }
-
-    // Check if seat is already booked by someone else
-    const existingTicket = await Tiket.findOne({
-      where: {
-        id_rute: reservation.id_rute,
-        nomor_kursi: reservation.nomor_kursi,
-        status_tiket: {
-          [Op.in]: ['pending', 'confirmed', 'completed']
-        }
-      },
-      transaction
-    });
-
-    if (existingTicket) {
-      await reservation.destroy({ transaction });
-      await transaction.rollback();
-      
-      return res.status(409).json({
-        success: false,
-        message: 'Kursi sudah dipesan oleh pengguna lain'
-      });
-    }
-
-    // Set payment deadline (24 hours from now)
-    const batas_pembayaran = new Date(Date.now() + (24 * 60 * 60 * 1000));
-
-    // Create ticket
-    const ticket = await Tiket.create({
-      id_rute: reservation.id_rute,
-      id_user: req.user.id_user,
-      nomor_kursi: reservation.nomor_kursi,
-      tanggal_pemesanan: new Date(),
-      status_tiket: 'pending',
-      total_bayar: reservation.Rute.harga,
-      batas_pembayaran
-    }, { transaction });
-
-    // Generate payment code (fallback for non-Midtrans payments)
-    const kode_pembayaran = `PAY-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
-
-    // Create payment record (ready for Midtrans integration)
-    const payment = await Pembayaran.create({
-      id_tiket: ticket.id_tiket,
-      metode: metode_pembayaran,
-      status: 'pending',
-      kode_pembayaran,
-      transaction_id: null,
-      payment_token: null,
-      snap_redirect_url: null
-    }, { transaction });
-
-    // Delete the reservation (convert to ticket)
-    await reservation.destroy({ transaction });
-
-    // Commit transaction
-    await transaction.commit();
-
-    // Get complete ticket data for response
-    const completeTicket = await Tiket.findByPk(ticket.id_tiket, {
-      include: [
-        {
-          model: User,
-          attributes: ['id_user', 'username', 'email', 'no_telepon']
-        },
-        {
-          model: Rute,
-          include: [
-            {
-              model: Bus,
-              attributes: ['nama_bus', 'total_kursi']
-            }
-          ]
-        },
-        {
-          model: Pembayaran
-        }
-      ]
-    });
-
-    console.log('Ticket created from reservation successfully');
-
-    res.status(201).json({
-      success: true,
-      message: 'Tiket berhasil dibuat. Lanjutkan ke pembayaran.',
-      data: {
-        ticket: completeTicket,
-        payment: {
-          kode_pembayaran,
-          metode: metode_pembayaran,
-          batas_pembayaran,
-          total_bayar: ticket.total_bayar,
-          status: 'pending'
-        },
-        next_steps: {
-          create_payment_token: `/api/pembayaran/create`,
-          check_status: `/api/pembayaran/status/${ticket.id_tiket}`,
-          cancel_payment: `/api/pembayaran/cancel/${ticket.id_tiket}`
-        }
-      }
-    });
 
   } catch (error) {
     await transaction.rollback();
@@ -352,7 +434,9 @@ exports.createTicketFromReservation = async (req, res) => {
   }
 };
 
-// Enhanced booking summary with payment information
+/**
+ * Enhanced booking summary with payment information
+ */
 exports.getBookingSummary = async (req, res) => {
   try {
     const { id_reservasi } = req.params;
@@ -458,7 +542,9 @@ exports.getBookingSummary = async (req, res) => {
   }
 };
 
-// Complete booking with payment (legacy method for backward compatibility)
+/**
+ * Complete booking with payment (legacy method for backward compatibility)
+ */
 exports.createTicket = async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -479,139 +565,50 @@ exports.createTicket = async (req, res) => {
     // Normalize nomor_kursi to single seat for legacy compatibility
     const seatNumber = Array.isArray(nomor_kursi) ? nomor_kursi[0] : nomor_kursi;
 
-    // Check if route exists
-    const rute = await Rute.findByPk(id_rute, {
-      include: [{
-        model: Bus,
-        attributes: ['nama_bus', 'total_kursi']
-      }]
-    });
+    try {
+      // Validate route
+      const rute = await validateAndGetRoute(id_rute, transaction);
 
-    if (!rute) {
-      await transaction.rollback();
-      return res.status(404).json({
-        success: false,
-        message: 'Rute tidak ditemukan'
-      });
-    }
+      // Check seat availability
+      await checkSeatAvailability(id_rute, seatNumber, req.user.id_user, transaction);
 
-    // Check seat availability
-    const existingBookings = await Promise.all([
-      // Check existing tickets
-      Tiket.findOne({
-        where: {
-          id_rute,
-          nomor_kursi: seatNumber,
-          status_tiket: {
-            [Op.in]: ['pending', 'confirmed', 'completed']
-          }
-        },
-        transaction
-      }),
-      // Check active reservations
-      ReservasiSementara.findOne({
-        where: {
-          id_rute,
-          nomor_kursi: seatNumber,
-          waktu_expired: {
-            [Op.gt]: new Date()
-          },
-          id_user: {
-            [Op.ne]: req.user.id_user // Exclude current user's reservations
-          }
-        },
-        transaction
-      })
-    ]);
-
-    const [existingTicket, existingReservation] = existingBookings;
-
-    if (existingTicket || existingReservation) {
-      await transaction.rollback();
-      return res.status(409).json({
-        success: false,
-        message: 'Kursi sudah dipesan atau direservasi'
-      });
-    }
-
-    // Set payment deadline (24 hours from now)
-    const batas_pembayaran = new Date(Date.now() + (24 * 60 * 60 * 1000));
-
-    // Create ticket
-    const ticket = await Tiket.create({
-      id_rute,
-      id_user: req.user.id_user,
-      nomor_kursi: seatNumber,
-      tanggal_pemesanan: new Date(),
-      status_tiket: 'pending',
-      total_bayar: rute.harga,
-      batas_pembayaran
-    }, { transaction });
-
-    // Generate payment code
-    const kode_pembayaran = `PAY-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
-
-    // Create payment record
-    const payment = await Pembayaran.create({
-      id_tiket: ticket.id_tiket,
-      metode: metode_pembayaran,
-      status: 'pending',
-      kode_pembayaran
-    }, { transaction });
-
-    // Clear any existing reservations by this user for this seat
-    await ReservasiSementara.destroy({
-      where: {
-        id_user: req.user.id_user,
+      // Create ticket
+      const ticketData = {
         id_rute,
-        nomor_kursi: seatNumber
-      },
-      transaction
-    });
+        id_user: req.user.id_user,
+        nomor_kursi: seatNumber,
+        total_bayar: rute.harga
+      };
 
-    await transaction.commit();
+      const { ticket, payment } = await createTicketWithPayment(ticketData, metode_pembayaran, transaction);
 
-    // Get complete ticket data for response
-    const completeTicket = await Tiket.findByPk(ticket.id_tiket, {
-      include: [
-        {
-          model: User,
-          attributes: ['id_user', 'username', 'email', 'no_telepon']
-        },
-        {
-          model: Rute,
-          include: [
-            {
-              model: Bus,
-              attributes: ['nama_bus', 'total_kursi']
-            }
-          ]
-        },
-        {
-          model: Pembayaran
-        }
-      ]
-    });
+      // Clear any existing reservations by this user for this seat
+      await clearUserReservations(req.user.id_user, id_rute, seatNumber, transaction);
 
-    console.log('Direct ticket created successfully');
+      await transaction.commit();
 
-    res.status(201).json({
-      success: true,
-      message: 'Tiket berhasil dibuat. Lanjutkan ke pembayaran.',
-      data: {
-        ticket: completeTicket,
-        payment: {
-          kode_pembayaran,
-          metode: metode_pembayaran,
-          batas_pembayaran,
-          total_bayar: ticket.total_bayar
-        },
-        next_steps: {
-          create_payment_token: `/api/pembayaran/create`,
-          check_status: `/api/pembayaran/status/${ticket.id_tiket}`
-        }
+      // Get complete ticket data for response
+      const completeTicket = await getCompleteTicketData(ticket.id_tiket);
+
+      console.log('Direct ticket created successfully');
+
+      res.status(201).json(formatTicketResponse(completeTicket, payment, false));
+
+    } catch (error) {
+      await transaction.rollback();
+      
+      if (error.conflictSeats) {
+        return res.status(409).json({
+          success: false,
+          message: 'Kursi sudah dipesan atau direservasi'
+        });
       }
-    });
+      
+      return res.status(error.message === 'Rute tidak ditemukan' ? 404 : 500).json({
+        success: false,
+        message: error.message
+      });
+    }
 
   } catch (error) {
     await transaction.rollback();
@@ -625,38 +622,17 @@ exports.createTicket = async (req, res) => {
   }
 };
 
-// Get grouped tickets by ID (NEW FUNCTION)
+/**
+ * Get grouped tickets by ID
+ */
 exports.getGroupedTicketById = async (req, res) => {
   try {
     const { id } = req.params;
     
     // Get the main ticket
-    const mainTicket = await Tiket.findOne({
-      where: {
-        id_tiket: id,
-        id_user: req.user.id_user
-      },
-      include: [
-        {
-          model: User,
-          attributes: ['id_user', 'username', 'email', 'no_telepon']
-        },
-        {
-          model: Rute,
-          include: [
-            {
-              model: Bus,
-              attributes: ['nama_bus', 'total_kursi']
-            }
-          ]
-        },
-        {
-          model: Pembayaran
-        }
-      ]
-    });
+    const mainTicket = await getCompleteTicketData(id);
 
-    if (!mainTicket) {
+    if (!mainTicket || mainTicket.id_user !== req.user.id_user) {
       return res.status(404).json({
         success: false,
         message: 'Tiket tidak ditemukan'

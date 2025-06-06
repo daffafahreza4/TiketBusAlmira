@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
@@ -27,24 +27,35 @@ const SeatSelection = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingSeats, setIsCheckingSeats] = useState(false);
 
-  // Generate all possible seats (1A-10D = 40 seats)
-  const generateAllSeats = () => {
+  // FIXED: Memoize generateAllSeats function
+  const generateAllSeats = useCallback(() => {
+    // FIXED: Get totalSeats from availableSeats data or route data
+    let totalSeats = 40; // default fallback
+    
+    if (availableSeats?.totalSeats) {
+      totalSeats = availableSeats.totalSeats;
+    } else if (route?.total_kursi) {
+      totalSeats = route.total_kursi;
+    } else if (route?.Bus?.total_kursi) {
+      totalSeats = route.Bus.total_kursi;
+    }
+
     const allSeats = {};
-    for (let seatNum = 1; seatNum <= 40; seatNum++) {
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
       allSeats[seatNum.toString()] = 'available';
     }
     return allSeats;
-  };
+  }, [availableSeats?.totalSeats, route?.total_kursi, route?.Bus?.total_kursi]);
 
   // TAMBAHKAN function baru untuk refresh seat data
-  const refreshSeatData = async () => {
+  const refreshSeatData = useCallback(async () => {
     try {
       console.log('🔄 Refreshing seat data...');
       await getAvailableSeats(routeId);
     } catch (error) {
       console.error('Failed to refresh seat data:', error);
     }
-  };
+  }, [getAvailableSeats, routeId]);
 
   useEffect(() => {
     const defaultSeats = generateAllSeats();
@@ -130,7 +141,7 @@ const SeatSelection = ({
 
     setSeatStatuses(statusMap);
     console.log('🎨 Seat colors updated:', statusMap); // Debug
-  }, [availableSeats]);
+  }, [availableSeats, generateAllSeats]);
 
   // TAMBAHKAN auto-refresh
   useEffect(() => {
@@ -141,7 +152,7 @@ const SeatSelection = ({
     }, 15000); // Refresh setiap 15 detik
 
     return () => clearInterval(interval);
-  }, [routeId]);
+  }, [routeId, refreshSeatData]);
 
   // Handle seat click
   const handleSeatClick = async (seatNumber) => {
@@ -272,13 +283,24 @@ const SeatSelection = ({
     );
   }
 
-  // Generate bus layout
-  // Generate bus layout with 2-2 configuration
+  // Generate bus layout with dynamic seats based on totalSeats
   const generateBusLayout = () => {
-    const rows = 10;
+    // FIXED: Get totalSeats from availableSeats data or route data
+    let totalSeats = 40; // default fallback
+    
+    if (availableSeats?.totalSeats) {
+      totalSeats = availableSeats.totalSeats;
+    } else if (route?.total_kursi) {
+      totalSeats = route.total_kursi;
+    } else if (route?.Bus?.total_kursi) {
+      totalSeats = route.Bus.total_kursi;
+    }
+
+    const seatsPerRow = 4; // 2-2 configuration
+    const totalRows = Math.ceil(totalSeats / seatsPerRow);
     const layout = [];
 
-    for (let row = 1; row <= rows; row++) {
+    for (let row = 1; row <= totalRows; row++) {
       const rowSeats = [];
 
       // Calculate seat numbers for this row (2-2 configuration)
@@ -287,59 +309,79 @@ const SeatSelection = ({
       const rightSeat1 = ((row - 1) * 4) + 3;
       const rightSeat2 = ((row - 1) * 4) + 4;
 
-      // Left side seats (2 seats)
-      rowSeats.push(
-        <div key={`left-${row}`} className="flex gap-1">
-          <div
-            className={`seat ${getSeatClass(leftSeat1.toString())}`}
-            onClick={() => handleSeatClick(leftSeat1.toString())}
-            data-seat={leftSeat1}
-            style={{ cursor: 'pointer' }}
-          >
-            {leftSeat1}
+      // Only render seats that exist (don't exceed totalSeats)
+      if (leftSeat1 <= totalSeats) {
+        // Left side seats (2 seats)
+        rowSeats.push(
+          <div key={`left-${row}`} className="flex gap-1">
+            <div
+              className={`seat ${getSeatClass(leftSeat1.toString())}`}
+              onClick={() => handleSeatClick(leftSeat1.toString())}
+              data-seat={leftSeat1}
+              style={{ cursor: 'pointer' }}
+            >
+              {leftSeat1}
+            </div>
+            {leftSeat2 <= totalSeats && (
+              <div
+                className={`seat ${getSeatClass(leftSeat2.toString())}`}
+                onClick={() => handleSeatClick(leftSeat2.toString())}
+                data-seat={leftSeat2}
+                style={{ cursor: 'pointer' }}
+              >
+                {leftSeat2}
+              </div>
+            )}
           </div>
-          <div
-            className={`seat ${getSeatClass(leftSeat2.toString())}`}
-            onClick={() => handleSeatClick(leftSeat2.toString())}
-            data-seat={leftSeat2}
-            style={{ cursor: 'pointer' }}
-          >
-            {leftSeat2}
-          </div>
-        </div>
-      );
+        );
 
-      // Aisle (gang tengah)
-      rowSeats.push(<div key={`aisle-${row}`} className="w-8"></div>);
+        // Aisle (gang tengah)
+        rowSeats.push(<div key={`aisle-${row}`} className="w-8"></div>);
 
-      // Right side seats (2 seats)
-      rowSeats.push(
-        <div key={`right-${row}`} className="flex gap-1">
-          <div
-            className={`seat ${getSeatClass(rightSeat1.toString())}`}
-            onClick={() => handleSeatClick(rightSeat1.toString())}
-            data-seat={rightSeat1}
-            style={{ cursor: 'pointer' }}
-          >
-            {rightSeat1}
-          </div>
-          <div
-            className={`seat ${getSeatClass(rightSeat2.toString())}`}
-            onClick={() => handleSeatClick(rightSeat2.toString())}
-            data-seat={rightSeat2}
-            style={{ cursor: 'pointer' }}
-          >
-            {rightSeat2}
-          </div>
-        </div>
-      );
+        // Right side seats (2 seats)
+        const rightSeats = [];
+        if (rightSeat1 <= totalSeats) {
+          rightSeats.push(
+            <div
+              key={`right1-${row}`}
+              className={`seat ${getSeatClass(rightSeat1.toString())}`}
+              onClick={() => handleSeatClick(rightSeat1.toString())}
+              data-seat={rightSeat1}
+              style={{ cursor: 'pointer' }}
+            >
+              {rightSeat1}
+            </div>
+          );
+        }
+        if (rightSeat2 <= totalSeats) {
+          rightSeats.push(
+            <div
+              key={`right2-${row}`}
+              className={`seat ${getSeatClass(rightSeat2.toString())}`}
+              onClick={() => handleSeatClick(rightSeat2.toString())}
+              data-seat={rightSeat2}
+              style={{ cursor: 'pointer' }}
+            >
+              {rightSeat2}
+            </div>
+          );
+        }
 
-      layout.push(
-        <div key={`row-${row}`} className="flex justify-center items-center mb-2">
-          <span className="w-8 text-xs text-gray-500 text-center">{row}</span>
-          {rowSeats}
-        </div>
-      );
+        if (rightSeats.length > 0) {
+          rowSeats.push(
+            <div key={`right-${row}`} className="flex gap-1">
+              {rightSeats}
+            </div>
+          );
+        }
+
+        layout.push(
+          <div key={`row-${row}`} className="flex justify-center items-center mb-2">
+            <span className="w-8 text-xs text-gray-500 text-center">{row}</span>
+            {rowSeats}
+          </div>
+        );
+      }
     }
 
     return layout;

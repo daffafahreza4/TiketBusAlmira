@@ -271,14 +271,13 @@ exports.getAvailableSeats = async (req, res) => {
       attributes: ['nomor_kursi', 'id_user', 'waktu_expired']
     });
 
-    const totalSeats = route.Bus.total_kursi;
-    const seatsPerRow = 4; // Assuming 4 seats per row (A, B, C, D)
+    const totalSeats = route.Bus.total_kursi; // Ambil dari database
+    const seatsPerRow = 4;
     const totalRows = Math.ceil(totalSeats / seatsPerRow);
 
-    // Generate all possible seats
-    // Generate all possible seats (1-40 for 2-2 configuration)
+    // Generate seats berdasarkan kapasitas bus sebenarnya
     const allSeats = [];
-    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) { // Gunakan totalSeats, bukan 40
       const row = Math.ceil(seatNum / 4);
       const positionInRow = ((seatNum - 1) % 4) + 1;
       let seatPosition;

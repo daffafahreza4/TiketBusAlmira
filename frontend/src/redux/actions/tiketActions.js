@@ -20,6 +20,11 @@ export const getAvailableSeats = routeId => async dispatch => {
 
     const res = await axios.get(`/api/tiket/available-seats/${routeId}`);
 
+    // TAMBAH: Handle booking closed response
+    if (res.data.booking_closed) {
+      throw new Error(res.data.message || 'Pemesanan sudah ditutup');
+    }
+
     // Handle different response structures from backend
     let seatData = null;
 
@@ -39,13 +44,16 @@ export const getAvailableSeats = routeId => async dispatch => {
       payload: seatData
     });
   } catch (err) {
-    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat mengambil data kursi';
+    const errorMsg = err.response?.data?.message || err.message || 'Terjadi kesalahan saat mengambil data kursi';
 
     dispatch(setAlert(errorMsg, 'danger'));
     dispatch({
       type: TICKET_ERROR,
       payload: errorMsg
     });
+    
+    // TAMBAH: Throw error untuk handling di component
+    throw err;
   }
 };
 

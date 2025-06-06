@@ -70,8 +70,26 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
       {routes.map(route => (
         <div 
           key={route.id_rute} 
-          className="bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow duration-200"
+          className={`bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow duration-200 ${
+            route.minutes_until_departure <= 10 ? 'border-l-4 border-red-500' : ''
+          }`}
         >
+          {/* TAMBAH: Warning untuk rute yang hampir tutup */}
+          {route.minutes_until_departure <= 30 && route.minutes_until_departure > 10 && (
+            <div className="mb-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+            </div>
+          )}
+          
+          {/* Warning untuk rute yang sudah sangat dekat waktu keberangkatan */}
+          {route.minutes_until_departure <= 10 && route.minutes_until_departure > 0 && (
+            <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              <strong>Perhatian!</strong> Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             {/* Waktu & Rute */}
             <div className="flex items-center space-x-8">
@@ -109,12 +127,21 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
               <div className="text-xl font-bold text-gray-900 mb-2">
                 {formatCurrency(route.harga)}
               </div>
-              <Link
-                to={`/booking/${route.id_rute}`}
-                className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
-              >
-                Pesan
-              </Link>
+              {route.booking_allowed ? (
+                <Link
+                  to={`/booking/${route.id_rute}`}
+                  className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
+                >
+                  Pesan
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="bg-gray-400 text-white px-6 py-2 rounded-full cursor-not-allowed font-medium"
+                >
+                  Tutup
+                </button>
+              )}
             </div>
           </div>
           

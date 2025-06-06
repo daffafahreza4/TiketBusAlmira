@@ -1,4 +1,5 @@
 const { Tiket, User, Rute, Pembayaran, Bus, ReservasiSementara } = require('../models');
+const { isBookingAllowed } = require('../utils/cleanupJob');
 const { Op } = require('sequelize');
 
 // Get all tickets for authenticated user
@@ -248,6 +249,23 @@ exports.getAvailableSeats = async (req, res) => {
         message: 'Rute tidak ditemukan'
       });
     }
+
+    if (!isBookingAllowed(route.waktu_berangkat)) {
+      const departure = new Date(route.waktu_berangkat);
+      const now = new Date();
+
+      let message = 'Pemesanan ditutup 10 menit sebelum keberangkatan.';
+      if (departure <= now) {
+        message = 'Bus sudah berangkat. Pemesanan tidak dapat dilakukan.';
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: message,
+        booking_closed: true
+      });
+    }
+
 
     // Get booked seats from confirmed tickets
     const bookedSeats = await Tiket.findAll({

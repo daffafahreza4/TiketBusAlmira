@@ -2,11 +2,12 @@ const { Rute, Bus } = require('../models');
 const { Op } = require('sequelize');
 
 // Get all routes
+// Get all routes
 exports.getAllRoutes = async (req, res) => {
   try {
     const routes = await Rute.findAll({
       attributes: [
-        'id_rute', 'id_bus', 'asal', 'tujuan', 
+        'id_rute', 'id_bus', 'asal', 'tujuan',
         'waktu_berangkat', 'harga', 'status', 'created_at'
       ],
       include: [{
@@ -14,7 +15,11 @@ exports.getAllRoutes = async (req, res) => {
         attributes: ['id_bus', 'nama_bus', 'total_kursi']
       }],
       where: {
-        status: 'aktif'
+        status: 'aktif',
+        // TAMBAH: Filter rute yang belum berangkat + masih bisa dipesan (10 menit buffer)
+        waktu_berangkat: {
+          [Op.gt]: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+        }
       },
       order: [['waktu_berangkat', 'ASC']]
     });
@@ -23,13 +28,18 @@ exports.getAllRoutes = async (req, res) => {
     const routesWithArrival = routes.map(route => {
       const departure = new Date(route.waktu_berangkat);
       const arrival = new Date(departure.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours
-      
+
+      // TAMBAH: Calculate minutes until departure
+      const minutesUntilDeparture = Math.floor((departure - new Date()) / (1000 * 60));
+
       return {
         ...route.toJSON(),
         perkiraan_tiba: arrival,
         nama_bus: route.Bus ? route.Bus.nama_bus : 'Bus Tidak Diketahui',
         total_kursi: route.Bus ? route.Bus.total_kursi : 0,
-        kursi_tersedia: route.Bus ? route.Bus.total_kursi : 0 // For now, assume all seats available
+        kursi_tersedia: route.Bus ? route.Bus.total_kursi : 0,
+        minutes_until_departure: minutesUntilDeparture, // TAMBAH INI
+        booking_allowed: minutesUntilDeparture > 10 // TAMBAH INI
       };
     });
 
@@ -51,7 +61,7 @@ exports.getRouteById = async (req, res) => {
   try {
     const route = await Rute.findByPk(req.params.id, {
       attributes: [
-        'id_rute', 'id_bus', 'asal', 'tujuan', 
+        'id_rute', 'id_bus', 'asal', 'tujuan',
         'waktu_berangkat', 'harga', 'status', 'created_at'
       ],
       include: [{

@@ -1,4 +1,5 @@
 const { Tiket, User, Rute, Bus, ReservasiSementara, Pembayaran } = require('../models');
+const { isBookingAllowed } = require('../utils/cleanupJob');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const crypto = require('crypto');
@@ -70,6 +71,18 @@ async function validateAndGetRoute(id_rute, transaction) {
     throw new Error('Rute tidak ditemukan');
   }
 
+  // TAMBAH: Validasi waktu keberangkatan
+  if (!isBookingAllowed(rute.waktu_berangkat)) {
+    const departure = new Date(rute.waktu_berangkat);
+    const now = new Date();
+
+    if (departure <= now) {
+      throw new Error('Bus sudah berangkat. Pemesanan tidak dapat dilakukan.');
+    } else {
+      throw new Error('Pemesanan ditutup 10 menit sebelum keberangkatan.');
+    }
+  }
+
   return rute;
 }
 
@@ -78,7 +91,7 @@ async function validateAndGetRoute(id_rute, transaction) {
  */
 async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction) {
   const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
-  
+
   const [existingTickets, existingReservations] = await Promise.all([
     // Check existing tickets
     Tiket.findAll({
@@ -114,9 +127,9 @@ async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction)
   const bookedSeats = existingTickets.map(ticket => ticket.nomor_kursi);
   const reservedSeats = existingReservations.map(res => res.nomor_kursi);
   const unavailableSeats = [...bookedSeats, ...reservedSeats];
-  
+
   const conflictSeats = seats.filter(seat => unavailableSeats.includes(seat));
-  
+
   if (conflictSeats.length > 0) {
     const error = new Error(`Kursi ${conflictSeats.join(', ')} sudah dipesan atau direservasi oleh pengguna lain`);
     error.conflictSeats = conflictSeats;
@@ -131,7 +144,7 @@ async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction)
  */
 async function createTicketWithPayment(ticketData, metode_pembayaran, transaction) {
   const batas_pembayaran = getPaymentDeadline();
-  
+
   // Create ticket
   const ticket = await Tiket.create({
     ...ticketData,
@@ -183,7 +196,7 @@ async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_p
  */
 async function clearUserReservations(id_user, id_rute, nomor_kursi, transaction) {
   const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
-  
+
   await ReservasiSementara.destroy({
     where: {
       id_user,
@@ -239,18 +252,18 @@ async function validateReservation(id_reservasi, id_user, transaction) {
  */
 function formatTicketResponse(tickets, payments, isMultiple = false) {
   const firstTicket = Array.isArray(tickets) ? tickets[0] : tickets;
-  const totalAmount = Array.isArray(tickets) 
+  const totalAmount = Array.isArray(tickets)
     ? tickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0)
     : parseFloat(tickets.total_bayar);
 
   const response = {
     success: true,
-    message: isMultiple 
+    message: isMultiple
       ? `${tickets.length} tiket berhasil dibuat. Lanjutkan ke pembayaran.`
       : 'Tiket berhasil dibuat. Lanjutkan ke pembayaran.',
     data: {
       [isMultiple ? 'tickets' : 'ticket']: isMultiple ? tickets : tickets,
-      [isMultiple ? 'payments' : 'payment']: isMultiple ? 
+      [isMultiple ? 'payments' : 'payment']: isMultiple ?
         payments.map(payment => ({
           kode_pembayaran: payment.kode_pembayaran,
           metode: payment.metode,
@@ -282,7 +295,7 @@ function formatTicketResponse(tickets, payments, isMultiple = false) {
  */
 exports.createTicketFromReservation = async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id_reservasi, metode_pembayaran = 'midtrans', nomor_kursi, id_rute } = req.body;
 
@@ -291,7 +304,7 @@ exports.createTicketFromReservation = async (req, res) => {
     // Handle temporary reservation (when id_reservasi is 'temp')
     if (id_reservasi === 'temp' && nomor_kursi && id_rute) {
       console.log('Creating ticket directly without reservation');
-      
+
       // Validate required fields
       if (!id_rute || !nomor_kursi || !Array.isArray(nomor_kursi) || nomor_kursi.length === 0) {
         await transaction.rollback();
@@ -316,9 +329,9 @@ exports.createTicketFromReservation = async (req, res) => {
         };
 
         const { tickets, payments } = await createMultipleTicketsWithPayments(
-          baseTicketData, 
-          nomor_kursi, 
-          metode_pembayaran, 
+          baseTicketData,
+          nomor_kursi,
+          metode_pembayaran,
           transaction
         );
 
@@ -338,7 +351,7 @@ exports.createTicketFromReservation = async (req, res) => {
 
       } catch (error) {
         await transaction.rollback();
-        
+
         if (error.conflictSeats) {
           return res.status(409).json({
             success: false,
@@ -346,7 +359,7 @@ exports.createTicketFromReservation = async (req, res) => {
             conflictSeats: error.conflictSeats
           });
         }
-        
+
         return res.status(error.message === 'Rute tidak ditemukan' ? 404 : 500).json({
           success: false,
           message: error.message
@@ -369,9 +382,9 @@ exports.createTicketFromReservation = async (req, res) => {
 
       // Check if seat is already booked by someone else
       await checkSeatAvailability(
-        reservation.id_rute, 
-        reservation.nomor_kursi, 
-        req.user.id_user, 
+        reservation.id_rute,
+        reservation.nomor_kursi,
+        req.user.id_user,
         transaction
       );
 
@@ -400,7 +413,7 @@ exports.createTicketFromReservation = async (req, res) => {
 
     } catch (error) {
       await transaction.rollback();
-      
+
       if (error.expired) {
         return res.status(410).json({
           success: false,
@@ -408,14 +421,14 @@ exports.createTicketFromReservation = async (req, res) => {
           expired: true
         });
       }
-      
+
       if (error.conflictSeats) {
         return res.status(409).json({
           success: false,
           message: 'Kursi sudah dipesan oleh pengguna lain'
         });
       }
-      
+
       return res.status(404).json({
         success: false,
         message: error.message
@@ -473,7 +486,7 @@ exports.getBookingSummary = async (req, res) => {
     // Check if reservation is still valid
     if (new Date() > reservation.waktu_expired) {
       await reservation.destroy();
-      
+
       return res.status(410).json({
         success: false,
         message: 'Reservasi telah kadaluarsa',
@@ -547,7 +560,7 @@ exports.getBookingSummary = async (req, res) => {
  */
 exports.createTicket = async (req, res) => {
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { id_rute, nomor_kursi, metode_pembayaran = 'midtrans' } = req.body;
 
@@ -596,14 +609,14 @@ exports.createTicket = async (req, res) => {
 
     } catch (error) {
       await transaction.rollback();
-      
+
       if (error.conflictSeats) {
         return res.status(409).json({
           success: false,
           message: 'Kursi sudah dipesan atau direservasi'
         });
       }
-      
+
       return res.status(error.message === 'Rute tidak ditemukan' ? 404 : 500).json({
         success: false,
         message: error.message
@@ -628,7 +641,7 @@ exports.createTicket = async (req, res) => {
 exports.getGroupedTicketById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Get the main ticket
     const mainTicket = await getCompleteTicketData(id);
 

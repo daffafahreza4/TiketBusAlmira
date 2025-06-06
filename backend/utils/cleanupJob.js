@@ -11,12 +11,12 @@ const startCleanupJob = () => {
   // Run immediately on start
   runCleanup();
   
-  // Run every 2 minutes for faster cleanup of 30-minute reservations
+  // UBAH: Run every 1 minute untuk auto-cancel yang lebih responsif
   cleanupInterval = setInterval(() => {
     runCleanup();
-  }, 2 * 60 * 1000); // 2 minutes
+  }, 1 * 60 * 1000); 
   
-  console.log('🧹 Cleanup job started - running every 2 minutes');
+  console.log(' Cleanup job started - running every 1 minute');
 };
 
 
@@ -26,7 +26,7 @@ const stopCleanupJob = () => {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    console.log('🛑 Cleanup job stopped');
+    console.log(' Cleanup job stopped');
   }
 };
 
@@ -34,28 +34,35 @@ const stopCleanupJob = () => {
 const runCleanup = async () => {
   try {
     let totalCleaned = 0;
-    
+
     // 1. Clean expired reservations
     const reservationResult = await checkExpiredReservations();
     if (reservationResult.success && reservationResult.deletedCount > 0) {
       totalCleaned += reservationResult.deletedCount;
-      console.log(`🧹 Cleaned ${reservationResult.deletedCount} expired reservations`);
+      console.log(` Cleaned ${reservationResult.deletedCount} expired reservations`);
     }
-    
+
     // 2. Clean expired pending tickets (30 minutes old)
     const expiredTickets = await cleanExpiredTickets();
     if (expiredTickets > 0) {
       totalCleaned += expiredTickets;
-      console.log(`🧹 Cleaned ${expiredTickets} expired pending tickets`);
+      console.log(` Cleaned ${expiredTickets} expired pending tickets`);
     }
-    
+
+    // 3. AUTO-CANCEL DEPARTED TICKETS - TAMBAH INI
+    const cancelledTickets = await autoCancelDepartedTickets();
+    if (cancelledTickets > 0) {
+      totalCleaned += cancelledTickets;
+      console.log(` Auto-cancelled ${cancelledTickets} tickets for departed buses`);
+    }
+
     // Log total cleanup if any items were cleaned
     if (totalCleaned > 0) {
-      console.log(`✅ Total cleanup completed: ${totalCleaned} items cleaned`);
+      console.log(` Total cleanup completed: ${totalCleaned} items cleaned`);
     }
-    
+
   } catch (error) {
-    console.error('❌ Cleanup error:', error.message);
+    console.error(' Cleanup error:', error.message);
   }
 };
 
@@ -64,7 +71,7 @@ const cleanExpiredTickets = async () => {
   try {
     // Find tickets that are pending and older than 30 minutes
     const expiredTime = new Date(Date.now() - (30 * 60 * 1000)); // 30 minutes ago
-    
+
     const expiredTickets = await Tiket.findAll({
       where: {
         status_tiket: 'pending',
@@ -147,6 +154,78 @@ const shouldExpire = (createdAt, timeoutMinutes = 30) => {
   return new Date() > expiryTime;
 };
 
+// Auto cancel tickets for departed buses
+const autoCancelDepartedTickets = async () => {
+  try {
+    const { Tiket, Rute, Pembayaran } = require('../models');
+    const { Op } = require('sequelize');
+
+    // Find tickets for buses that have already departed
+    const departedTickets = await Tiket.findAll({
+      include: [{
+        model: Rute,
+        where: {
+          waktu_berangkat: {
+            [Op.lt]: new Date() // Departure time has passed
+          }
+        }
+      }],
+      where: {
+        status_tiket: {
+          [Op.in]: ['pending', 'confirmed']
+        }
+      }
+    });
+
+    if (departedTickets.length > 0) {
+      // Update tickets to cancelled
+      await Tiket.update(
+        { status_tiket: 'cancelled' },
+        {
+          where: {
+            id_tiket: {
+              [Op.in]: departedTickets.map(ticket => ticket.id_tiket)
+            }
+          }
+        }
+      );
+
+      // Update associated payments
+      await Pembayaran.update(
+        { status: 'cancelled' },
+        {
+          where: {
+            id_tiket: {
+              [Op.in]: departedTickets.map(ticket => ticket.id_tiket)
+            },
+            status: {
+              [Op.in]: ['pending', 'completed']
+            }
+          }
+        }
+      );
+
+      console.log(`🚌 Auto-cancelled ${departedTickets.length} tickets for departed buses`);
+      return departedTickets.length;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('❌ Error auto-cancelling departed tickets:', error);
+    return 0;
+  }
+};
+
+// Check if booking is still allowed (10 minutes before departure)
+const isBookingAllowed = (departureTime) => {
+  const now = new Date();
+  const departure = new Date(departureTime);
+  const timeDiff = departure - now;
+  const minutesUntilDeparture = timeDiff / (1000 * 60);
+
+  return minutesUntilDeparture > 10; // Allow booking if more than 10 minutes left
+};
+
 module.exports = {
   startCleanupJob,
   stopCleanupJob,
@@ -154,5 +233,7 @@ module.exports = {
   getCleanupStatus,
   triggerManualCleanup,
   cleanExpiredTickets,
-  shouldExpire
+  shouldExpire,
+  autoCancelDepartedTickets,
+  isBookingAllowed
 };

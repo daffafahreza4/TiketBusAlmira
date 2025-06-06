@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getAvailableSeats, setSelectedSeats, checkSeatAvailability } from '../../redux/actions/tiketActions';
 import { createTempReservation } from '../../redux/actions/reservasiActions';
+import { setAlert } from '../../redux/actions/alertActions';
 import { formatCurrency } from '../../utils/formatters';
 
 
@@ -31,7 +32,7 @@ const SeatSelection = ({
   const generateAllSeats = useCallback(() => {
     // FIXED: Get totalSeats from availableSeats data or route data
     let totalSeats = 40; // default fallback
-    
+
     if (availableSeats?.totalSeats) {
       totalSeats = availableSeats.totalSeats;
     } else if (route?.total_kursi) {
@@ -71,11 +72,24 @@ const SeatSelection = ({
     } catch (error) {
       console.warn('Could not restore seats from storage:', error);
     }
-  }, [setSelectedSeats]);
+  }, [generateAllSeats, setSelectedSeats]);
 
   useEffect(() => {
-    if (routeId) getAvailableSeats(routeId);
-  }, [getAvailableSeats, routeId]);
+    const loadSeats = async () => {
+      if (routeId) {
+        try {
+          await getAvailableSeats(routeId);
+        } catch (error) {
+          if (error.response?.data?.booking_closed) {
+            setAlert('Pemesanan untuk rute ini sudah ditutup', 'warning');
+            navigate('/search-results');
+          }
+        }
+      }
+    };
+
+    loadSeats();
+  }, [getAvailableSeats, routeId, navigate]);
 
   useEffect(() => {
     if (route && selectedSeatsList) {
@@ -90,7 +104,7 @@ const SeatSelection = ({
     if (availableSeats) {
       // PERBAIKAN: Jangan reset semua ke 'booked' dulu
       // Biarkan default 'available' dari generateAllSeats()
-      
+
       if (Array.isArray(availableSeats)) {
         // Format: ['1', '2', '3', ...]
         availableSeats.forEach(seat => {
@@ -98,7 +112,7 @@ const SeatSelection = ({
             statusMap[seat] = 'available';
           }
         });
-        
+
         // Set sisanya ke 'booked' jika tidak ada dalam array
         Object.keys(statusMap).forEach(seat => {
           if (!availableSeats.includes(seat)) {
@@ -112,7 +126,7 @@ const SeatSelection = ({
         Object.keys(statusMap).forEach(seat => {
           statusMap[seat] = 'booked';
         });
-        
+
         availableSeats.seats.forEach(seatData => {
           const seatNumber = seatData.number || seatData.seat_number;
           if (seatNumber && statusMap.hasOwnProperty(seatNumber)) {
@@ -287,7 +301,7 @@ const SeatSelection = ({
   const generateBusLayout = () => {
     // FIXED: Get totalSeats from availableSeats data or route data
     let totalSeats = 40; // default fallback
-    
+
     if (availableSeats?.totalSeats) {
       totalSeats = availableSeats.totalSeats;
     } else if (route?.total_kursi) {
@@ -589,7 +603,8 @@ SeatSelection.propTypes = {
   getAvailableSeats: PropTypes.func.isRequired,
   setSelectedSeats: PropTypes.func.isRequired,
   createTempReservation: PropTypes.func.isRequired,
-  checkSeatAvailability: PropTypes.func.isRequired
+  checkSeatAvailability: PropTypes.func.isRequired,
+  setAlert: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -604,5 +619,6 @@ export default connect(mapStateToProps, {
   getAvailableSeats,
   setSelectedSeats,
   createTempReservation,
-  checkSeatAvailability
+  checkSeatAvailability,
+  setAlert
 })(SeatSelection);

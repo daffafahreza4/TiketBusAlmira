@@ -8,7 +8,9 @@ const {
   resetPassword,
   resetPasswordSMS,
   verifySMSCode,
-  makeAdmin
+  makeAdmin,
+  verifyOTP,
+  resendOTP
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,6 +18,8 @@ const router = express.Router();
 
 // Public routes
 router.post('/register', register);
+router.post('/verify-otp', verifyOTP);
+router.post('/resend-otp', resendOTP);
 router.post('/login', login);
 router.post('/forgotpassword', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);

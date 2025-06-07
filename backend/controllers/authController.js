@@ -1,11 +1,11 @@
 const crypto = require('crypto');
 const { User } = require('../models');
 const generateToken = require('../utils/generateToken');
-const sendEmail = require('../utils/sendEmail');
+const { sendVerificationOTP, sendPasswordResetEmail } = require('../utils/sendEmail');
 const sendSMS = require('../utils/sendSMS');
 const { Op } = require('sequelize');
 
-// Register new user
+// Register new user with email verification
 exports.register = async (req, res) => {
   try {
     const { username, email, password, no_telepon } = req.body;
@@ -16,34 +16,76 @@ exports.register = async (req, res) => {
     });
 
     if (userExists) {
+      // If user exists but not verified, allow resending OTP
+      if (!userExists.is_verified) {
+        const otp = userExists.generateVerificationToken();
+        await userExists.save({ validate: false });
+
+        // Send OTP email
+        try {
+          await sendVerificationOTP(email, username, otp);
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Akun sudah terdaftar tetapi belum diverifikasi. Kode OTP baru telah dikirim ke email Anda.',
+            requiresVerification: true,
+            email: email
+          });
+        } catch (emailError) {
+          console.error('Send OTP error:', emailError);
+          return res.status(500).json({
+            success: false,
+            message: 'Gagal mengirim kode OTP. Silakan coba lagi.'
+          });
+        }
+      }
+
       return res.status(400).json({
         success: false,
-        message: 'Email sudah terdaftar'
+        message: 'Email sudah terdaftar dan terverifikasi'
       });
     }
 
-    // Create new user
+    // Create new user (not verified yet)
     const user = await User.create({
       username,
       email,
       password,
       no_telepon,
-      role: 'user'
+      role: 'user',
+      is_verified: false
     });
 
-    // Generate token
-    const token = generateToken(user.id_user);
+    // Generate OTP
+    const otp = user.generateVerificationToken();
+    await user.save({ validate: false });
 
-    res.status(201).json({
-      success: true,
-      data: {
-        id: user.id_user,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        token
-      }
-    });
+    // Send OTP email
+    try {
+      await sendVerificationOTP(email, username, otp);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Registrasi berhasil! Kode OTP telah dikirim ke email Anda. Silakan verifikasi akun Anda.',
+        requiresVerification: true,
+        email: email,
+        data: {
+          id: user.id_user,
+          username: user.username,
+          email: user.email,
+          is_verified: user.is_verified
+        }
+      });
+    } catch (emailError) {
+      console.error('Send OTP error:', emailError);
+      // Delete user if email sending fails
+      await user.destroy();
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Registrasi gagal. Tidak dapat mengirim email verifikasi. Silakan coba lagi.'
+      });
+    }
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({
@@ -53,7 +95,132 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login user
+// Verify OTP
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email dan kode OTP harus diisi'
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Akun sudah terverifikasi'
+      });
+    }
+
+    // Check if OTP is valid
+    if (!user.isVerificationTokenValid(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Kode OTP tidak valid atau sudah kadaluarsa'
+      });
+    }
+
+    // Verify user
+    user.clearVerificationToken();
+    await user.save({ validate: false });
+
+    // Generate token for auto-login
+    const token = generateToken(user.id_user);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verifikasi berhasil! Akun Anda telah diaktifkan.',
+      data: {
+        id: user.id_user,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        is_verified: user.is_verified,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Resend OTP
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email harus diisi'
+      });
+    }
+
+    const user = await User.findOne({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    if (user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Akun sudah terverifikasi'
+      });
+    }
+
+    // Generate new OTP
+    const otp = user.generateVerificationToken();
+    await user.save({ validate: false });
+
+    // Send OTP email
+    try {
+      await sendVerificationOTP(email, user.username, otp);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Kode OTP baru telah dikirim ke email Anda'
+      });
+    } catch (emailError) {
+      console.error('Resend OTP error:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal mengirim kode OTP. Silakan coba lagi.'
+      });
+    }
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// Login user (only verified users can login)
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -66,7 +233,17 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email atau password'
+        message: 'Email atau password tidak valid'
+      });
+    }
+
+    // Check if user is verified
+    if (!user.is_verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Akun belum diverifikasi. Silakan cek email Anda.',
+        requiresVerification: true,
+        email: user.email
       });
     }
 
@@ -76,7 +253,7 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email atau password'
+        message: 'Email atau password tidak valid'
       });
     }
 
@@ -85,11 +262,13 @@ exports.login = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: 'Login berhasil',
       data: {
         id: user.id_user,
         username: user.username,
         email: user.email,
         role: user.role,
+        is_verified: user.is_verified,
         token
       }
     });
@@ -114,7 +293,7 @@ exports.getProfile = async (req, res) => {
 
     // Get fresh user data from database
     const user = await User.findByPk(req.user.id_user, {
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password', 'verification_token', 'resetPasswordToken'] }
     });
 
     if (!user) {
@@ -151,9 +330,59 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    // Update fields
+    // If email is being changed, require verification
+    if (email && email !== user.email) {
+      // Check if new email already exists
+      const existingUser = await User.findOne({
+        where: { 
+          email,
+          id_user: { [Op.ne]: user.id_user }
+        }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email sudah digunakan oleh user lain'
+        });
+      }
+
+      // Update email and mark as unverified
+      user.email = email;
+      user.is_verified = false;
+      
+      // Generate OTP for new email
+      const otp = user.generateVerificationToken();
+      await user.save({ validate: false });
+
+      // Send OTP to new email
+      try {
+        await sendVerificationOTP(email, user.username, otp);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Email berhasil diubah. Kode OTP telah dikirim ke email baru Anda untuk verifikasi.',
+          requiresVerification: true,
+          data: {
+            id: user.id_user,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            is_verified: user.is_verified,
+            no_telepon: user.no_telepon
+          }
+        });
+      } catch (emailError) {
+        console.error('Send OTP error:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Gagal mengirim email verifikasi'
+        });
+      }
+    }
+
+    // Update other fields
     if (username) user.username = username;
-    if (email) user.email = email;
     if (no_telepon) user.no_telepon = no_telepon;
     if (password) user.password = password;
 
@@ -161,11 +390,14 @@ exports.updateProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: 'Profil berhasil diperbarui',
       data: {
         id: user.id_user,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        is_verified: user.is_verified,
+        no_telepon: user.no_telepon
       }
     });
   } catch (error) {
@@ -177,7 +409,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// Forgot password
+// Forgot password (only for verified users)
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -190,6 +422,15 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Email tidak terdaftar'
+      });
+    }
+
+    if (!user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Akun belum diverifikasi. Silakan verifikasi akun terlebih dahulu.',
+        requiresVerification: true,
+        email: user.email
       });
     }
 
@@ -206,21 +447,14 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validate: false });
 
     // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
-
-    const message = `Anda menerima email ini karena Anda (atau orang lain) telah meminta reset password. Klik link berikut untuk melanjutkan: \n\n ${resetUrl}`;
+    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
 
     try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Reset Password',
-        message,
-        html: `<p>Anda menerima email ini karena Anda (atau orang lain) telah meminta reset password.</p><p>Klik link berikut untuk melanjutkan:</p><p><a href="${resetUrl}">Reset Password</a></p>`
-      });
+      await sendPasswordResetEmail(user.email, user.username, resetUrl);
 
       res.status(200).json({
         success: true,
-        message: 'Email terkirim'
+        message: 'Link reset password telah dikirim ke email Anda'
       });
     } catch (err) {
       console.error('Send email error:', err);
@@ -256,6 +490,13 @@ exports.resetPasswordSMS = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Nomor telepon tidak terdaftar'
+      });
+    }
+
+    if (!user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Akun belum diverifikasi'
       });
     }
 
@@ -405,6 +646,13 @@ exports.makeAdmin = async (req, res) => {
       });
     }
 
+    if (!user.is_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'User belum terverifikasi'
+      });
+    }
+
     // Change role to admin
     user.role = 'admin';
     await user.save();
@@ -416,7 +664,8 @@ exports.makeAdmin = async (req, res) => {
         id: user.id_user,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        is_verified: user.is_verified
       }
     });
   } catch (error) {

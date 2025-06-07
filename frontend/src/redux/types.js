@@ -7,6 +7,12 @@ export const REGISTER_FAIL = 'REGISTER_FAIL';
 export const AUTH_ERROR = 'AUTH_ERROR';
 export const LOGOUT = 'LOGOUT';
 
+// OTP Verification Types
+export const VERIFY_OTP_SUCCESS = 'VERIFY_OTP_SUCCESS';
+export const VERIFY_OTP_FAIL = 'VERIFY_OTP_FAIL';
+export const RESEND_OTP_SUCCESS = 'RESEND_OTP_SUCCESS';
+export const RESEND_OTP_FAIL = 'RESEND_OTP_FAIL';
+
 // Password Reset Types
 export const FORGOT_PASSWORD_SUCCESS = 'FORGOT_PASSWORD_SUCCESS';
 export const FORGOT_PASSWORD_FAIL = 'FORGOT_PASSWORD_FAIL';

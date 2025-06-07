@@ -84,8 +84,8 @@ const Sidebar = ({ user }) => {
       {/* Bottom section with app version */}
       <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 bg-white">
         <div className="text-center">
-          <p className="text-xs text-gray-500 font-medium">TicketBus v1.0.0</p>
-          <p className="text-xs text-gray-400 mt-1">© 2025 TicketBus</p>
+          <p className="text-xs text-gray-500 font-medium">Almira Travel v1.0.0</p>
+          <p className="text-xs text-gray-400 mt-1">© 2025 Almira Travel</p>
         </div>
       </div>
     </aside>

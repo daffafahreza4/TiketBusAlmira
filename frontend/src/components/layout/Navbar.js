@@ -92,7 +92,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
               to={getHomePath()} 
               className="flex-shrink-0 flex items-center"
             >
-              <span className="text-white text-xl font-bold">TicketBus</span>
+              <span className="text-white text-xl font-bold">Almira Travel</span>
             </Link>
             
             {/* Desktop Navigation Links */}

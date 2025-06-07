@@ -7,7 +7,11 @@ import {
   REGISTER_SUCCESS,
   REGISTER_FAIL,
   AUTH_ERROR,
-  LOGOUT
+  LOGOUT,
+  VERIFY_OTP_SUCCESS,
+  VERIFY_OTP_FAIL,
+  RESEND_OTP_SUCCESS,
+  RESEND_OTP_FAIL
 } from '../types';
 import setAuthToken from '../../utils/setAuthToken';
 
@@ -54,14 +58,24 @@ export const register = formData => async dispatch => {
       payload: res.data
     });
 
-    const token = res.data.data?.token;
+    // Check if requires verification
+    if (res.data.requiresVerification) {
+      dispatch(setAlert(res.data.message, 'success'));
+      return {
+        requiresVerification: true,
+        email: res.data.email
+      };
+    }
 
+    // If registration is complete without verification (shouldn't happen in new flow)
+    const token = res.data.data?.token;
     if (token) {
       setAuthToken(token);
       dispatch(loadUser());
     }
     
     dispatch(setAlert('Registrasi berhasil', 'success'));
+    return res.data;
   } catch (err) {
     const errors = err.response?.data?.errors;
     
@@ -75,6 +89,72 @@ export const register = formData => async dispatch => {
       type: REGISTER_FAIL,
       payload: err.response?.data?.message || 'Server error'
     });
+    
+    throw err;
+  }
+};
+
+// Verify OTP
+export const verifyOTP = ({ email, otp }) => async dispatch => {
+  try {
+    const config = { headers: { 'Content-Type': 'application/json' } };
+    const body = JSON.stringify({ email, otp });
+
+    const res = await axios.post('/api/auth/verify-otp', body, config);
+    
+    const token = res.data.data?.token;
+    if (token) {
+      setAuthToken(token);
+    }
+
+    dispatch({
+      type: VERIFY_OTP_SUCCESS,
+      payload: res.data
+    });
+
+    // Load user profile after verification
+    if (token) {
+      await dispatch(loadUser());
+    }
+
+    dispatch(setAlert(res.data.message || 'Verifikasi berhasil', 'success'));
+    return res.data;
+  } catch (err) {
+    dispatch(setAlert(err.response?.data?.message || 'Verifikasi gagal', 'danger'));
+
+    dispatch({
+      type: VERIFY_OTP_FAIL,
+      payload: err.response?.data?.message || 'Verification failed'
+    });
+    
+    throw err;
+  }
+};
+
+// Resend OTP
+export const resendOTP = ({ email }) => async dispatch => {
+  try {
+    const config = { headers: { 'Content-Type': 'application/json' } };
+    const body = JSON.stringify({ email });
+
+    const res = await axios.post('/api/auth/resend-otp', body, config);
+
+    dispatch({
+      type: RESEND_OTP_SUCCESS,
+      payload: res.data
+    });
+
+    dispatch(setAlert(res.data.message || 'Kode OTP berhasil dikirim ulang', 'success'));
+    return res.data;
+  } catch (err) {
+    dispatch(setAlert(err.response?.data?.message || 'Gagal mengirim ulang OTP', 'danger'));
+
+    dispatch({
+      type: RESEND_OTP_FAIL,
+      payload: err.response?.data?.message || 'Resend failed'
+    });
+    
+    throw err;
   }
 };
 
@@ -85,8 +165,17 @@ export const login = (email, password) => async dispatch => {
     const body = JSON.stringify({ email, password });
 
     const res = await axios.post('/api/auth/login', body, config);
-    const token = res.data.data?.token;
+    
+    // Check if requires verification
+    if (res.data.requiresVerification) {
+      dispatch(setAlert(res.data.message, 'warning'));
+      return {
+        requiresVerification: true,
+        email: res.data.email
+      };
+    }
 
+    const token = res.data.data?.token;
     if (!token) {
       dispatch(setAlert('Login failed: No token received', 'danger'));
       return Promise.reject('No token received');
@@ -107,11 +196,20 @@ export const login = (email, password) => async dispatch => {
     dispatch(setAlert('Login berhasil', 'success'));
     return Promise.resolve();
   } catch (err) {
-    dispatch(setAlert(err.response?.data?.message || 'Login failed', 'danger'));
+    const errorMessage = err.response?.data?.message || 'Login failed';
+    dispatch(setAlert(errorMessage, 'danger'));
+
+    // Check if error indicates need for verification
+    if (err.response?.data?.requiresVerification) {
+      return Promise.reject({
+        requiresVerification: true,
+        email: err.response.data.email
+      });
+    }
 
     dispatch({
       type: LOGIN_FAIL,
-      payload: err.response?.data?.message || 'Server error'
+      payload: errorMessage
     });
     
     return Promise.reject(err);

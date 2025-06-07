@@ -9,7 +9,7 @@ const NotificationWidget = ({ notifications = [], loading = false }) => {
     {
       id: 1,
       type: 'info',
-      message: 'Selamat datang di dashboard TicketBus!',
+      message: 'Selamat datang di dashboard Almira Travel!',
       link: null,
       date: new Date()
     },

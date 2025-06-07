@@ -88,7 +88,7 @@ const PrintTiket = ({ getTicketById, ticket, loading, error }) => {
         <div className="border-b-2 border-gray-200 pb-4 mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">TIKET BUS</h1>
-            <p className="text-gray-600">TicketBus - Perjalanan Nyaman Anda</p>
+            <p className="text-gray-600">Almira Travel - Perjalanan Nyaman Anda</p>
           </div>
           <div className="text-right">
             <img 
@@ -97,7 +97,7 @@ const PrintTiket = ({ getTicketById, ticket, loading, error }) => {
               className="h-12"
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/120x48?text=TicketBus';
+                e.target.src = 'https://via.placeholder.com/120x48?text= Almira Travel';
               }}
             />
           </div>
@@ -195,13 +195,13 @@ const PrintTiket = ({ getTicketById, ticket, loading, error }) => {
             <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
             <li>Pembatalan tiket harus dilakukan minimal 24 jam sebelum keberangkatan.</li>
             <li>Bagasi yang diperbolehkan maksimal 20kg per penumpang.</li>
-            <li>Untuk informasi lebih lanjut, hubungi customer service TicketBus di 021-1234567.</li>
+            <li>Untuk informasi lebih lanjut, hubungi customer service Almira di 0812-2549-6270.</li>
           </ul>
         </div>
         
         <div className="border-t border-gray-200 pt-4 text-center text-xs text-gray-500">
-          <p>Tiket ini diterbitkan oleh TicketBus © {new Date().getFullYear()}</p>
-          <p>www.ticketbus.com</p>
+          <p>Tiket ini diterbitkan oleh Almira © {new Date().getFullYear()}</p>
+          <p>www.Almira.com</p>
         </div>
       </div>
     </div>

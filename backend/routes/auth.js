@@ -10,7 +10,8 @@ const {
   verifySMSCode,
   makeAdmin,
   verifyOTP,
-  resendOTP
+  resendOTP,
+  changePassword
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -29,6 +30,7 @@ router.post('/verifysms', verifySMSCode);
 // Protected routes
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
+router.put('/password', protect, changePassword);
 
 // Admin routes (protected with admin role)
 router.put('/make-admin/:id', protect, authorize('admin'), makeAdmin);

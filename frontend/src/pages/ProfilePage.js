@@ -44,9 +44,16 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
         no_telepon
       });
       
-      await axios.put('/api/auth/profile', body, config);
+      const res = await axios.put('/api/auth/profile', body, config);
       
-      setAlert('Profil berhasil diperbarui', 'success');
+      // Check if email change requires verification
+      if (res.data.requiresVerification) {
+        setAlert('Email berhasil diubah. Silakan cek email untuk verifikasi.', 'warning');
+        // You might want to redirect to verification page or show verification form
+      } else {
+        setAlert('Profil berhasil diperbarui', 'success');
+      }
+      
       setIsEditing(false);
     } catch (err) {
       const errorMsg = err.response && err.response.data.message 
@@ -64,6 +71,11 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
     
     if (newPassword !== confirmPassword) {
       setAlert('Password baru tidak cocok', 'danger');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setAlert('Password baru minimal 6 karakter', 'danger');
       return;
     }
     
@@ -128,6 +140,19 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                     <h3 className="text-xl font-bold">{user.username}</h3>
                     <p className="text-gray-600">{user.email}</p>
                     <p className="text-gray-600">{user.no_telepon}</p>
+                    <div className="mt-2">
+                      {user.is_verified ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          Terverifikasi
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <i className="fas fa-exclamation-circle mr-1"></i>
+                          Belum Verifikasi
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -156,6 +181,11 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
                             required
                           />
+                          {email !== user.email && (
+                            <p className="text-xs text-yellow-600 mt-1">
+                              Mengubah email akan memerlukan verifikasi ulang
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-gray-700 mb-2">No. Telepon</label>
@@ -165,14 +195,21 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                             value={no_telepon}
                             onChange={onChange}
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                            required
                           />
                         </div>
                       </div>
                       <div className="flex justify-end space-x-4">
                         <button
                           type="button"
-                          onClick={() => setIsEditing(false)}
+                          onClick={() => {
+                            setIsEditing(false);
+                            setFormData({
+                              ...formData,
+                              username: user.username,
+                              email: user.email,
+                              no_telepon: user.no_telepon
+                            });
+                          }}
                           className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
                           disabled={submitting}
                         >
@@ -212,6 +249,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                             required
                             minLength="6"
                           />
+                          <p className="text-xs text-gray-500 mt-1">Minimal 6 karakter</p>
                         </div>
                         <div>
                           <label className="block text-gray-700 mb-2">Konfirmasi Password</label>
@@ -229,7 +267,15 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                       <div className="flex justify-end space-x-4">
                         <button
                           type="button"
-                          onClick={() => setIsChangingPassword(false)}
+                          onClick={() => {
+                            setIsChangingPassword(false);
+                            setFormData({
+                              ...formData,
+                              currentPassword: '',
+                              newPassword: '',
+                              confirmPassword: ''
+                            });
+                          }}
                           className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
                           disabled={submitting}
                         >
@@ -258,14 +304,29 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                         </div>
                         <div>
                           <p className="text-gray-500 text-sm">No. Telepon</p>
-                          <p>{user.no_telepon}</p>
+                          <p>{user.no_telepon || '-'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 text-sm">Status Akun</p>
-                          <p className="text-green-600">
-                            <i className="fas fa-check-circle mr-2"></i>
-                            Terverifikasi
-                          </p>
+                          {user.is_verified ? (
+                            <p className="text-green-600">
+                              <i className="fas fa-check-circle mr-2"></i>
+                              Terverifikasi
+                            </p>
+                          ) : (
+                            <p className="text-red-600">
+                              <i className="fas fa-exclamation-circle mr-2"></i>
+                              Belum Verifikasi
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-sm">Role</p>
+                          <p className="capitalize">{user.role}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-sm">Bergabung</p>
+                          <p>{new Date(user.created_at).toLocaleDateString('id-ID')}</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-4">
@@ -273,12 +334,14 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                           onClick={() => setIsEditing(true)}
                           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
+                          <i className="fas fa-edit mr-2"></i>
                           Edit Profil
                         </button>
                         <button
                           onClick={() => setIsChangingPassword(true)}
                           className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
                         >
+                          <i className="fas fa-key mr-2"></i>
                           Ubah Password
                         </button>
                       </div>

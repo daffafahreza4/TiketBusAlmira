@@ -25,21 +25,21 @@ const sendEmail = async (options) => {
 
 // Send OTP verification email
 const sendVerificationOTP = async (email, username, otp) => {
-  const subject = 'Verifikasi Akun TicketBus - Kode OTP';
+  const subject = 'Verifikasi Akun Almira Travel - Kode OTP';
   
   const message = `
 Halo ${username},
 
-Terima kasih telah mendaftar di TicketBus!
+Terima kasih telah mendaftar di Almira Travel!
 
 Kode verifikasi OTP Anda adalah: ${otp}
 
 Kode ini berlaku selama 10 menit. Jangan bagikan kode ini kepada siapa pun.
 
-Jika Anda tidak merasa mendaftar di TicketBus, abaikan email ini.
+Jika Anda tidak merasa mendaftar di Almira Travel, abaikan email ini.
 
 Salam,
-Tim TicketBus
+Tim Almira Travel
   `;
 
   const html = `
@@ -47,7 +47,7 @@ Tim TicketBus
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Verifikasi Akun TicketBus</title>
+    <title>Verifikasi Akun Almira Travel</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -62,12 +62,12 @@ Tim TicketBus
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚌 TicketBus</h1>
+            <h1>🚌 Almira Travel</h1>
             <p>Verifikasi Akun Anda</p>
         </div>
         <div class="content">
             <h2>Halo ${username}!</h2>
-            <p>Terima kasih telah mendaftar di TicketBus. Untuk melengkapi proses pendaftaran, silakan verifikasi akun Anda dengan memasukkan kode OTP berikut:</p>
+            <p>Terima kasih telah mendaftar di Almira Travel. Untuk melengkapi proses pendaftaran, silakan verifikasi akun Anda dengan memasukkan kode OTP berikut:</p>
             
             <div class="otp-box">
                 <p style="margin: 0; color: #6b7280;">Kode Verifikasi OTP</p>
@@ -85,7 +85,7 @@ Tim TicketBus
             
             <p>Setelah verifikasi berhasil, Anda dapat langsung login dan menikmati layanan pemesanan tiket bus kami.</p>
             
-            <p>Salam hangat,<br><strong>Tim TicketBus</strong></p>
+            <p>Salam hangat,<br><strong>Tim Almira Travel</strong></p>
         </div>
         <div class="footer">
             <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
@@ -105,19 +105,19 @@ Tim TicketBus
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, username, resetUrl) => {
-  const subject = 'Reset Password TicketBus';
+  const subject = 'Reset Password Almira Travel';
   
   const message = `
 Halo ${username},
 
-Anda menerima email ini karena ada permintaan untuk reset password akun TicketBus Anda.
+Anda menerima email ini karena ada permintaan untuk reset password akun Almira Travel Anda.
 
 Klik link berikut untuk reset password: ${resetUrl}
 
 Link ini berlaku selama 10 menit. Jika Anda tidak meminta reset password, abaikan email ini.
 
 Salam,
-Tim TicketBus
+Tim Almira Travel
   `;
 
   const html = `
@@ -125,7 +125,7 @@ Tim TicketBus
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Reset Password TicketBus</title>
+    <title>Reset Password Almira Travel</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -139,12 +139,12 @@ Tim TicketBus
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚌 TicketBus</h1>
+            <h1>🚌 Almira Travel</h1>
             <p>Reset Password</p>
         </div>
         <div class="content">
             <h2>Halo ${username}!</h2>
-            <p>Kami menerima permintaan untuk reset password akun TicketBus Anda.</p>
+            <p>Kami menerima permintaan untuk reset password akun Almira Travel Anda.</p>
             
             <div style="text-align: center;">
                 <a href="${resetUrl}" class="button">Reset Password</a>
@@ -162,7 +162,7 @@ Tim TicketBus
             <p>Jika button di atas tidak berfungsi, copy dan paste link berikut ke browser Anda:</p>
             <p style="word-break: break-all; background: #e5e7eb; padding: 10px; border-radius: 5px;">${resetUrl}</p>
             
-            <p>Salam,<br><strong>Tim TicketBus</strong></p>
+            <p>Salam,<br><strong>Tim Almira Travel</strong></p>
         </div>
         <div class="footer">
             <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>

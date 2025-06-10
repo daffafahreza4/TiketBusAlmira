@@ -446,8 +446,8 @@ exports.forgotPassword = async (req, res) => {
 
     await user.save({ validate: false });
 
-    // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+    // PERBAIKAN: URL harus mengarah ke FRONTEND (localhost:3000), bukan backend (localhost:5000)
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
 
     try {
       await sendPasswordResetEmail(user.email, user.username, resetUrl);

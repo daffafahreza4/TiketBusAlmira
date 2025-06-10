@@ -22,10 +22,9 @@ router.post('/register', register);
 router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
 router.post('/login', login);
-router.post('/forgotpassword', forgotPassword);
+router.post('/forgot-password', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);
-router.post('/resetpassword/sms', resetPasswordSMS);
-router.post('/verifysms', verifySMSCode);
+router.put('/reset-password/:resettoken', resetPassword);
 
 // Protected routes
 router.get('/profile', protect, getProfile);

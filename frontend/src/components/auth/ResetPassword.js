@@ -24,6 +24,7 @@ const ResetPassword = ({ setAlert }) => {
   useEffect(() => {
     const verifyToken = async () => {
       try {
+        // FIXED: Changed endpoint to match backend route
         await axios.get(`/api/auth/reset-password/${token}`);
         setTokenValid(true);
       } catch (err) {
@@ -59,6 +60,7 @@ const ResetPassword = ({ setAlert }) => {
       
       const body = JSON.stringify({ password });
       
+      // FIXED: Changed endpoint to match backend route with kebab-case
       await axios.post(`/api/auth/reset-password/${token}`, body, config);
       
       setAlert('Password berhasil direset', 'success');

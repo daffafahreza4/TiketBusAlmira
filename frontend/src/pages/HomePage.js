@@ -31,7 +31,7 @@ const HomePage = () => {
               </div>
               <div className="md:w-1/2">
                 <img
-                  src="\assets\img\Yoru.jpeg"
+                  src="\assets\img\bus.jpg"
                   alt="Bus Travel"
                   className="rounded-lg shadow-xl"
                 />

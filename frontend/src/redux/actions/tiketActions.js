@@ -160,15 +160,17 @@ export const getTicketById = id => async dispatch => {
   }
 };
 
-// Tambahkan action baru untuk grouped tickets
+// Action untuk mengambil grouped tickets (order)
 export const getGroupedTicketById = id => async dispatch => {
   try {
-    const res = await axios.get(`/api/tiket/grouped/${id}`);
+    const res = await axios.get(`/api/tiket/order/${id}`);
 
     dispatch({
       type: GET_TICKET,
       payload: res.data.data
     });
+    
+    return res.data.data;
   } catch (err) {
     // Fallback to regular ticket if grouped fails
     try {
@@ -177,6 +179,8 @@ export const getGroupedTicketById = id => async dispatch => {
         type: GET_TICKET,
         payload: res.data.data
       });
+      
+      return res.data.data;
     } catch (fallbackErr) {
       const errorMsg = fallbackErr.response?.data?.message || 'Terjadi kesalahan saat mengambil data tiket';
 
@@ -184,6 +188,8 @@ export const getGroupedTicketById = id => async dispatch => {
         type: TICKET_ERROR,
         payload: errorMsg
       });
+      
+      throw fallbackErr;
     }
   }
 };

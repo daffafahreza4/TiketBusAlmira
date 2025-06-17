@@ -49,7 +49,7 @@ const NotificationWidget = ({ notifications = [], loading = false }) => {
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold">Notifikasi</h3>
         {notifList.length > 0 && (
-          <Link to="/notifications" className="text-sm text-blue-600 hover:underline">
+          <Link to="/notifications" className="text-sm text-pink-600 hover:underline">
             Lihat Semua
           </Link>
         )}
@@ -70,7 +70,7 @@ const NotificationWidget = ({ notifications = [], loading = false }) => {
             switch (notification.type) {
               case 'info':
                 icon = 'fas fa-info-circle';
-                colorClass = 'text-blue-500';
+                colorClass = 'text-pink-500';
                 break;
               case 'promo':
                 icon = 'fas fa-tags';
@@ -123,7 +123,7 @@ const NotificationWidget = ({ notifications = [], loading = false }) => {
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">{dateDisplay}</span>
                     {notification.link && (
-                      <Link to={notification.link} className="text-xs text-blue-600 hover:underline">
+                      <Link to={notification.link} className="text-xs text-pink-600 hover:underline">
                         Lihat Detail
                       </Link>
                     )}

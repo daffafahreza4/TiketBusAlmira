@@ -172,11 +172,11 @@ const BookingDetailsPage = ({
                       />
                       <span className="text-sm">
                         Saya setuju dengan{' '}
-                        <a href="/terms" className="text-blue-600 hover:underline">
+                        <a href="/terms" className="text-pink-600 hover:underline">
                           Syarat dan Ketentuan
                         </a>{' '}
                         serta{' '}
-                        <a href="/privacy" className="text-blue-600 hover:underline">
+                        <a href="/privacy" className="text-pink-600 hover:underline">
                           Kebijakan Privasi
                         </a>
                       </span>
@@ -188,7 +188,7 @@ const BookingDetailsPage = ({
                     className={`w-full py-3 font-bold rounded-lg transition duration-300 ${
                       !agreeTerms
                         ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-pink-500 text-white hover:bg-pink-700'
                     }`}
                     disabled={!agreeTerms}
                   >
@@ -237,7 +237,7 @@ const BookingDetailsPage = ({
                       {selectedSeats.map(seat => (
                         <span 
                           key={seat} 
-                          className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded"
+                          className="inline-block px-2 py-1 bg-pink-100 text-pink-800 rounded"
                         >
                           {seat}
                         </span>

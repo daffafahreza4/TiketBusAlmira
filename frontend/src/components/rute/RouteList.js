@@ -24,11 +24,11 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
   if (error) {
     return (
       <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
-        <div className="flex justify-between items-center">
-          <span>{error}</span>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+          <span className="text-sm sm:text-base">{error}</span>
           <button 
             onClick={handleRefresh}
-            className="ml-4 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+            className="w-full sm:w-auto px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
           >
             Coba Lagi
           </button>
@@ -41,11 +41,11 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
     return (
       <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-4 text-center">
         <div className="text-4xl mb-2">🚌</div>
-        <p className="font-medium">Belum ada rute yang tersedia saat ini</p>
-        <p className="text-sm">Silakan cek kembali nanti</p>
+        <p className="font-medium text-sm sm:text-base">Belum ada rute yang tersedia saat ini</p>
+        <p className="text-xs sm:text-sm">Silakan cek kembali nanti</p>
         <button 
           onClick={handleRefresh}
-          className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+          className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
         >
           Refresh Data
         </button>
@@ -56,11 +56,11 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
   return (
     <div className="space-y-4">
       {/* Add refresh button for users */}
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-gray-600">{routes.length} rute tersedia</p>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 space-y-2 sm:space-y-0">
+        <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">{routes.length} rute tersedia</p>
         <button 
           onClick={handleRefresh}
-          className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+          className="w-full sm:w-auto px-3 py-2 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
         >
           <i className="fas fa-sync-alt mr-1"></i>
           Refresh
@@ -70,27 +70,93 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
       {routes.map(route => (
         <div 
           key={route.id_rute} 
-          className={`bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow duration-200 ${
+          className={`bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 hover:shadow-lg transition-shadow duration-200 ${
             route.minutes_until_departure <= 10 ? 'border-l-4 border-red-500' : ''
           }`}
         >
           {/* TAMBAH: Warning untuk rute yang hampir tutup */}
           {route.minutes_until_departure <= 30 && route.minutes_until_departure > 10 && (
-            <div className="mb-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+            <div className="mb-4 p-2 sm:p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
               <i className="fas fa-exclamation-triangle mr-2"></i>
-              Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              <span className="text-xs sm:text-sm">
+                Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              </span>
             </div>
           )}
           
           {/* Warning untuk rute yang sudah sangat dekat waktu keberangkatan */}
           {route.minutes_until_departure <= 10 && route.minutes_until_departure > 0 && (
-            <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div className="mb-4 p-2 sm:p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               <i className="fas fa-exclamation-triangle mr-2"></i>
-              <strong>Perhatian!</strong> Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              <span className="text-xs sm:text-sm">
+                <strong>Perhatian!</strong> Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              </span>
             </div>
           )}
 
-          <div className="flex justify-between items-center">
+          {/* Mobile Layout */}
+          <div className="block lg:hidden">
+            {/* Route Header */}
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+                  {route.asal} → {route.tujuan}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <i className="fas fa-bus mr-1"></i>
+                  {route.nama_bus || 'Bus Tidak Diketahui'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold text-pink-600 mb-2">
+                  {formatCurrency(route.harga)}
+                </div>
+                {route.booking_allowed ? (
+                  <Link
+                    to={`/booking/${route.id_rute}`}
+                    className="bg-black text-white px-4 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium text-sm"
+                  >
+                    Pesan
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-gray-400 text-white px-4 py-2 rounded-full cursor-not-allowed font-medium text-sm"
+                  >
+                    Tutup
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Time and Details */}
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Berangkat</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {formatTime(route.waktu_berangkat)}
+                </div>
+                <div className="text-xs text-gray-600">{route.asal}</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Tiba</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {formatTime(route.perkiraan_tiba)}
+                </div>
+                <div className="text-xs text-gray-600">{route.tujuan}</div>
+              </div>
+            </div>
+
+            {/* Bus Info */}
+            <div className="pt-3 border-t border-gray-100">
+              <div className="text-xs text-gray-600">
+                <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden lg:flex justify-between items-center">
             {/* Waktu & Rute */}
             <div className="flex items-center space-x-8">
               {/* Departure */}
@@ -106,8 +172,8 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
               {/* Route Line */}
               <div className="flex-1 relative px-8">
                 <div className="border-t-2 border-gray-300 relative">
-                  <div className="absolute left-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
-                  <div className="absolute right-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
+                  <div className="absolute left-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+                  <div className="absolute right-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
                 </div>
               </div>
               
@@ -145,8 +211,8 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
             </div>
           </div>
           
-          {/* Show bus info clearly */}
-          <div className="mt-4 pt-3 border-t border-gray-100">
+          {/* Show bus info clearly - Desktop only */}
+          <div className="hidden lg:block mt-4 pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center text-gray-600">
                 <i className="fas fa-bus mr-2"></i>
@@ -154,10 +220,6 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
                 <span className="mx-2">•</span>
                 <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
               </div>
-              <button className="flex items-center text-gray-500 text-sm hover:text-gray-700">
-                <i className="fas fa-info-circle mr-2"></i>
-                Details
-              </button>
             </div>
           </div>
         </div>

@@ -54,7 +54,7 @@ const UserStatsWidget = ({ stats, loading }) => {
           
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-400 rounded-full mr-2"></div>
+              <div className="w-3 h-3 bg-pink-400 rounded-full mr-2"></div>
               <span>Selesai</span>
             </div>
             <span className="font-semibold">{ticketStats.completed}</span>

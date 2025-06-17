@@ -20,7 +20,7 @@ const QuickSearchWidget = () => {
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">12</div>
+            <div className="text-2xl font-bold text-pink-600">12</div>
             <div className="text-sm text-gray-600">Rute Tersedia</div>
           </div>
           <div className="bg-green-50 p-3 rounded-lg">
@@ -32,7 +32,7 @@ const QuickSearchWidget = () => {
       
       <button
         onClick={handleViewSchedule}
-        className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300"
+        className="w-full py-3 bg-pink-500 text-white font-bold rounded-lg hover:bg-pink-700 transition duration-300"
       >
         Lihat Jadwal Lengkap
       </button>

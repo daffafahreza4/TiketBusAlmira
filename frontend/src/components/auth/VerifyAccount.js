@@ -60,7 +60,7 @@ const VerifyAccount = ({ setAlert }) => {
               </p>
               <Link
                 to="/login"
-                className="px-6 py-2 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-900 inline-block"
+                className="px-6 py-2 mt-4 text-white bg-pink-500 rounded-lg hover:bg-pink-900 inline-block"
               >
                 Login Sekarang
               </Link>
@@ -73,7 +73,7 @@ const VerifyAccount = ({ setAlert }) => {
               </p>
               <Link
                 to="/login"
-                className="text-blue-600 hover:underline"
+                className="text-pink-600 hover:underline"
               >
                 Kembali ke halaman login
               </Link>

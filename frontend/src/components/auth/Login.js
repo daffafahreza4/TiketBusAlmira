@@ -179,7 +179,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                   <div className="text-sm">
                     <Link
                       to="/forgot-password"
-                      className="text-blue-600 hover:underline"
+                      className="text-pink-600 hover:underline"
                     >
                       Lupa password?
                     </Link>
@@ -188,7 +188,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                 <div className="flex items-center justify-between mt-6">
                   <button
                     type="submit"
-                    className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 text-white bg-pink-500 rounded-lg hover:bg-pink-900 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={submitting}
                   >
                     {submitting ? 'Memproses...' : 'Login'}
@@ -197,12 +197,12 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                 <div className="mt-6 text-center">
                   <p className="text-sm">
                     Belum punya akun?{' '}
-                    <Link to="/register" className="text-blue-600 hover:underline">
+                    <Link to="/register" className="text-pink-600 hover:underline">
                       Daftar
                     </Link>
                   </p>
                   <p className="text-sm">
-                    <Link to="/" className="text-blue-600 hover:underline">
+                    <Link to="/" className="text-pink-600 hover:underline">
                       Kembali
                     </Link>
                   </p>
@@ -216,7 +216,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
             <p className="text-center text-gray-600 text-sm mt-2">
               Masukkan kode OTP yang telah dikirim ke
             </p>
-            <p className="text-center text-blue-600 font-semibold text-sm">
+            <p className="text-center text-pink-600 font-semibold text-sm">
               {otpData.email}
             </p>
             
@@ -252,7 +252,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                 <div className="flex items-center justify-between mt-6">
                   <button
                     type="submit"
-                    className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 text-white bg-pink-500 rounded-lg hover:bg-pink-700 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={submitting || otp.length !== 6}
                   >
                     {submitting ? 'Memverifikasi...' : 'Verifikasi'}
@@ -265,7 +265,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                     <button
                       type="button"
                       onClick={onResendOtp}
-                      className={`text-blue-600 hover:underline font-medium ${
+                      className={`text-pink-600 hover:underline font-medium ${
                         resendCooldown > 0 || submitting 
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''

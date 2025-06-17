@@ -9,8 +9,8 @@ const AdminStatsWidget = ({ stats = {}, loading = false }) => {
       value: stats.totalUsers || 0,
       icon: 'fas fa-users',
       color: 'blue',
-      bgColor: 'bg-blue-500',
-      textColor: 'text-blue-600'
+      bgColor: 'bg-pink-500',
+      textColor: 'text-pink-600'
     },
     {
       name: 'Total Bus',

@@ -8,6 +8,7 @@ import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import UserList from '../components/admin/UserList';
 
+//TODO harus responsive
 const AdminUsersPage = ({
   auth: { user, isAuthenticated, loading: authLoading }
 }) => {

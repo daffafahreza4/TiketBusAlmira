@@ -113,14 +113,14 @@ const VerificationPage = ({
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <i className="fas fa-envelope text-blue-600 text-2xl"></i>
+          <div className="mx-auto w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mb-4">
+            <i className="fas fa-envelope text-pink-600 text-2xl"></i>
           </div>
           <h3 className="text-2xl font-bold text-gray-800">Verifikasi Email</h3>
           <p className="text-gray-600 text-sm mt-2">
             Masukkan kode OTP yang telah dikirim ke
           </p>
-          <p className="text-blue-600 font-semibold text-sm break-all">
+          <p className="text-pink-600 font-semibold text-sm break-all">
             {email}
           </p>
         </div>
@@ -157,7 +157,7 @@ const VerificationPage = ({
             
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-pink-500 text-white font-bold rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={submitting || otp.length !== 6}
             >
               {submitting ? 'Memverifikasi...' : 'Verifikasi Akun'}
@@ -172,7 +172,7 @@ const VerificationPage = ({
           <button
             type="button"
             onClick={onResendOtp}
-            className={`text-blue-600 hover:text-blue-800 font-medium transition-colors ${
+            className={`text-pink-600 hover:text-pink-800 font-medium transition-colors ${
               resendCooldown > 0 || submitting 
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:underline'
@@ -189,13 +189,13 @@ const VerificationPage = ({
         <div className="mt-6 pt-6 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-600">
             Salah email?{' '}
-            <Link to="/register" className="text-blue-600 hover:underline font-medium">
+            <Link to="/register" className="text-pink-600 hover:underline font-medium">
               Daftar ulang
             </Link>
           </p>
           <p className="text-sm text-gray-600 mt-2">
             Sudah punya akun?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
+            <Link to="/login" className="text-pink-600 hover:underline font-medium">
               Login
             </Link>
           </p>

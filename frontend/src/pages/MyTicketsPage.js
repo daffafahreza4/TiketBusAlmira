@@ -7,24 +7,76 @@ import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
 import { getUserTickets } from '../redux/actions/tiketActions';
+import { createPaymentToken } from '../redux/actions/paymentActions';
+import { setAlert } from '../redux/actions/alertActions';
 import { formatCurrency, formatDate, formatTime, formatStatus } from '../utils/formatters';
 
-const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
+const MyTicketsPage = ({ getUserTickets, createPaymentToken, setAlert, tickets, loading, error }) => {
   const [filter, setFilter] = useState('all');
   const [filteredTickets, setFilteredTickets] = useState([]);
+  const [paymentLoading, setPaymentLoading] = useState(null);
   
   useEffect(() => {
     getUserTickets();
   }, [getUserTickets]);
   
-  // Filter tickets based on status
+  // Group tickets by order and filter based on status
   useEffect(() => {
     if (tickets) {
+      // Group tickets by order_group_id
+      const groupedOrders = [];
+      const processedTickets = new Set();
+      
+      tickets.forEach(ticket => {
+        if (processedTickets.has(ticket.id_tiket)) return;
+        
+        if (ticket.order_group_id) {
+          // Find all tickets in the same order group
+          const orderTickets = tickets.filter(t => 
+            t.order_group_id === ticket.order_group_id
+          );
+          
+          // Mark all tickets in this group as processed
+          orderTickets.forEach(t => processedTickets.add(t.id_tiket));
+          
+          // Create order object
+          const masterTicket = orderTickets.find(t => t.is_master_ticket) || orderTickets[0];
+          const allSeats = orderTickets.map(t => t.nomor_kursi).sort();
+          const totalAmount = orderTickets.reduce((sum, t) => sum + parseFloat(t.total_bayar || 0), 0);
+          
+          groupedOrders.push({
+            type: 'order',
+            order_group_id: ticket.order_group_id,
+            master_ticket_id: masterTicket.id_tiket,
+            total_tickets: orderTickets.length,
+            seats: allSeats,
+            status_tiket: masterTicket.status_tiket,
+            total_bayar: masterTicket.order_total_amount || totalAmount,
+            tanggal_pemesanan: masterTicket.tanggal_pemesanan,
+            batas_pembayaran: masterTicket.batas_pembayaran,
+            rute: masterTicket.rute || masterTicket.Rute,
+            user: masterTicket.user || masterTicket.User,
+            pembayaran: masterTicket.pembayaran || masterTicket.Pembayaran,
+            tickets: orderTickets
+          });
+        } else {
+          // Single ticket (legacy or single seat orders)
+          processedTickets.add(ticket.id_tiket);
+          groupedOrders.push({
+            type: 'single',
+            ...ticket,
+            seats: [ticket.nomor_kursi],
+            total_tickets: 1
+          });
+        }
+      });
+      
+      // Apply filter
       if (filter === 'all') {
-        setFilteredTickets(tickets);
+        setFilteredTickets(groupedOrders);
       } else {
-        setFilteredTickets(tickets.filter(ticket => 
-          ticket.status_tiket.toLowerCase() === filter
+        setFilteredTickets(groupedOrders.filter(order => 
+          order.status_tiket.toLowerCase() === filter
         ));
       }
     }
@@ -32,6 +84,28 @@ const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
   
   const handleFilterChange = e => {
     setFilter(e.target.value);
+  };
+
+  const handlePayNow = async (order) => {
+    try {
+      // Use master ticket ID for payment
+      const ticketId = order.master_ticket_id || order.id_tiket;
+      setPaymentLoading(ticketId);
+      
+      const paymentResult = await createPaymentToken(ticketId);
+      
+      if (paymentResult.success && paymentResult.redirect_url) {
+        // Redirect to Midtrans payment page
+        window.location.href = paymentResult.redirect_url;
+      } else {
+        setAlert('Gagal membuat token pembayaran. Silakan coba lagi.', 'danger');
+      }
+    } catch (error) {
+      console.error('Payment token error:', error);
+      setAlert('Gagal membuat token pembayaran. Silakan coba lagi.', 'danger');
+    } finally {
+      setPaymentLoading(null);
+    }
   };
   
   if (loading) {
@@ -94,73 +168,125 @@ const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
               </p>
               <Link
                 to="/search-results"
-                className="inline-block px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition"
+                className="inline-block px-6 py-2 bg-pink-500 text-white font-bold rounded-lg hover:bg-pink-700 transition"
               >
                 Pesan Tiket
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredTickets.map(ticket => {
-                const status = formatStatus(ticket.status_tiket);
+              {filteredTickets.map(order => {
+                const status = formatStatus(order.status_tiket);
+                const route = order.rute || order.Rute;
+                const ticketId = order.master_ticket_id || order.id_tiket;
+                
                 return (
                   <div 
-                    key={ticket.id_tiket} 
+                    key={order.order_group_id || order.id_tiket} 
                     className="bg-white rounded-lg shadow-md overflow-hidden"
                   >
                     <div className="p-4 md:p-6">
+                      {/* Order Header */}
                       <div className="flex flex-wrap justify-between items-start mb-4">
                         <div>
-                          <h2 className="text-xl font-bold">{ticket.rute.asal} - {ticket.rute.tujuan}</h2>
-                          <p className="text-gray-600">{ticket.rute.nama_bus}</p>
+                          <div className="flex items-center mb-2">
+                            <h2 className="text-xl font-bold">{route?.asal} → {route?.tujuan}</h2>
+                            {order.type === 'order' && order.total_tickets > 1 && (
+                              <span className="ml-3 px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm font-medium">
+                                {order.total_tickets} Tiket
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-600">{route?.nama_bus}</p>
+                          {order.type === 'order' && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Order ID: {order.order_group_id}
+                            </p>
+                          )}
                         </div>
                         <div className={`${status.colorClass} font-semibold px-3 py-1 rounded-full text-sm bg-opacity-20`}>
                           {status.text}
                         </div>
                       </div>
                       
+                      {/* Trip Details */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
                           <p className="text-gray-600 text-sm">Tanggal Keberangkatan</p>
-                          <p className="font-semibold">{formatDate(ticket.rute.waktu_berangkat)}</p>
+                          <p className="font-semibold">{formatDate(route?.waktu_berangkat)}</p>
                         </div>
                         <div>
                           <p className="text-gray-600 text-sm">Jam Berangkat</p>
-                          <p className="font-semibold">{formatTime(ticket.rute.waktu_berangkat)}</p>
+                          <p className="font-semibold">{formatTime(route?.waktu_berangkat)}</p>
                         </div>
                         <div>
-                          <p className="text-gray-600 text-sm">Nomor Kursi</p>
-                          <p className="font-semibold">{ticket.nomor_kursi}</p>
+                          <p className="text-gray-600 text-sm">Kursi</p>
+                          <div className="flex flex-wrap gap-1">
+                            {order.seats.map((seat, index) => (
+                              <span 
+                                key={index}
+                                className="inline-block px-2 py-1 bg-gray-100 text-gray-800 rounded text-sm font-medium"
+                              >
+                                {seat}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       
+                      {/* Order Summary untuk multiple tickets */}
+                      {order.type === 'order' && order.total_tickets > 1 && (
+                        <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Detail Order:</span>
+                            <span className="font-medium">
+                              {order.total_tickets} tiket × {formatCurrency(parseFloat(order.total_bayar) / order.total_tickets)} = {formatCurrency(order.total_bayar)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Satu pembayaran untuk semua tiket dalam order ini
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Actions */}
                       <div className="flex flex-wrap justify-between items-center border-t pt-4">
                         <div>
                           <p className="text-gray-600 text-sm">Total Bayar</p>
-                          <p className="font-bold text-lg">{formatCurrency(ticket.total_bayar)}</p>
+                          <p className="font-bold text-lg">{formatCurrency(order.total_bayar)}</p>
                         </div>
                         
                         <div className="space-x-2">
-                          {ticket.status_tiket === 'pending' && (
-                            <Link
-                              to={`/payment/${ticket.id_pembayaran}`}
-                              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                          {order.status_tiket === 'pending' && (
+                            <button
+                              onClick={() => handlePayNow(order)}
+                              disabled={paymentLoading === ticketId}
+                              className="inline-block px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
-                              Bayar Sekarang
-                            </Link>
+                              {paymentLoading === ticketId ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                                  Memproses...
+                                </div>
+                              ) : (
+                                'Bayar Sekarang'
+                              )}
+                            </button>
                           )}
                           
                           <Link
-                            to={`/ticket/${ticket.id_tiket}`}
+                            to={`/ticket/${ticketId}`}
                             className="inline-block px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition text-sm"
                           >
                             Lihat Detail
                           </Link>
                           
-                          {ticket.status_tiket === 'confirmed' && (
+                          {order.status_tiket === 'confirmed' && (
                             <button
                               className="inline-block px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm"
-                              onClick={() => window.open(`/ticket/print/${ticket.id_tiket}`, '_blank')}
+                              onClick={() => {
+                                window.open(`/ticket/print/${ticketId}`, '_blank');
+                              }}
                             >
                               Cetak Tiket
                             </button>
@@ -183,6 +309,8 @@ const MyTicketsPage = ({ getUserTickets, tickets, loading, error }) => {
 
 MyTicketsPage.propTypes = {
   getUserTickets: PropTypes.func.isRequired,
+  createPaymentToken: PropTypes.func.isRequired,
+  setAlert: PropTypes.func.isRequired,
   tickets: PropTypes.array,
   loading: PropTypes.bool,
   error: PropTypes.string
@@ -194,4 +322,8 @@ const mapStateToProps = state => ({
   error: state.tiket.error
 });
 
-export default connect(mapStateToProps, { getUserTickets })(MyTicketsPage);
+export default connect(mapStateToProps, { 
+  getUserTickets, 
+  createPaymentToken, 
+  setAlert 
+})(MyTicketsPage);

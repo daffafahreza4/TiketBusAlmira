@@ -42,7 +42,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
             auth.user?.role === 'admin' 
               ? 'bg-red-600 text-white' 
-              : 'bg-white text-blue-600'
+              : 'bg-white text-pink-600'
           }`}>
             {auth.user?.role === 'admin' ? (
               <i className="fas fa-user-shield"></i>
@@ -74,7 +74,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
       <li>
         <Link 
           to="/login" 
-          className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium"
+          className="bg-white text-pink-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium"
         >
           Login
         </Link>
@@ -83,7 +83,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
   );
 
   return (
-    <nav className="bg-blue-600 shadow-lg fixed w-full z-50 top-0">
+    <nav className="bg-pink-500 shadow-lg fixed w-full z-50 top-0">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
@@ -135,11 +135,11 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
         
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-16 left-0 right-0 bg-blue-700 shadow-lg">
+          <div className="md:hidden absolute top-16 left-0 right-0 bg-pink-700 shadow-lg">
             <div className="px-4 py-3 space-y-2">
               <Link 
                 to={getHomePath()} 
-                className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Beranda
@@ -149,24 +149,16 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
               {auth.user?.role !== 'admin' && (
                 <Link 
                   to="/search-results" 
-                  className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                  className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Cari Tiket
                 </Link>
               )}
               
-              <Link 
-                to="/about" 
-                className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Tentang Kami
-              </Link>
-              
               {auth.isAuthenticated ? (
                 <>
-                  <div className="border-t border-blue-600 my-2"></div>
+                  <div className="border-t border-pink-600 my-2"></div>
 
                   {/* Show different mobile menu items based on user role */}
                   {auth.user?.role === 'admin' ? (
@@ -174,28 +166,28 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                     <>
                       <Link 
                         to="/admin/users" 
-                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Kelola User
                       </Link>
                       <Link 
                         to="/admin/buses" 
-                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Kelola Bus
                       </Link>
                       <Link 
                         to="/admin/routes" 
-                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Kelola Rute
                       </Link>
                       <Link 
                         to="/admin/tickets" 
-                        className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                        className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Kelola Tiket
@@ -205,7 +197,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                     // Regular user mobile menu items
                     <Link 
                       to="/my-tickets" 
-                      className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                      className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Tiket Saya
@@ -214,7 +206,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                   
                   <Link 
                     to="/profile" 
-                    className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                    className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Profil
@@ -224,24 +216,24 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                       logout();
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full text-left text-white hover:bg-blue-600 px-3 py-2 rounded-md cursor-pointer transition-colors duration-200"
+                    className="block w-full text-left text-white hover:bg-pink-500 px-3 py-2 rounded-md cursor-pointer transition-colors duration-200"
                   >
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <div className="border-t border-blue-600 my-2"></div>
+                  <div className="border-t border-pink-600 my-2"></div>
                   <Link 
                     to="/register" 
-                    className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                    className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Daftar
                   </Link>
                   <Link 
                     to="/login" 
-                    className="block text-white hover:bg-blue-600 px-3 py-2 rounded-md transition-colors duration-200"
+                    className="block text-white hover:bg-pink-500 px-3 py-2 rounded-md transition-colors duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login

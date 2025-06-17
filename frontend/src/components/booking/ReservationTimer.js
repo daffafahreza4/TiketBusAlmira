@@ -176,7 +176,7 @@ const ReservationTimer = ({
             <div className="space-y-3">
               <button
                 onClick={handleExpiredModalClose}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors"
               >
                 Pilih Kursi Lagi
               </button>

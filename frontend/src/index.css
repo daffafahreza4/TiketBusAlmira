@@ -65,7 +65,7 @@ body {
   display: inline-block;
   position: absolute;
   top: 0;
-  background-color: #3182ce;
+  background-color: #f49cbb;
   border-radius: 100%;
   -webkit-animation: sk-bounce 2.0s infinite ease-in-out;
   animation: sk-bounce 2.0s infinite ease-in-out;

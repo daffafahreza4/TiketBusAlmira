@@ -115,30 +115,30 @@ const UserList = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Kelola User</h2>
-        <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
+        <h2 className="text-lg sm:text-xl font-bold">Kelola User</h2>
+        <span className="bg-pink-100 text-pink-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full self-start sm:self-auto">
           Total: {users ? users.length : 0}
         </span>
       </div>
 
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
           <input
             type="text"
             placeholder="Cari username atau email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Semua Role</option>
             <option value="user">User</option>
@@ -147,8 +147,8 @@ const UserList = ({
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="overflow-x-auto">
+      {/* Users Table - Desktop */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-50">
             <tr>
@@ -183,7 +183,7 @@ const UserList = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mr-4 ${
-                        user.role === 'admin' ? 'bg-red-600' : 'bg-blue-600'
+                        user.role === 'admin' ? 'bg-red-600' : 'bg-pink-500'
                       }`}>
                         {user.role === 'admin' ? (
                           <i className="fas fa-user-shield"></i>
@@ -219,7 +219,6 @@ const UserList = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex space-x-2">
-                      {/* Tambahkan button Edit */}
                       <button
                         onClick={() => handleEditClick(user)}
                         className="text-green-600 hover:text-green-900 text-sm px-3 py-1 rounded border border-green-600 hover:bg-green-50 transition-colors"
@@ -232,7 +231,7 @@ const UserList = ({
                       {user.role !== 'admin' && (
                         <button
                           onClick={() => handleMakeAdmin(user.id_user, user.username)}
-                          className="text-blue-600 hover:text-blue-900 text-sm px-3 py-1 rounded border border-blue-600 hover:bg-blue-50 transition-colors"
+                          className="text-pink-600 hover:text-pink-900 text-sm px-3 py-1 rounded border border-pink-600 hover:bg-blue-50 transition-colors"
                           title="Jadikan Admin"
                         >
                           <i className="fas fa-user-shield mr-1"></i>
@@ -257,22 +256,100 @@ const UserList = ({
         </table>
       </div>
 
+      {/* Users Cards - Mobile */}
+      <div className="lg:hidden space-y-3">
+        {filteredUsers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-4xl mb-2">👥</div>
+            <p className="text-sm">Tidak ada user yang ditemukan</p>
+          </div>
+        ) : (
+          filteredUsers.map((user) => (
+            <div key={user.id_user} className="bg-gray-50 rounded-lg p-4 border">
+              {/* User Info */}
+              <div className="flex items-start space-x-3 mb-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${
+                  user.role === 'admin' ? 'bg-red-600' : 'bg-pink-500'
+                }`}>
+                  {user.role === 'admin' ? (
+                    <i className="fas fa-user-shield text-sm"></i>
+                  ) : (
+                    user.username.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">
+                      {user.username}
+                    </h3>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2 ${
+                      user.role === 'admin' 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {user.role === 'admin' ? 'Admin' : 'User'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">ID: {user.id_user}</p>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-1 mb-3">
+                <p className="text-xs text-gray-900 break-all">{user.email}</p>
+                <p className="text-xs text-gray-500">{user.no_telepon || 'No. Telepon: -'}</p>
+                <p className="text-xs text-gray-500">Terdaftar: {formatDate(user.created_at)}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleEditClick(user)}
+                  className="flex-1 min-w-0 text-green-600 hover:text-green-900 text-xs px-3 py-2 rounded border border-green-600 hover:bg-green-50 transition-colors text-center"
+                >
+                  <i className="fas fa-edit mr-1"></i>
+                  Edit
+                </button>
+                
+                {user.role !== 'admin' && (
+                  <button
+                    onClick={() => handleMakeAdmin(user.id_user, user.username)}
+                    className="flex-1 min-w-0 text-pink-600 hover:text-pink-900 text-xs px-3 py-2 rounded border border-pink-600 hover:bg-blue-50 transition-colors text-center"
+                  >
+                    <i className="fas fa-user-shield mr-1"></i>
+                    Admin
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => handleDeleteClick(user)}
+                  className="flex-1 min-w-0 text-red-600 hover:text-red-900 text-xs px-3 py-2 rounded border border-red-600 hover:bg-red-50 transition-colors text-center"
+                >
+                  <i className="fas fa-trash mr-1"></i>
+                  Hapus
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Edit Modal */}
       {showEditModal && userToEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Edit User</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Edit User</h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
                 <i className="fas fa-times"></i>
               </button>
             </div>
             
             <form onSubmit={handleEditSubmit}>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Username
@@ -282,7 +359,7 @@ const UserList = ({
                     name="username"
                     value={editFormData.username}
                     onChange={handleEditChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -296,7 +373,7 @@ const UserList = ({
                     name="email"
                     value={editFormData.email}
                     onChange={handleEditChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -310,7 +387,7 @@ const UserList = ({
                     name="no_telepon"
                     value={editFormData.no_telepon}
                     onChange={handleEditChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Opsional"
                   />
                 </div>
@@ -320,7 +397,7 @@ const UserList = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Role
                   </label>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                     <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                       userToEdit.role === 'admin' 
                         ? 'bg-red-100 text-red-800' 
@@ -337,17 +414,17 @@ const UserList = ({
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors text-sm"
                 >
                   <i className="fas fa-save mr-2"></i>
                   Simpan Perubahan
@@ -361,29 +438,29 @@ const UserList = ({
       {/* Delete Confirmation Modal */}
       {showDeleteModal && userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6">
             <div className="flex items-center mb-4">
               <div className="bg-red-100 rounded-full p-2 mr-3">
                 <i className="fas fa-exclamation-triangle text-red-600"></i>
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
             </div>
             
-            <p className="text-gray-700 mb-6">
+            <p className="text-gray-700 mb-6 text-sm sm:text-base">
               Apakah Anda yakin ingin menghapus user <strong>{userToDelete.username}</strong>? 
               Tindakan ini tidak dapat dibatalkan.
             </p>
             
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
               >
                 Batal
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               >
                 <i className="fas fa-trash mr-2"></i>
                 Hapus
@@ -417,6 +494,6 @@ export default connect(mapStateToProps, {
   getAllUsers, 
   deleteUser, 
   makeUserAdmin,
-  updateUser,  // Tambahkan ke mapDispatchToProps
+  updateUser,  
   setAlert 
 })(UserList);

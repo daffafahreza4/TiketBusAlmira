@@ -23,7 +23,7 @@ const RecentTicketsAdminWidget = ({ recentTickets = [], loading = false }) => {
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold">Tiket Terbaru</h3>
-        <Link to="/admin/tickets" className="text-sm text-blue-600 hover:underline">
+        <Link to="/admin/tickets" className="text-sm text-pink-600 hover:underline">
           Lihat Semua
         </Link>
       </div>

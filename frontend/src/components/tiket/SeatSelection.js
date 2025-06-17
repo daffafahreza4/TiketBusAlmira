@@ -157,13 +157,13 @@ const SeatSelection = ({
     console.log('🎨 Seat colors updated:', statusMap); // Debug
   }, [availableSeats, generateAllSeats]);
 
-  // TAMBAHKAN auto-refresh
+  // TAMBAHKAN auto-refresh dengan interval lebih cepat
   useEffect(() => {
     if (!routeId) return;
 
     const interval = setInterval(() => {
       refreshSeatData();
-    }, 15000); // Refresh setiap 15 detik
+    }, 15000); // Refresh setiap 5 detik untuk real-time experience
 
     return () => clearInterval(interval);
   }, [routeId, refreshSeatData]);
@@ -258,6 +258,9 @@ const SeatSelection = ({
         const result = await createTempReservation(reservationData);
 
         if (result.success) {
+          // PERBAIKAN: Refresh seat data immediately after successful reservation
+          await refreshSeatData();
+
           let navigationUrl;
 
           if (result.reservations && result.reservations.length > 0) {
@@ -412,9 +415,10 @@ const SeatSelection = ({
     switch (status) {
       case 'available':
         return 'seat-available'; // ABU-ABU
+      case 'my_reservation':
+        return 'seat-my-reservation'; // BIRU - kursi yang saya reservasi
       case 'booked':
       case 'reserved':
-      case 'my_reservation':
       default:
         return 'seat-booked'; // MERAH
     }
@@ -452,7 +456,7 @@ const SeatSelection = ({
             <h3 className="font-bold text-lg">Pilih Kursi Anda</h3>
             <button
               onClick={refreshSeatData}
-              className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors text-sm"
+              className="px-3 py-1 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
               disabled={loading}
             >
               <i className="fas fa-sync-alt mr-1"></i>
@@ -460,8 +464,8 @@ const SeatSelection = ({
             </button>
           </div>
 
-          {/* Legend - 3 Status Saja */}
-          <div className="mb-6 flex justify-center space-x-6 flex-wrap">
+          {/* Legend - 4 Status */}
+          <div className="mb-6 flex justify-center space-x-4 flex-wrap">
             <div className="flex items-center mb-2">
               <div className="seat-available w-6 h-6 mr-2 rounded"></div>
               <span className="text-sm">Tersedia</span>
@@ -519,7 +523,7 @@ const SeatSelection = ({
                       {selectedSeatsList.map(seat => (
                         <span
                           key={seat}
-                          className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium"
+                          className="inline-block px-2 py-1 bg-pink-100 text-pink-800 rounded font-medium"
                         >
                           {seat}
                         </span>
@@ -550,7 +554,7 @@ const SeatSelection = ({
                   disabled={selectedSeatsList.length === 0 || isSubmitting}
                   className={`w-full mt-6 py-3 font-bold rounded-lg transition duration-300 ${selectedSeatsList.length === 0 || isSubmitting
                     ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-pink-500 text-white hover:bg-pink-700'
                     }`}
                 >
                   {isSubmitting ? (

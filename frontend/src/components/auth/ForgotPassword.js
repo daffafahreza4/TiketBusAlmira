@@ -53,7 +53,7 @@ const ForgotPassword = ({ setAlert }) => {
               Silakan cek kotak masuk atau folder spam Anda.
             </p>
             <p className="mt-6">
-              <Link to="/login" className="text-blue-600 hover:underline">
+              <Link to="/login" className="text-pink-600 hover:underline">
                 Kembali ke halaman login
               </Link>
             </p>
@@ -90,14 +90,14 @@ const ForgotPassword = ({ setAlert }) => {
               <div className="flex items-center justify-between mt-6">
                 <button
                   type="submit"
-                  className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-900 w-full"
+                  className="px-6 py-2 text-white bg-pink-500 rounded-lg hover:bg-pink-900 w-full"
                 >
                   Kirim Link Reset
                 </button>
               </div>
               <div className="mt-6 text-center">
                 <p className="text-sm">
-                  <Link to="/login" className="text-blue-600 hover:underline">
+                  <Link to="/login" className="text-pink-600 hover:underline">
                     Kembali ke halaman login
                   </Link>
                 </p>

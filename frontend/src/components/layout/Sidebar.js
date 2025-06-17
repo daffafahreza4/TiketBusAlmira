@@ -40,7 +40,7 @@ const Sidebar = ({ user }) => {
       {/* User info section */}
       <div className="px-6 py-6 border-b border-gray-200">
         <div className="flex items-center space-x-4">
-          <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold">
+          <div className="bg-pink-500 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold">
             {user && user.username ? user.username.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="flex-1 min-w-0">
@@ -67,12 +67,12 @@ const Sidebar = ({ user }) => {
                 to={item.path}
                 className={`flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
                   location.pathname === item.path
-                    ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-600'
+                    ? 'bg-blue-50 text-pink-700 font-medium border-r-2 border-pink-600'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
                 <i className={`${item.icon} w-5 text-center mr-3 ${
-                  location.pathname === item.path ? 'text-blue-600' : 'text-gray-400'
+                  location.pathname === item.path ? 'text-pink-600' : 'text-gray-400'
                 }`}></i>
                 <span>{item.name}</span>
               </Link>

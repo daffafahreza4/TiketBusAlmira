@@ -133,7 +133,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
             ) : (
               <div>
                 <div className="flex flex-col sm:flex-row items-center mb-6">
-                  <div className="bg-blue-600 text-white rounded-full w-24 h-24 flex items-center justify-center text-3xl font-bold mb-4 sm:mb-0 sm:mr-6">
+                  <div className="bg-pink-500 text-white rounded-full w-24 h-24 flex items-center justify-center text-3xl font-bold mb-4 sm:mb-0 sm:mr-6">
                     {user.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -217,7 +217,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                          className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-700 disabled:opacity-50"
                           disabled={submitting}
                         >
                           {submitting ? 'Menyimpan...' : 'Simpan'}
@@ -283,7 +283,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                          className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-700 disabled:opacity-50"
                           disabled={submitting}
                         >
                           {submitting ? 'Menyimpan...' : 'Ubah Password'}
@@ -332,7 +332,7 @@ const ProfilePage = ({ auth: { user, loading }, setAlert }) => {
                       <div className="flex flex-wrap gap-4">
                         <button
                           onClick={() => setIsEditing(true)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-700"
                         >
                           <i className="fas fa-edit mr-2"></i>
                           Edit Profil

@@ -17,11 +17,15 @@ const SearchResultsPage = ({ isAuthenticated }) => {
       </div>
 
       <main className="main-content bg-gray-100">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {/* Page Header with proper spacing */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Jadwal Keberangkatan</h1>
-            <p className="text-gray-600">Pilih jadwal perjalanan yang sesuai dengan kebutuhan Anda</p>
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 leading-tight">
+              Jadwal Keberangkatan
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+              Pilih jadwal perjalanan yang sesuai dengan kebutuhan Anda
+            </p>
           </div>
           
           {/* Route List */}
@@ -29,28 +33,30 @@ const SearchResultsPage = ({ isAuthenticated }) => {
           
           {/* Login Prompt for Non-authenticated Users */}
           {!isAuthenticated && (
-            <div className="mt-8 bg-blue-50 p-6 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                  <i className="fas fa-user text-white"></i>
+            <div className="mt-6 sm:mt-8 bg-blue-50 p-4 sm:p-6 rounded-lg border border-pink-200">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-4">
+                <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center flex-shrink-0 mx-auto sm:mx-0">
+                  <i className="fas fa-user text-white text-sm"></i>
                 </div>
-                <div>
-                  <h3 className="font-bold text-blue-800">Belum punya akun?</h3>
-                  <p className="text-blue-700 text-sm">
+                <div className="text-center sm:text-left">
+                  <h3 className="font-bold text-pink-800 text-base sm:text-lg">
+                    Belum punya akun?
+                  </h3>
+                  <p className="text-pink-700 text-xs sm:text-sm leading-relaxed mt-1">
                     Login atau daftar untuk menikmati kemudahan pemesanan tiket
                   </p>
                 </div>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <a 
                   href="/login" 
-                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2 bg-pink-500 text-white font-medium rounded-lg hover:bg-pink-700 transition-colors text-center text-sm sm:text-base"
                 >
                   Login
                 </a>
                 <a 
                   href="/register" 
-                  className="px-6 py-2 bg-white text-blue-600 font-medium rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2 bg-white text-pink-600 font-medium rounded-lg border border-pink-600 hover:bg-blue-50 transition-colors text-center text-sm sm:text-base"
                 >
                   Daftar
                 </a>

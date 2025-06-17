@@ -16,8 +16,8 @@ const SimpleRouteCard = ({ route }) => {
           
           <div className="flex-1 relative px-8">
             <div className="border-t-2 border-gray-300 relative">
-              <div className="absolute left-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
-              <div className="absolute right-0 top-0 w-3 h-3 bg-blue-500 rounded-full transform -translate-y-1/2"></div>
+              <div className="absolute left-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+              <div className="absolute right-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
             </div>
           </div>
           

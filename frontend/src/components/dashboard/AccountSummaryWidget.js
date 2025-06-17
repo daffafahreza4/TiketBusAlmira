@@ -42,7 +42,7 @@ const AccountSummaryWidget = ({ user, tickets = [], loading = false }) => {
       <h3 className="text-lg font-bold mb-4">Ringkasan Akun</h3>
       
       <div className="flex items-center mb-6">
-        <div className="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mr-4">
+        <div className="bg-pink-500 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold mr-4">
           {user && user.username ? user.username.charAt(0).toUpperCase() : 'U'}
         </div>
         <div>

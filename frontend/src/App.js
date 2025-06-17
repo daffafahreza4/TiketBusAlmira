@@ -27,6 +27,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminBusesPage from './pages/AdminBusesPage';
 import AdminRoutesPage from './pages/AdminRoutesPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
+import PaymentFinishPage from './pages/PaymentFinishPage';
 
 // Routing utility
 import PrivateRoute from './components/routing/PrivateRoute';
@@ -54,6 +55,32 @@ const App = () => {
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
           <Route path="/search-results" element={<SearchResultsPage />} />
+          
+          {/* Payment Routes */}
+          <Route
+            path="/payment/finish"
+            element={
+              <PrivateRoute>
+                <PaymentFinishPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/payment/error"
+            element={
+              <PrivateRoute>
+                <PaymentFinishPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/payment/pending"
+            element={
+              <PrivateRoute>
+                <PaymentFinishPage />
+              </PrivateRoute>
+            }
+          />
 
           {/* Protected Routes */}
           <Route
@@ -107,6 +134,23 @@ const App = () => {
           />
           <Route
             path="/ticket/print/:id"
+            element={
+              <PrivateRoute>
+                <PrintTiket />
+              </PrivateRoute>
+            }
+          />
+          {/* Alternative routes for grouped tickets compatibility */}
+          <Route
+            path="/tiket/order/:id"
+            element={
+              <PrivateRoute>
+                <TicketDetailPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/tiket/print-order/:id"
             element={
               <PrivateRoute>
                 <PrintTiket />

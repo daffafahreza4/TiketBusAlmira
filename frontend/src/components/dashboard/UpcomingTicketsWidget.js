@@ -19,7 +19,7 @@ const UpcomingTicketsWidget = ({ tickets = [], loading = false }) => {
     <div className="bg-white rounded-lg shadow-md p-6 h-full">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold">Tiket Mendatang</h3>
-        <Link to="/my-tickets" className="text-sm text-blue-600 hover:underline">
+        <Link to="/my-tickets" className="text-sm text-pink-600 hover:underline">
           Lihat Semua
         </Link>
       </div>
@@ -29,7 +29,7 @@ const UpcomingTicketsWidget = ({ tickets = [], loading = false }) => {
           <i className="fas fa-ticket-alt"></i>
         </div>
         <p className="text-gray-600 mb-2">Tidak ada tiket mendatang</p>
-        <Link to="/search-results" className="text-blue-600 hover:underline text-sm">
+        <Link to="/search-results" className="text-pink-600 hover:underline text-sm">
           Pesan tiket sekarang
         </Link>
       </div>

@@ -88,8 +88,8 @@ const AdminDashboardPage = ({
                     <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
                     <div className="space-y-3">
 
-                      <Link to="/admin/buses" className="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                        <i className="fas fa-plus mr-3 text-blue-600"></i>
+                      <Link to="/admin/buses" className="block w-full text-left p-3 bg-blue-50 hover:bg-pink-100 rounded-lg transition-colors">
+                        <i className="fas fa-plus mr-3 text-pink-600"></i>
                         Tambah Bus Baru
                       </Link>
 

@@ -82,9 +82,9 @@ export const formatStatus = (status) => {
     case 'cancelled':
       return { text: 'Dibatalkan', colorClass: 'text-red-600' };
     case 'completed':
-      return { text: 'Selesai', colorClass: 'text-blue-600' };
+      return { text: 'Selesai', colorClass: 'text-pink-600' };
     case 'processing':
-      return { text: 'Diproses', colorClass: 'text-blue-600' };
+      return { text: 'Diproses', colorClass: 'text-pink-600' };
     case 'expired':
       return { text: 'Kadaluarsa', colorClass: 'text-gray-600' };
     default:

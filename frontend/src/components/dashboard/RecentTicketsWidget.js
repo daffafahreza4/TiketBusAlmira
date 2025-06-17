@@ -19,7 +19,7 @@ const RecentTicketsWidget = ({ tickets = [], loading = false }) => {
     <div className="bg-white rounded-lg shadow-md p-6 h-full">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold">Riwayat Tiket</h3>
-        <Link to="/my-tickets" className="text-sm text-blue-600 hover:underline">
+        <Link to="/my-tickets" className="text-sm text-pink-600 hover:underline">
           Lihat Semua
         </Link>
       </div>

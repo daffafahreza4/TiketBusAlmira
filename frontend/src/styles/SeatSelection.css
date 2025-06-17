@@ -35,6 +35,20 @@
   background-color: #059669 !important;
 }
 
+/* BIRU - Reservasi Milik Saya */
+.seat-my-reservation {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-color: #f49cbb !important;
+  cursor: not-allowed !important;
+  opacity: 0.9 !important;
+}
+
+.seat-my-reservation:hover {
+  background-color: #f49cbb !important;
+  transform: none !important;
+}
+
 /* MERAH - Kursi Tidak Tersedia */
 .seat-booked {
   background-color: #ef4444 !important;

@@ -13,19 +13,13 @@ import {
 // Get all routes for admin
 export const getAllAdminRoutes = () => async dispatch => {
   try {
-    console.log('🔍 Fetching admin routes...'); // Debug log
-    
     const res = await axios.get('/api/admin/routes');
-    
-    console.log('✅ Admin routes received:', res.data); // Debug log
 
     dispatch({
       type: GET_ADMIN_ROUTES,
       payload: res.data.data
     });
   } catch (err) {
-    console.error('❌ Get admin routes error:', err.response); // Debug log
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat mengambil data rute';
@@ -65,8 +59,6 @@ export const getAdminRouteById = (routeId) => async dispatch => {
 // Create new route
 export const createAdminRoute = (routeData) => async dispatch => {
   try {
-    console.log('🔍 Creating new route...', routeData); // Debug log
-    
     const config = {
       headers: {
         'Content-Type': 'application/json'
@@ -74,8 +66,6 @@ export const createAdminRoute = (routeData) => async dispatch => {
     };
 
     const res = await axios.post('/api/admin/routes', routeData, config);
-    
-    console.log('✅ Route created:', res.data); // Debug log
     
     dispatch({
       type: ADD_ADMIN_ROUTE,
@@ -87,8 +77,6 @@ export const createAdminRoute = (routeData) => async dispatch => {
     // Refresh route list
     dispatch(getAllAdminRoutes());
   } catch (err) {
-    console.error('❌ Create route error:', err.response); // Debug log
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat menambahkan rute';
@@ -105,8 +93,6 @@ export const createAdminRoute = (routeData) => async dispatch => {
 // Update route
 export const updateAdminRoute = (routeId, routeData) => async dispatch => {
   try {
-    console.log('🔍 Updating route...', routeId, routeData); // Debug log
-    
     const config = {
       headers: {
         'Content-Type': 'application/json'
@@ -114,8 +100,6 @@ export const updateAdminRoute = (routeId, routeData) => async dispatch => {
     };
 
     const res = await axios.put(`/api/admin/routes/${routeId}`, routeData, config);
-    
-    console.log('✅ Route updated:', res.data); // Debug log
     
     dispatch({
       type: UPDATE_ADMIN_ROUTE,
@@ -127,8 +111,6 @@ export const updateAdminRoute = (routeId, routeData) => async dispatch => {
     // Refresh route list
     dispatch(getAllAdminRoutes());
   } catch (err) {
-    console.error('❌ Update route error:', err.response); // Debug log
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat memperbarui rute';
@@ -145,11 +127,7 @@ export const updateAdminRoute = (routeId, routeData) => async dispatch => {
 // Delete route
 export const deleteAdminRoute = (routeId) => async dispatch => {
   try {
-    console.log('🔍 Deleting route...', routeId); // Debug log
-    
     await axios.delete(`/api/admin/routes/${routeId}`);
-    
-    console.log('✅ Route deleted:', routeId); // Debug log
     
     dispatch({
       type: DELETE_ADMIN_ROUTE,
@@ -161,8 +139,6 @@ export const deleteAdminRoute = (routeId) => async dispatch => {
     // Refresh route list
     dispatch(getAllAdminRoutes());
   } catch (err) {
-    console.error('❌ Delete route error:', err.response); // Debug log
-    
     const errorMsg = err.response && err.response.data.message 
       ? err.response.data.message 
       : 'Terjadi kesalahan saat menghapus rute';

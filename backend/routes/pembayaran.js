@@ -31,12 +31,7 @@ router.get('/status/:id_tiket', checkPaymentStatus);
 router.put('/cancel/:id_tiket', cancelPayment);
 
 // Admin routes - require admin role
-router.use(authorize('admin'));
-
-// Get webhook statistics and monitoring data
-router.get('/webhook/stats', getWebhookStats);
-
-// Clean up old webhook logs
-router.post('/webhook/cleanup', cleanupWebhookLogs);
+router.get('/webhook/stats', authorize('admin'), getWebhookStats);
+router.post('/webhook/cleanup', authorize('admin'), cleanupWebhookLogs);
 
 module.exports = router;

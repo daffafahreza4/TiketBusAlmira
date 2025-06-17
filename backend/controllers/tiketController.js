@@ -1,4 +1,5 @@
 const { Tiket, User, Rute, Pembayaran, Bus, ReservasiSementara } = require('../models');
+const { sequelize } = require('../config/db');
 const { isBookingAllowed } = require('../utils/cleanupJob');
 const { Op } = require('sequelize');
 
@@ -129,15 +130,18 @@ exports.getTicketById = async (req, res) => {
   }
 };
 
-// Get grouped ticket by ID (NEW FUNCTION)
-exports.getGroupedTicketById = async (req, res) => {
+// Get order (grouped tickets) by ticket ID or order group ID
+exports.getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get the main ticket
-    const mainTicket = await Tiket.findOne({
+    // First, try to get ticket by ID to find order group
+    let referenceTicket = await Tiket.findOne({
       where: {
-        id_tiket: id,
+        [Op.or]: [
+          { id_tiket: id },
+          { order_group_id: id }
+        ],
         id_user: req.user.id_user
       },
       include: [
@@ -160,69 +164,156 @@ exports.getGroupedTicketById = async (req, res) => {
       ]
     });
 
-    if (!mainTicket) {
+    if (!referenceTicket) {
       return res.status(404).json({
         success: false,
-        message: 'Tiket tidak ditemukan'
+        message: 'Order atau tiket tidak ditemukan'
       });
     }
 
-    // Find grouped tickets (same booking session)
-    const timeWindow = 2 * 60 * 1000; // 2 minutes window
-    const bookingTime = new Date(mainTicket.tanggal_pemesanan);
-    const startTime = new Date(bookingTime.getTime() - timeWindow);
-    const endTime = new Date(bookingTime.getTime() + timeWindow);
+    // Get all tickets in the same order group
+    let allTicketsInOrder;
+    
+    if (referenceTicket.order_group_id) {
+      // NEW SYSTEM: Get by order_group_id
+      allTicketsInOrder = await Tiket.findAll({
+        where: {
+          order_group_id: referenceTicket.order_group_id,
+          id_user: req.user.id_user
+        },
+        include: [
+          {
+            model: User,
+            attributes: ['id_user', 'username', 'email', 'no_telepon']
+          },
+          {
+            model: Rute,
+            include: [
+              {
+                model: Bus,
+                attributes: ['nama_bus', 'total_kursi']
+              }
+            ]
+          },
+          {
+            model: Pembayaran
+          }
+        ],
+        order: [['nomor_kursi', 'ASC']]
+      });
+    } else {
+      // LEGACY SYSTEM: Use time-based grouping for old tickets
+      const timeWindow = 2 * 60 * 1000; // 2 minutes window
+      const bookingTime = new Date(referenceTicket.tanggal_pemesanan);
+      const startTime = new Date(bookingTime.getTime() - timeWindow);
+      const endTime = new Date(bookingTime.getTime() + timeWindow);
 
-    const groupedTickets = await Tiket.findAll({
-      where: {
-        id_user: req.user.id_user,
-        id_rute: mainTicket.id_rute,
-        tanggal_pemesanan: {
-          [Op.between]: [startTime, endTime]
-        }
+      allTicketsInOrder = await Tiket.findAll({
+        where: {
+          id_user: req.user.id_user,
+          id_rute: referenceTicket.id_rute,
+          tanggal_pemesanan: {
+            [Op.between]: [startTime, endTime]
+          }
+        },
+        include: [
+          {
+            model: User,
+            attributes: ['id_user', 'username', 'email', 'no_telepon']
+          },
+          {
+            model: Rute,
+            include: [
+              {
+                model: Bus,
+                attributes: ['nama_bus', 'total_kursi']
+              }
+            ]
+          },
+          {
+            model: Pembayaran
+          }
+        ],
+        order: [['nomor_kursi', 'ASC']]
+      });
+    }
+
+    // Find master ticket (either marked as master or first ticket)
+    const masterTicket = allTicketsInOrder.find(t => t.is_master_ticket) || allTicketsInOrder[0];
+    
+    // Calculate totals
+    const allSeats = allTicketsInOrder.map(ticket => ticket.nomor_kursi).sort();
+    const totalOrderAmount = masterTicket.order_total_amount || 
+      allTicketsInOrder.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar || 0), 0);
+
+    // Determine overall order status
+    const ticketStatuses = allTicketsInOrder.map(t => t.status_tiket);
+    const orderStatus = (() => {
+      if (ticketStatuses.every(status => status === 'confirmed')) return 'confirmed';
+      if (ticketStatuses.every(status => status === 'cancelled')) return 'cancelled';
+      if (ticketStatuses.some(status => status === 'pending')) return 'pending';
+      return masterTicket.status_tiket; // fallback to master ticket status
+    })();
+
+    // Create order response
+    const orderResponse = {
+      // ORDER INFO
+      order: {
+        order_group_id: masterTicket.order_group_id || `LEGACY-${masterTicket.id_tiket}`,
+        total_tickets: allTicketsInOrder.length,
+        total_amount: totalOrderAmount,
+        seats: allSeats,
+        master_ticket_id: masterTicket.id_tiket,
+        is_legacy_order: !masterTicket.order_group_id
       },
-      include: [
-        {
-          model: User,
-          attributes: ['id_user', 'username', 'email', 'no_telepon']
-        },
-        {
-          model: Rute,
-          include: [
-            {
-              model: Bus,
-              attributes: ['nama_bus', 'total_kursi']
-            }
-          ]
-        },
-        {
-          model: Pembayaran
-        }
-      ],
-      order: [['nomor_kursi', 'ASC']]
-    });
-
-    // Combine data
-    const allSeats = groupedTickets.map(ticket => ticket.nomor_kursi).sort();
-    const totalPayment = groupedTickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar || 0), 0);
-
-    // Create combined response
-    const combinedTicket = {
-      ...mainTicket.toJSON(),
-      nomor_kursi: allSeats,
-      total_bayar: totalPayment,
-      ticket_count: groupedTickets.length,
-      is_grouped: groupedTickets.length > 1,
-      all_ticket_ids: groupedTickets.map(t => t.id_tiket)
+      
+      // TICKETS DETAIL
+      tickets: allTicketsInOrder.map(ticket => ({
+        id_tiket: ticket.id_tiket,
+        nomor_kursi: ticket.nomor_kursi,
+        individual_price: parseFloat(ticket.total_bayar),
+        status_tiket: ticket.status_tiket,
+        is_master_ticket: ticket.is_master_ticket || (ticket.id_tiket === masterTicket.id_tiket),
+        tanggal_pemesanan: ticket.tanggal_pemesanan,
+        batas_pembayaran: ticket.batas_pembayaran
+      })),
+      
+      // ROUTE INFO
+      route: masterTicket.Rute ? {
+        id_rute: masterTicket.Rute.id_rute,
+        asal: masterTicket.Rute.asal,
+        tujuan: masterTicket.Rute.tujuan,
+        waktu_berangkat: masterTicket.Rute.waktu_berangkat,
+        harga: masterTicket.Rute.harga,
+        nama_bus: masterTicket.Rute.Bus ? masterTicket.Rute.Bus.nama_bus : 'Bus Tidak Diketahui',
+        total_kursi: masterTicket.Rute.Bus ? masterTicket.Rute.Bus.total_kursi : 0,
+        Bus: masterTicket.Rute.Bus,
+        bus: masterTicket.Rute.Bus
+      } : null,
+      
+      // PAYMENT INFO
+      payment: masterTicket.Pembayaran || null,
+      
+      // USER INFO
+      user: masterTicket.User ? {
+        id_user: masterTicket.User.id_user,
+        username: masterTicket.User.username,
+        email: masterTicket.User.email
+      } : null,
+      
+      // ORDER STATUS
+      status_tiket: orderStatus,
+      tanggal_pemesanan: masterTicket.tanggal_pemesanan,
+      batas_pembayaran: masterTicket.batas_pembayaran
     };
 
     res.status(200).json({
       success: true,
-      data: combinedTicket
+      data: orderResponse
     });
 
   } catch (error) {
-    console.error('Get grouped ticket error:', error);
+    console.error('Get order by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -332,10 +423,10 @@ exports.getAvailableSeats = async (req, res) => {
         return { ...seat, status: 'booked' };
       } else if (reservedSeatInfo[seat.number]) {
         const reservationInfo = reservedSeatInfo[seat.number];
-        // SEMUA reservasi (termasuk my_reservation) = 'booked' untuk frontend
+        // Bedakan antara reservasi milik sendiri vs orang lain
         return {
           ...seat,
-          status: 'booked', // Ubah dari 'reserved'/'my_reservation' jadi 'booked'
+          status: reservationInfo.isMyReservation ? 'my_reservation' : 'reserved',
           expiredAt: reservationInfo.expiredAt
         };
       }
@@ -518,14 +609,44 @@ exports.cancelTicket = async (req, res) => {
       });
     }
 
-    // Update ticket status
-    ticket.status_tiket = 'cancelled';
-    await ticket.save();
+    // Use transaction to ensure all updates are atomic
+    const transaction = await sequelize.transaction();
 
-    // Update payment status if exists
-    if (ticket.Pembayaran) {
-      ticket.Pembayaran.status = 'cancelled';
-      await ticket.Pembayaran.save();
+    try {
+      // Update ticket status - HANDLE GROUPED TICKETS
+      if (ticket.order_group_id) {
+        // NEW SYSTEM: Cancel all tickets in the order group
+        const updateResult = await Tiket.update(
+          { 
+            status_tiket: 'cancelled' 
+          },
+          {
+            where: {
+              order_group_id: ticket.order_group_id
+            },
+            transaction
+          }
+        );
+        
+        console.log(`Cancelled ${updateResult[0]} tickets in order group ${ticket.order_group_id}`);
+      } else {
+        // LEGACY SYSTEM: Cancel single ticket
+        ticket.status_tiket = 'cancelled';
+        await ticket.save({ transaction });
+      }
+
+      // Update payment status if exists
+      if (ticket.Pembayaran) {
+        ticket.Pembayaran.status = 'cancelled';
+        await ticket.Pembayaran.save({ transaction });
+      }
+
+      // Commit transaction
+      await transaction.commit();
+    } catch (error) {
+      // Rollback transaction on error
+      await transaction.rollback();
+      throw error;
     }
 
     res.status(200).json({

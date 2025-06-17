@@ -91,17 +91,46 @@ const cleanExpiredTickets = async () => {
     });
 
     if (expiredTickets.length > 0) {
-      // Update tickets to expired status
-      await Tiket.update(
-        { status_tiket: 'expired' },
-        {
-          where: {
-            id_tiket: {
-              [Op.in]: expiredTickets.map(ticket => ticket.id_tiket)
+      // Group tickets by order_group_id to handle grouped orders
+      const orderGroups = new Set();
+      const individualTickets = [];
+      
+      expiredTickets.forEach(ticket => {
+        if (ticket.order_group_id) {
+          orderGroups.add(ticket.order_group_id);
+        } else {
+          individualTickets.push(ticket.id_tiket);
+        }
+      });
+      
+      let totalUpdated = 0;
+      
+      // Update individual tickets
+      if (individualTickets.length > 0) {
+        const result = await Tiket.update(
+          { status_tiket: 'expired' },
+          {
+            where: {
+              id_tiket: { [Op.in]: individualTickets }
             }
           }
-        }
-      );
+        );
+        totalUpdated += result[0];
+      }
+      
+      // Update grouped tickets by order_group_id
+      for (const orderGroupId of orderGroups) {
+        const result = await Tiket.update(
+          { status_tiket: 'expired' },
+          {
+            where: {
+              order_group_id: orderGroupId,
+              status_tiket: 'pending' // Only update if still pending
+            }
+          }
+        );
+        totalUpdated += result[0];
+      }
 
       // Also update associated payments if they exist
       const { Pembayaran } = require('../models');
@@ -117,7 +146,7 @@ const cleanExpiredTickets = async () => {
         }
       );
 
-      return expiredTickets.length;
+      return totalUpdated;
     }
 
     return 0;

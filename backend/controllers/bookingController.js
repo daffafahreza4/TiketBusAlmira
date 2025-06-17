@@ -171,24 +171,61 @@ async function createTicketWithPayment(ticketData, metode_pembayaran, transactio
 }
 
 /**
- * Create multiple tickets for multiple seats
+ * Create multiple tickets for multiple seats - DENGAN SINGLE ORDER SYSTEM
  */
 async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_pembayaran, transaction) {
   const tickets = [];
-  const payments = [];
-
-  for (const seat of seats) {
+  const batas_pembayaran = getPaymentDeadline();
+  
+  // Generate unique order group ID untuk mengelompokkan tiket
+  const orderGroupId = `ORDER-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  
+  // Calculate total amount untuk keseluruhan order
+  const totalOrderAmount = parseFloat(baseTicketData.total_bayar) * seats.length;
+  
+  // Create tickets untuk setiap kursi
+  for (let i = 0; i < seats.length; i++) {
+    const seat = seats[i];
+    const isMasterTicket = i === 0; // First ticket adalah master ticket
+    
     const ticketData = {
       ...baseTicketData,
-      nomor_kursi: seat
+      nomor_kursi: seat,
+      tanggal_pemesanan: new Date(),
+      status_tiket: 'pending',
+      batas_pembayaran,
+      order_group_id: orderGroupId,
+      is_master_ticket: isMasterTicket,
+      // Hanya master ticket yang menyimpan total order amount
+      order_total_amount: isMasterTicket ? totalOrderAmount : null
     };
 
-    const { ticket, payment } = await createTicketWithPayment(ticketData, metode_pembayaran, transaction);
+    const ticket = await Tiket.create(ticketData, { transaction });
     tickets.push(ticket);
-    payments.push(payment);
   }
 
-  return { tickets, payments };
+  // Generate payment code
+  const kode_pembayaran = generatePaymentCode();
+  
+  // PENTING: Hanya buat SATU payment record untuk MASTER TICKET saja
+  const masterTicket = tickets[0];
+  const payment = await Pembayaran.create({
+    id_tiket: masterTicket.id_tiket,
+    metode: metode_pembayaran,
+    status: 'pending',
+    kode_pembayaran,
+    transaction_id: null,
+    payment_token: null,
+    snap_redirect_url: null
+  }, { transaction });
+
+  return { 
+    tickets, 
+    payment, // Single payment object
+    orderGroupId,
+    totalAmount: totalOrderAmount,
+    masterTicket
+  };
 }
 
 /**
@@ -248,39 +285,55 @@ async function validateReservation(id_reservasi, id_user, transaction) {
 }
 
 /**
- * Format success response for ticket creation
+ * Format success response for ticket creation - UPDATED UNTUK SINGLE ORDER
  */
-function formatTicketResponse(tickets, payments, isMultiple = false) {
-  const firstTicket = Array.isArray(tickets) ? tickets[0] : tickets;
-  const totalAmount = Array.isArray(tickets)
-    ? tickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0)
-    : parseFloat(tickets.total_bayar);
+function formatTicketResponse(tickets, payment, orderData = null) {
+  const isMultiple = Array.isArray(tickets) && tickets.length > 1;
+  const masterTicket = isMultiple ? tickets[0] : tickets;
+  const totalAmount = orderData?.totalAmount || 
+    (isMultiple 
+      ? tickets.reduce((sum, ticket) => sum + parseFloat(ticket.total_bayar), 0)
+      : parseFloat(tickets.total_bayar));
 
   const response = {
     success: true,
     message: isMultiple
-      ? `${tickets.length} tiket berhasil dibuat. Lanjutkan ke pembayaran.`
+      ? `Order dengan ${tickets.length} tiket berhasil dibuat. Lanjutkan ke pembayaran.`
       : 'Tiket berhasil dibuat. Lanjutkan ke pembayaran.',
     data: {
-      [isMultiple ? 'tickets' : 'ticket']: isMultiple ? tickets : tickets,
-      [isMultiple ? 'payments' : 'payment']: isMultiple ?
-        payments.map(payment => ({
-          kode_pembayaran: payment.kode_pembayaran,
-          metode: payment.metode,
-          batas_pembayaran: firstTicket.batas_pembayaran,
-          total_bayar: totalAmount,
-          status: 'pending'
-        })) : {
-          kode_pembayaran: payments.kode_pembayaran,
-          metode: payments.metode,
-          batas_pembayaran: firstTicket.batas_pembayaran,
-          total_bayar: totalAmount,
-          status: 'pending'
-        },
+      // SINGLE ORDER INFO
+      order: {
+        order_group_id: orderData?.orderGroupId || masterTicket.order_group_id,
+        total_tickets: isMultiple ? tickets.length : 1,
+        total_amount: totalAmount,
+        seats: isMultiple ? tickets.map(t => t.nomor_kursi).sort() : [masterTicket.nomor_kursi],
+        master_ticket_id: masterTicket.id_tiket
+      },
+      // TICKET DETAILS
+      tickets: isMultiple ? tickets.map(ticket => ({
+        id_tiket: ticket.id_tiket,
+        nomor_kursi: ticket.nomor_kursi,
+        individual_price: parseFloat(ticket.total_bayar),
+        is_master_ticket: ticket.is_master_ticket || false
+      })) : {
+        id_tiket: masterTicket.id_tiket,
+        nomor_kursi: masterTicket.nomor_kursi,
+        individual_price: parseFloat(masterTicket.total_bayar),
+        is_master_ticket: true
+      },
+      // SINGLE PAYMENT INFO
+      payment: {
+        kode_pembayaran: payment.kode_pembayaran,
+        metode: payment.metode,
+        batas_pembayaran: masterTicket.batas_pembayaran,
+        total_bayar: totalAmount,
+        status: 'pending',
+        master_ticket_id: masterTicket.id_tiket
+      },
       next_steps: {
         create_payment_token: `/api/pembayaran/create`,
-        check_status: `/api/pembayaran/status/${firstTicket.id_tiket}`,
-        cancel_payment: `/api/pembayaran/cancel/${firstTicket.id_tiket}`
+        check_status: `/api/pembayaran/status/${masterTicket.id_tiket}`,
+        cancel_payment: `/api/pembayaran/cancel/${masterTicket.id_tiket}`
       }
     }
   };
@@ -328,7 +381,7 @@ exports.createTicketFromReservation = async (req, res) => {
           total_bayar: rute.harga
         };
 
-        const { tickets, payments } = await createMultipleTicketsWithPayments(
+        const { tickets, payment, orderGroupId, totalAmount, masterTicket } = await createMultipleTicketsWithPayments(
           baseTicketData,
           nomor_kursi,
           metode_pembayaran,
@@ -345,9 +398,13 @@ exports.createTicketFromReservation = async (req, res) => {
           tickets.map(t => t.id_tiket)
         );
 
-        console.log('Multiple tickets created successfully');
+        console.log(`Multiple tickets created successfully with order group ID: ${orderGroupId}`);
 
-        return res.status(201).json(formatTicketResponse(completeTickets, payments, true));
+        return res.status(201).json(formatTicketResponse(
+          completeTickets, 
+          payment, 
+          { orderGroupId, totalAmount }
+        ));
 
       } catch (error) {
         await transaction.rollback();

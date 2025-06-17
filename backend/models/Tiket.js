@@ -45,6 +45,24 @@ const Tiket = sequelize.define('Tiket', {
     type: DataTypes.DATE,
     allowNull: false
   },
+  // TAMBAH: Field untuk mengelompokkan multiple tiket dalam satu order
+  order_group_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Group ID untuk multiple tiket dalam satu order/pembayaran'
+  },
+  // TAMBAH: Field untuk menyimpan total bayar keseluruhan order
+  order_total_amount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    comment: 'Total bayar untuk keseluruhan order (hanya di master ticket)'
+  },
+  // TAMBAH: Field untuk menandai tiket master dalam group
+  is_master_ticket: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'True jika ini adalah master ticket dalam group order'
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

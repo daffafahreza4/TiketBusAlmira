@@ -1,4 +1,5 @@
 const midtransClient = require('midtrans-client');
+require('dotenv').config();
 const isProduction = process.env.MIDTRANS_ENVIRONMENT === 'production';
 
 // Core API configuration (for server-side operations)

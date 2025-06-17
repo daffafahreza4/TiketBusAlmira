@@ -324,7 +324,7 @@ const BookingSummary = ({
   const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Seat Conflict Error Alert */}
       {seatConflictError && (
         <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -368,204 +368,110 @@ const BookingSummary = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Booking Form */}
-        <div className="lg:col-span-2">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Informasi Penumpang</h2>
+      {/* UNIFIED LAYOUT: Ringkasan di atas untuk semua device */}
+      <div className="space-y-6">
+        {/* 1. BOOKING SUMMARY - ALWAYS FIRST */}
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4 sm:mb-6">Ringkasan Reservasi</h2>
 
-            <form onSubmit={onSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 mb-2">Nama Lengkap</label>
-                  <input
-                    type="text"
-                    name="nama"
-                    value={nama}
-                    onChange={onChange}
-                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    required
-                    disabled={submitting}
-                  />
-                </div>
+          {/* Trip Info */}
+          <div className="border-b pb-4 mb-4">
+            <h3 className="font-semibold text-base sm:text-lg lg:text-xl mb-2 sm:mb-3">
+              {summaryData?.bus?.nama_bus || selectedRoute?.nama_bus || 'Bus'}
+            </h3>
 
-                <div>
-                  <label className="block text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={email}
-                    onChange={onChange}
-                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    required
-                    disabled={submitting}
-                  />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-sm sm:text-base">
+              <div className="flex justify-between sm:flex-col">
+                <span className="text-gray-600">Rute:</span>
+                <span className="font-medium sm:mt-1">
+                  {summaryData?.route?.asal || selectedRoute?.asal || 'N/A'} → {summaryData?.route?.tujuan || selectedRoute?.tujuan || 'N/A'}
+                </span>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Nomor Telepon</label>
-                <input
-                  type="text"
-                  name="noTelepon"
-                  value={noTelepon}
-                  onChange={onChange}
-                  className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  required
-                  disabled={submitting}
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Nomor telepon akan digunakan untuk konfirmasi perjalanan
-                </p>
+              <div className="flex justify-between sm:flex-col">
+                <span className="text-gray-600">Tanggal:</span>
+                <span className="font-medium sm:mt-1">
+                  {summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat ?
+                    formatDate(summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat) : 'N/A'}
+                </span>
               </div>
 
-              <div className="mb-6">
-                <label className="flex items-start">
-                  <input
-                    type="checkbox"
-                    name="agreeTerms"
-                    checked={agreeTerms}
-                    onChange={onChange}
-                    className="mr-2 mt-1"
-                    required
-                    disabled={submitting}
-                  />
-                  <span className="text-sm">
-                    Saya setuju dengan syarat dan ketentuan serta kebijakan dari pihak Almira Travel. 
-                    Saya memahami bahwa reservasi ini akan berakhir dalam waktu yang ditentukan.
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!agreeTerms || submitting || seatCount === 0 || seatConflictError}
-                className={`w-full py-3 font-bold rounded-lg transition duration-300 ${!agreeTerms || submitting || seatCount === 0 || seatConflictError
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-pink-500 text-white hover:bg-pink-700'
-                  }`}
-              >
-                {submitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Memproses...
-                  </div>
-                ) : seatConflictError ? (
-                  'Pilih Kursi Lain'
-                ) : seatCount === 0 ? (
-                  'Tidak ada kursi dipilih'
-                ) : (
-                  'Konfirmasi & Bayar Sekarang'
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Booking Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow-md sticky top-4">
-            <h2 className="text-xl font-bold mb-4">Ringkasan Reservasi</h2>
-
-            {/* Trip Info */}
-            <div className="border-b pb-4 mb-4">
-              <h3 className="font-semibold text-lg mb-2">
-                {summaryData?.bus?.nama_bus || selectedRoute?.nama_bus || 'Bus'}
-              </h3>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Rute:</span>
-                  <span className="font-medium">
-                    {summaryData?.route?.asal || selectedRoute?.asal || 'N/A'} → {summaryData?.route?.tujuan || selectedRoute?.tujuan || 'N/A'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tanggal:</span>
-                  <span className="font-medium">
-                    {summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat ?
-                      formatDate(summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat) : 'N/A'}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Waktu:</span>
-                  <span className="font-medium">
-                    {summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat ?
-                      formatTime(summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat) : 'N/A'}
-                  </span>
-                </div>
+              <div className="flex justify-between sm:flex-col">
+                <span className="text-gray-600">Waktu:</span>
+                <span className="font-medium sm:mt-1">
+                  {summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat ?
+                    formatTime(summaryData?.route?.waktu_berangkat || selectedRoute?.waktu_berangkat) : 'N/A'}
+                </span>
               </div>
             </div>
+          </div>
 
-            {/* Order Summary - UPDATED untuk single order display */}
-            <div className="border-b pb-4 mb-4">
-              <h3 className="font-semibold mb-3">Detail Order</h3>
+          {/* Order Summary */}
+          <div className="border-b pb-4 mb-4">
+            <h3 className="font-semibold mb-3 text-base sm:text-lg">Detail Order</h3>
 
-              {/* Order Header */}
-              {seatCount > 1 && (
-                <div className="bg-blue-50 p-3 rounded-lg mb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <i className="fas fa-ticket-alt text-pink-600 mr-2"></i>
-                      <span className="font-medium text-pink-800">
-                        Order {seatCount} Tiket
-                      </span>
-                    </div>
-                    <span className="text-pink-600 text-sm font-medium">
-                      Single Payment
+            {/* Order Header */}
+            {seatCount > 1 && (
+              <div className="bg-blue-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <i className="fas fa-ticket-alt text-pink-600 mr-2"></i>
+                    <span className="font-medium text-pink-800 text-sm sm:text-base">
+                      Order {seatCount} Tiket
                     </span>
                   </div>
-                  <p className="text-xs text-pink-600 mt-1">
-                    Satu pembayaran untuk semua tiket dalam order ini
-                  </p>
+                  <span className="text-pink-600 text-xs sm:text-sm font-medium">
+                    Single Payment
+                  </span>
                 </div>
-              )}
+                <p className="text-xs sm:text-sm text-pink-600 mt-1">
+                  Satu pembayaran untuk semua tiket dalam order ini
+                </p>
+              </div>
+            )}
 
-              {/* Seat Display */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600 text-sm">Kursi yang dipilih:</span>
-                  <span className="text-sm font-medium">{seatCount} kursi</span>
-                </div>
+            {/* Seat Display */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-gray-600 text-sm sm:text-base">Kursi yang dipilih:</span>
+                <span className="text-sm sm:text-base font-medium">{seatCount} kursi</span>
+              </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {seatCount > 0 ? (
-                    finalSeats.map((seat, index) => (
-                      <span
-                        key={index}
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${seatConflictError && seatConflictError.conflictSeats.includes(seat)
-                            ? 'bg-red-100 text-red-800 border border-red-200'
-                            : 'bg-green-100 text-green-800 border border-green-200'
-                          }`}
-                      >
-                        <i className="fas fa-check-circle mr-1"></i>
-                        Kursi {seat}
-                        {seatConflictError && seatConflictError.conflictSeats.includes(seat) && (
-                          <i className="fas fa-exclamation-triangle ml-1"></i>
-                        )}
-                      </span>
-                    ))
-                  ) : (
-                    <div className="w-full bg-red-50 p-3 rounded-lg border border-red-200">
-                      <div className="flex items-center">
-                        <i className="fas fa-exclamation-triangle text-red-500 mr-2"></i>
-                        <span className="text-red-700 text-sm font-medium">Tidak ada kursi dipilih</span>
-                      </div>
-                      <button
-                        onClick={() => navigate(`/booking/${routeId}`)}
-                        className="mt-2 text-pink-600 hover:text-pink-800 text-sm underline"
-                      >
-                        Pilih kursi sekarang →
-                      </button>
+              <div className="flex flex-wrap gap-2">
+                {seatCount > 0 ? (
+                  finalSeats.map((seat, index) => (
+                    <span
+                      key={index}
+                      className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${seatConflictError && seatConflictError.conflictSeats.includes(seat)
+                          ? 'bg-red-100 text-red-800 border border-red-200'
+                          : 'bg-green-100 text-green-800 border border-green-200'
+                        }`}
+                    >
+                      <i className="fas fa-check-circle mr-1"></i>
+                      Kursi {seat}
+                      {seatConflictError && seatConflictError.conflictSeats.includes(seat) && (
+                        <i className="fas fa-exclamation-triangle ml-1"></i>
+                      )}
+                    </span>
+                  ))
+                ) : (
+                  <div className="w-full bg-red-50 p-3 sm:p-4 rounded-lg border border-red-200">
+                    <div className="flex items-center">
+                      <i className="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                      <span className="text-red-700 text-sm sm:text-base font-medium">Tidak ada kursi dipilih</span>
                     </div>
-                  )}
-                </div>
+                    <button
+                      onClick={() => navigate(`/booking/${routeId}`)}
+                      className="mt-2 text-pink-600 hover:text-pink-800 text-sm sm:text-base underline"
+                    >
+                      Pilih kursi sekarang →
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Pricing Info */}
-              <div className="space-y-2 text-sm">
+              <div className="mt-4 space-y-2 text-sm sm:text-base">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Harga per tiket:</span>
                   <span className="font-medium">{formatCurrency(basePrice)}</span>
@@ -579,68 +485,144 @@ const BookingSummary = ({
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Pricing Breakdown */}
-            <div className="border-b pb-4 mb-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">
-                  {formatCurrency(basePrice * seatCount)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Biaya Admin:</span>
-                <span className="font-medium">{formatCurrency(adminFee)}</span>
-              </div>
+          {/* Pricing Breakdown */}
+          <div className="border-b pb-4 mb-4 space-y-2 text-sm sm:text-base">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium">
+                {formatCurrency(basePrice * seatCount)}
+              </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Biaya Admin:</span>
+              <span className="font-medium">{formatCurrency(adminFee)}</span>
+            </div>
+          </div>
 
-            {/* Total */}
-            <div className="border-b pb-4 mb-4">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total:</span>
-                <span>{formatCurrency(totalPrice)}</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                *Sudah termasuk pajak dan biaya layanan
+          {/* Total */}
+          <div className="border-b pb-4 mb-4">
+            <div className="flex justify-between font-bold text-lg sm:text-xl lg:text-2xl">
+              <span>Total:</span>
+              <span className="text-pink-600">{formatCurrency(totalPrice)}</span>
+            </div>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              *Sudah termasuk pajak dan biaya layanan
+            </p>
+          </div>
+
+          {/* Reservation Status */}
+          <div className={`p-3 sm:p-4 rounded-lg ${seatConflictError ? 'bg-red-50' : 'bg-blue-50'}`}>
+            <div className={`flex items-center ${seatConflictError ? 'text-red-800' : 'text-pink-800'}`}>
+              <i className={`${seatConflictError ? 'fas fa-exclamation-triangle' : 'fas fa-info-circle'} mr-2`}></i>
+              <span className="font-medium text-sm sm:text-base">
+                {seatConflictError ? 'Kursi Tidak Tersedia' : 'Status: Direservasi'}
+              </span>
+            </div>
+            <p className={`text-xs sm:text-sm mt-1 ${seatConflictError ? 'text-red-600' : 'text-pink-600'}`}>
+              {seatConflictError
+                ? 'Kursi yang Anda pilih sudah tidak tersedia. Silakan pilih kursi lain.'
+                : 'Kursi Anda telah direservasi. Selesaikan pembayaran sebelum waktu habis.'
+              }
+            </p>
+            {minutesRemaining > 0 && !seatConflictError && (
+              <p className="text-xs sm:text-sm text-pink-600 mt-1">
+                Sisa waktu: {minutesRemaining} menit
               </p>
-            </div>
-
-            {/* Reservation Status */}
-            <div className={`p-3 rounded-lg ${seatConflictError ? 'bg-red-50' : 'bg-blue-50'}`}>
-              <div className={`flex items-center ${seatConflictError ? 'text-red-800' : 'text-pink-800'}`}>
-                <i className={`${seatConflictError ? 'fas fa-exclamation-triangle' : 'fas fa-info-circle'} mr-2`}></i>
-                <span className="font-medium text-sm">
-                  {seatConflictError ? 'Kursi Tidak Tersedia' : 'Status: Direservasi'}
-                </span>
-              </div>
-              <p className={`text-xs mt-1 ${seatConflictError ? 'text-red-600' : 'text-pink-600'}`}>
-                {seatConflictError
-                  ? 'Kursi yang Anda pilih sudah tidak tersedia. Silakan pilih kursi lain.'
-                  : 'Kursi Anda telah direservasi. Selesaikan pembayaran sebelum waktu habis.'
-                }
-              </p>
-              {minutesRemaining > 0 && !seatConflictError && (
-                <p className="text-xs text-pink-600 mt-1">
-                  Sisa waktu: {minutesRemaining} menit
-                </p>
-              )}
-            </div>
-
-            {/* Debug Info - Only show in development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                <p className="font-semibold mb-2">Debug Info:</p>
-                <p>URL Seats: {searchParams.get('seats') || 'none'}</p>
-                <p>Redux Seats: {JSON.stringify(selectedSeats)}</p>
-                <p>Final Seats: {JSON.stringify(finalSeats)}</p>
-                <p>Seat Count: {seatCount}</p>
-                <p>Route ID: {routeId}</p>
-                <p>Reservation ID: {reservationId || 'none'}</p>
-                <p>Is Data Loaded: {isDataLoaded.toString()}</p>
-                <p>Seat Conflict: {seatConflictError ? 'Yes' : 'No'}</p>
-              </div>
             )}
           </div>
+        </div>
+
+        {/* 2. PASSENGER INFORMATION - ALWAYS SECOND */}
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4 sm:mb-6">Informasi Penumpang</h2>
+
+          <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label className="block text-gray-700 mb-2 font-medium text-sm sm:text-base">Nama Lengkap</label>
+                <input
+                  type="text"
+                  name="nama"
+                  value={nama}
+                  onChange={onChange}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                  required
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-2 font-medium text-sm sm:text-base">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={onChange}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                  required
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-2 font-medium text-sm sm:text-base">Nomor Telepon</label>
+              <input
+                type="text"
+                name="noTelepon"
+                value={noTelepon}
+                onChange={onChange}
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                required
+                disabled={submitting}
+              />
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Nomor telepon akan digunakan untuk konfirmasi perjalanan
+              </p>
+            </div>
+
+            <div>
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  name="agreeTerms"
+                  checked={agreeTerms}
+                  onChange={onChange}
+                  className="mr-2 sm:mr-3 mt-1 w-4 h-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                  required
+                  disabled={submitting}
+                />
+                <span className="text-xs sm:text-sm lg:text-base">
+                  Saya setuju dengan syarat dan ketentuan serta kebijakan dari pihak Almira Travel. 
+                  Saya memahami bahwa reservasi ini akan berakhir dalam waktu yang ditentukan.
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!agreeTerms || submitting || seatCount === 0 || seatConflictError}
+              className={`w-full py-3 sm:py-4 font-bold rounded-lg transition duration-300 text-sm sm:text-base lg:text-lg ${!agreeTerms || submitting || seatCount === 0 || seatConflictError
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-pink-500 text-white hover:bg-pink-700 shadow-lg hover:shadow-xl'
+                }`}
+            >
+              {submitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Memproses...
+                </div>
+              ) : seatConflictError ? (
+                'Pilih Kursi Lain'
+              ) : seatCount === 0 ? (
+                'Tidak ada kursi dipilih'
+              ) : (
+                'Konfirmasi & Bayar Sekarang'
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>

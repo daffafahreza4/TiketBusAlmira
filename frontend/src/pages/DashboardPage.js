@@ -90,23 +90,6 @@ const DashboardPage = ({
                     loading={isLoading} 
                   />
                 </div>
-                
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-                    <h4 className="font-bold mb-2">Debug Info:</h4>
-                    <p className="text-sm">Tickets Count: {tickets?.length || 0}</p>
-                    <p className="text-sm">Loading: {isLoading.toString()}</p>
-                    <p className="text-sm">Error: {ticketError || 'None'}</p>
-                    {tickets && tickets.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium">Sample Ticket Structure:</p>
-                        <pre className="text-xs bg-white p-2 rounded mt-1 overflow-auto max-h-32">
-                          {JSON.stringify(tickets[0], null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>

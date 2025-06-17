@@ -27,11 +27,6 @@ const Sidebar = ({ user }) => {
       name: 'Profil',
       path: '/profile',
       icon: 'fas fa-user'
-    },
-    {
-      name: 'Bantuan',
-      path: '/help',
-      icon: 'fas fa-question-circle'
     }
   ];
   

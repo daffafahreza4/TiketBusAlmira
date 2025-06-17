@@ -177,15 +177,23 @@ const SeatSelection = ({
 
     let newSelection;
     if (selectedSeatsList.includes(seatNumber)) {
+      // Jika kursi sudah dipilih, hapus dari selection
       newSelection = selectedSeatsList.filter(seat => seat !== seatNumber);
     } else {
+      // PERBAIKAN: Validasi maksimal 5 kursi SEBELUM pengecekan availability
+      if (selectedSeatsList.length >= 5) {
+        // Dispatch setAlert ke Redux store
+        setAlert('Hanya bisa memilih maksimal 5 kursi', 'warning');
+        return; // Stop execution here
+      }
+
       // Real-time check sebelum memilih kursi
       setIsCheckingSeats(true);
       try {
         const availabilityCheck = await checkSeatAvailability(routeId, [seatNumber]);
 
         if (!availabilityCheck.available) {
-          alert(`Kursi ${seatNumber} sudah tidak tersedia. Silakan refresh halaman.`);
+          setAlert(`Kursi ${seatNumber} sudah tidak tersedia. Silakan refresh halaman.`, 'danger');
           // Refresh seat data
           getAvailableSeats(routeId);
           setIsCheckingSeats(false);
@@ -194,7 +202,7 @@ const SeatSelection = ({
 
         newSelection = [...selectedSeatsList, seatNumber];
       } catch (error) {
-        alert('Gagal mengecek ketersediaan kursi. Silakan coba lagi.');
+        setAlert('Gagal mengecek ketersediaan kursi. Silakan coba lagi.', 'danger');
         setIsCheckingSeats(false);
         return;
       }
@@ -210,7 +218,6 @@ const SeatSelection = ({
       console.warn('Could not store in sessionStorage:', error);
     }
   };
-
   // CRITICAL FIX: Ensure seats are properly passed to BookingSummary
   const handleSubmit = async () => {
     if (selectedSeatsList.length === 0) {
@@ -467,7 +474,7 @@ const SeatSelection = ({
           {/* Legend - 4 Status */}
           <div className="mb-6 flex justify-center space-x-4 flex-wrap">
             <div className="flex items-center mb-2">
-              <div className="seat-available w-6 h-6 mr-2 rounded"></div>
+              <div className="seat-available w-6 h-6 mr-2 rounded border border-black"></div>
               <span className="text-sm">Tersedia</span>
             </div>
             <div className="flex items-center mb-2">
@@ -566,28 +573,6 @@ const SeatSelection = ({
                     'Pilih Kursi' : `Lanjut dengan ${selectedSeatsList.length} Kursi`
                   }
                 </button>
-
-                {/* Current Status */}
-                {selectedSeatsList.length > 0 && (
-                  <div className="mt-4 p-3 bg-green-50 rounded text-sm">
-                    <p className="font-semibold text-green-800">Status:</p>
-                    <p className="text-green-700">
-                      ✅ {selectedSeatsList.length} kursi dipilih: {selectedSeatsList.join(', ')}
-                    </p>
-                    <p className="text-green-700">
-                      💰 Total: {formatCurrency(totalPrice)}
-                    </p>
-                  </div>
-                )}
-
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-                    <p className="font-semibold mb-1">Debug Info:</p>
-                    <p>Redux: {JSON.stringify(selectedSeats)}</p>
-                    <p>Local: {JSON.stringify(selectedSeatsList)}</p>
-                    <p>SessionStorage: {sessionStorage.getItem('selectedSeats') || 'none'}</p>
-                  </div>
-                )}
               </>
             )}
           </div>

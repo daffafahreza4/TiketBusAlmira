@@ -1,7 +1,7 @@
 const { ReservasiSementara, Rute, User, Bus, Tiket } = require('../models');
 const { Op } = require('sequelize');
 
-// Create temporary reservation (hold seat for 1 hour)
+// Create temporary reservation (hold seat for 30 minutes)
 exports.createTempReservation = async (req, res) => {
   try {
     const { id_rute, nomor_kursi } = req.body;
@@ -11,6 +11,14 @@ exports.createTempReservation = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'ID rute dan nomor kursi harus diisi'
+      });
+    }
+
+    // TAMBAH: Validasi maksimal 5 kursi per reservasi
+    if (nomor_kursi.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maksimal 5 kursi per reservasi'
       });
     }
 
@@ -29,8 +37,8 @@ exports.createTempReservation = async (req, res) => {
       });
     }
 
-    // Set expiration time (1 hour from now)
-    const waktu_expired = new Date(Date.now() + (30 * 60 * 1000)); // 30 minutes
+    // Set expiration time (30 minutes from now)
+    const waktu_expired = new Date(Date.now() + (30 * 60 * 1000));
 
     // Check for existing reservations and confirmed tickets for these seats
     const existingReservations = await ReservasiSementara.findAll({
@@ -95,17 +103,17 @@ exports.createTempReservation = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Kursi berhasil direservasi sementara',
+      message: `${nomor_kursi.length} kursi berhasil direservasi sementara`,
       data: {
         reservations,
         route: rute,
         expiredAt: waktu_expired,
-        reservedSeats: nomor_kursi
+        reservedSeats: nomor_kursi,
+        totalSeats: nomor_kursi.length
       }
     });
 
   } catch (error) {
-    console.error('Create temp reservation error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat membuat reservasi'
@@ -148,7 +156,6 @@ exports.getUserReservations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get user reservations error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi'
@@ -206,7 +213,6 @@ exports.getReservationById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get reservation by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi'
@@ -254,7 +260,6 @@ exports.cancelReservation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Cancel reservation error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat membatalkan reservasi'
@@ -312,7 +317,6 @@ exports.checkExpiredReservations = async () => {
     }
 
   } catch (error) {
-    console.error('Check expired reservations error:', error);
     return {
       success: false,
       error: error.message
@@ -353,7 +357,6 @@ exports.getRouteReservations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get route reservations error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil data reservasi rute'

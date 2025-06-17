@@ -57,24 +57,12 @@ exports.getMyTickets = async (req, res) => {
       return ticketData;
     });
 
-    console.log('Transformed tickets structure:', {
-      count: transformedTickets.length,
-      sampleStructure: transformedTickets[0] ? {
-        id_tiket: transformedTickets[0].id_tiket,
-        hasRute: !!transformedTickets[0].rute,
-        hasRuteAsal: !!transformedTickets[0].rute?.asal,
-        hasUser: !!transformedTickets[0].user,
-        hasPembayaran: !!transformedTickets[0].pembayaran
-      } : 'No tickets'
-    });
-
     res.status(200).json({
       success: true,
       count: transformedTickets.length,
       data: transformedTickets
     });
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -122,7 +110,6 @@ exports.getTicketById = async (req, res) => {
       data: ticket
     });
   } catch (error) {
-    console.error('Get ticket by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -313,7 +300,6 @@ exports.getOrderById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get order by ID error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -321,7 +307,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// Get available seats for a route (Enhanced with reservation check)
+// Get available seats for a route (Enhanced with reservation check) - FIXED VERSION
 exports.getAvailableSeats = async (req, res) => {
   try {
     const { routeId } = req.params;
@@ -357,8 +343,7 @@ exports.getAvailableSeats = async (req, res) => {
       });
     }
 
-
-    // Get booked seats from confirmed tickets
+    // PERBAIKAN: Get booked seats from confirmed/pending tickets
     const bookedSeats = await Tiket.findAll({
       where: {
         id_rute: routeId,
@@ -369,7 +354,7 @@ exports.getAvailableSeats = async (req, res) => {
       attributes: ['nomor_kursi']
     });
 
-    // Get reserved seats (temporary reservations that haven't expired)
+    // PERBAIKAN: Get reserved seats (temporary reservations that haven't expired)
     const reservedSeats = await ReservasiSementara.findAll({
       where: {
         id_rute: routeId,
@@ -380,13 +365,13 @@ exports.getAvailableSeats = async (req, res) => {
       attributes: ['nomor_kursi', 'id_user', 'waktu_expired']
     });
 
-    const totalSeats = route.Bus.total_kursi; // Ambil dari database
+    const totalSeats = route.Bus.total_kursi;
     const seatsPerRow = 4;
     const totalRows = Math.ceil(totalSeats / seatsPerRow);
 
     // Generate seats berdasarkan kapasitas bus sebenarnya
     const allSeats = [];
-    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) { // Gunakan totalSeats, bukan 40
+    for (let seatNum = 1; seatNum <= totalSeats; seatNum++) {
       const row = Math.ceil(seatNum / 4);
       const positionInRow = ((seatNum - 1) % 4) + 1;
       let seatPosition;
@@ -405,10 +390,10 @@ exports.getAvailableSeats = async (req, res) => {
       });
     }
 
-    // Mark booked seats
+    // PERBAIKAN: Mark booked seats (ensure all booked seats are marked)
     const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
 
-    // Mark reserved seats
+    // PERBAIKAN: Mark reserved seats (handle user's own reservations vs others)
     const reservedSeatInfo = reservedSeats.reduce((acc, seat) => {
       acc[seat.nomor_kursi] = {
         isMyReservation: seat.id_user === req.user?.id_user,
@@ -417,7 +402,7 @@ exports.getAvailableSeats = async (req, res) => {
       return acc;
     }, {});
 
-    // Update seat statuses
+    // PERBAIKAN: Update seat statuses dengan logic yang benar
     const seatsWithStatus = allSeats.map(seat => {
       if (bookedSeatNumbers.includes(seat.number)) {
         return { ...seat, status: 'booked' };
@@ -439,7 +424,7 @@ exports.getAvailableSeats = async (req, res) => {
     const reservedCount = seatsWithStatus.filter(seat => seat.status === 'reserved').length;
     const myReservationCount = seatsWithStatus.filter(seat => seat.status === 'my_reservation').length;
 
-    // PERBAIKAN: Enhanced response structure
+    // Enhanced response structure
     res.status(200).json({
       success: true,
       data: {
@@ -457,12 +442,12 @@ exports.getAvailableSeats = async (req, res) => {
           rows: totalRows,
           seatsPerRow: seatsPerRow
         },
-        // TAMBAH: Format yang mudah di-parse frontend
+        // Format yang mudah di-parse frontend
         seatStatuses: seatsWithStatus.reduce((acc, seat) => {
           acc[seat.number] = seat.status;
           return acc;
         }, {}),
-        // TAMBAH: Array sederhana untuk backward compatibility
+        // Array sederhana untuk backward compatibility
         availableSeats: seatsWithStatus
           .filter(seat => seat.status === 'available')
           .map(seat => seat.number)
@@ -470,7 +455,6 @@ exports.getAvailableSeats = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get available seats error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -478,7 +462,7 @@ exports.getAvailableSeats = async (req, res) => {
   }
 };
 
-// Tambahkan fungsi untuk check real-time seat availability
+// Check real-time seat availability - ENHANCED VERSION
 exports.checkSeatAvailability = async (req, res) => {
   try {
     const { routeId } = req.params;
@@ -488,6 +472,14 @@ exports.checkSeatAvailability = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Seats array is required'
+      });
+    }
+
+    // TAMBAH: Validasi maksimal 5 kursi per check
+    if (seats.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maksimal 5 kursi per pengecekan'
       });
     }
 
@@ -535,12 +527,12 @@ exports.checkSeatAvailability = async (req, res) => {
         conflictSeats,
         requestedSeats: seats,
         bookedSeats: bookedSeatNumbers,
-        reservedSeats: reservedSeatNumbers
+        reservedSeats: reservedSeatNumbers,
+        maxSeatsPerBooking: 5
       }
     });
 
   } catch (error) {
-    console.error('Check seat availability error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -548,8 +540,7 @@ exports.checkSeatAvailability = async (req, res) => {
   }
 };
 
-// Cancel ticket (before departure)
-// Cancel ticket (before departure) - Perbaikan
+// Cancel ticket (before departure) - Enhanced Version
 exports.cancelTicket = async (req, res) => {
   try {
     const ticket = await Tiket.findOne({
@@ -597,7 +588,7 @@ exports.cancelTicket = async (req, res) => {
       });
     }
 
-    // Check if departure time has passed - Lebih toleran untuk testing
+    // Check if departure time has passed
     const now = new Date();
     const departureTime = new Date(ticket.Rute.waktu_berangkat);
     const hoursUntilDeparture = (departureTime - now) / (1000 * 60 * 60);
@@ -627,8 +618,6 @@ exports.cancelTicket = async (req, res) => {
             transaction
           }
         );
-        
-        console.log(`Cancelled ${updateResult[0]} tickets in order group ${ticket.order_group_id}`);
       } else {
         // LEGACY SYSTEM: Cancel single ticket
         ticket.status_tiket = 'cancelled';
@@ -663,7 +652,6 @@ exports.cancelTicket = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Cancel ticket error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

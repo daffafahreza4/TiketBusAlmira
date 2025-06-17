@@ -14,7 +14,7 @@ function generatePaymentCode() {
 }
 
 /**
- * Set payment deadline (24 hours from now)
+ * Set payment deadline (30 minutes from now)
  */
 function getPaymentDeadline() {
   return new Date(Date.now() + (30 * 60 * 1000));
@@ -71,7 +71,7 @@ async function validateAndGetRoute(id_rute, transaction) {
     throw new Error('Rute tidak ditemukan');
   }
 
-  // TAMBAH: Validasi waktu keberangkatan
+  // Validasi waktu keberangkatan
   if (!isBookingAllowed(rute.waktu_berangkat)) {
     const departure = new Date(rute.waktu_berangkat);
     const now = new Date();
@@ -87,7 +87,7 @@ async function validateAndGetRoute(id_rute, transaction) {
 }
 
 /**
- * Check seat availability for single or multiple seats
+ * Check seat availability for single or multiple seats - FIXED VERSION
  */
 async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction) {
   const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
@@ -171,7 +171,7 @@ async function createTicketWithPayment(ticketData, metode_pembayaran, transactio
 }
 
 /**
- * Create multiple tickets for multiple seats - DENGAN SINGLE ORDER SYSTEM
+ * Create multiple tickets for multiple seats - FIXED VERSION
  */
 async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_pembayaran, transaction) {
   const tickets = [];
@@ -183,14 +183,17 @@ async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_p
   // Calculate total amount untuk keseluruhan order
   const totalOrderAmount = parseFloat(baseTicketData.total_bayar) * seats.length;
   
-  // Create tickets untuk setiap kursi
+  // PERBAIKAN: Create tickets untuk setiap kursi dengan validasi ulang
   for (let i = 0; i < seats.length; i++) {
     const seat = seats[i];
     const isMasterTicket = i === 0; // First ticket adalah master ticket
     
+    // TAMBAH: Double check availability sebelum create ticket
+    await checkSeatAvailability(baseTicketData.id_rute, [seat], baseTicketData.id_user, transaction);
+    
     const ticketData = {
       ...baseTicketData,
-      nomor_kursi: seat,
+      nomor_kursi: seat, // PERBAIKAN: Pastikan setiap tiket punya kursi yang benar
       tanggal_pemesanan: new Date(),
       status_tiket: 'pending',
       batas_pembayaran,
@@ -285,7 +288,7 @@ async function validateReservation(id_reservasi, id_user, transaction) {
 }
 
 /**
- * Format success response for ticket creation - UPDATED UNTUK SINGLE ORDER
+ * Format success response for ticket creation
  */
 function formatTicketResponse(tickets, payment, orderData = null) {
   const isMultiple = Array.isArray(tickets) && tickets.length > 1;
@@ -352,12 +355,8 @@ exports.createTicketFromReservation = async (req, res) => {
   try {
     const { id_reservasi, metode_pembayaran = 'midtrans', nomor_kursi, id_rute } = req.body;
 
-    console.log('Request body:', req.body);
-
     // Handle temporary reservation (when id_reservasi is 'temp')
     if (id_reservasi === 'temp' && nomor_kursi && id_rute) {
-      console.log('Creating ticket directly without reservation');
-
       // Validate required fields
       if (!id_rute || !nomor_kursi || !Array.isArray(nomor_kursi) || nomor_kursi.length === 0) {
         await transaction.rollback();
@@ -367,11 +366,20 @@ exports.createTicketFromReservation = async (req, res) => {
         });
       }
 
+      // TAMBAH: Validasi maksimal 5 tiket per transaksi
+      if (nomor_kursi.length > 5) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Maksimal 5 tiket per transaksi'
+        });
+      }
+
       try {
         // Validate route
         const rute = await validateAndGetRoute(id_rute, transaction);
 
-        // Check seat availability
+        // PERBAIKAN: Check availability untuk semua kursi sekaligus
         await checkSeatAvailability(id_rute, nomor_kursi, req.user.id_user, transaction);
 
         // Create tickets for each seat
@@ -397,8 +405,6 @@ exports.createTicketFromReservation = async (req, res) => {
         const completeTickets = await getMultipleCompleteTicketData(
           tickets.map(t => t.id_tiket)
         );
-
-        console.log(`Multiple tickets created successfully with order group ID: ${orderGroupId}`);
 
         return res.status(201).json(formatTicketResponse(
           completeTickets, 
@@ -464,8 +470,6 @@ exports.createTicketFromReservation = async (req, res) => {
       // Get complete ticket data for response
       const completeTicket = await getCompleteTicketData(ticket.id_tiket);
 
-      console.log('Ticket created from reservation successfully');
-
       res.status(201).json(formatTicketResponse(completeTicket, payment, false));
 
     } catch (error) {
@@ -494,7 +498,6 @@ exports.createTicketFromReservation = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('Error:', error);
 
     res.status(500).json({
       success: false,
@@ -603,8 +606,6 @@ exports.getBookingSummary = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error:', error);
-
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat mengambil ringkasan booking'
@@ -620,8 +621,6 @@ exports.createTicket = async (req, res) => {
 
   try {
     const { id_rute, nomor_kursi, metode_pembayaran = 'midtrans' } = req.body;
-
-    console.log('Request body:', req.body);
 
     // Validate required fields
     if (!id_rute || !nomor_kursi) {
@@ -660,8 +659,6 @@ exports.createTicket = async (req, res) => {
       // Get complete ticket data for response
       const completeTicket = await getCompleteTicketData(ticket.id_tiket);
 
-      console.log('Direct ticket created successfully');
-
       res.status(201).json(formatTicketResponse(completeTicket, payment, false));
 
     } catch (error) {
@@ -682,7 +679,6 @@ exports.createTicket = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('Error:', error);
 
     res.status(500).json({
       success: false,
@@ -699,10 +695,10 @@ exports.getGroupedTicketById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get the main ticket
-    const mainTicket = await getCompleteTicketData(id);
+    // First, try to get ticket by ID to find order group
+    let referenceTicket = await getCompleteTicketData(id);
 
-    if (!mainTicket || mainTicket.id_user !== req.user.id_user) {
+    if (!referenceTicket || referenceTicket.id_user !== req.user.id_user) {
       return res.status(404).json({
         success: false,
         message: 'Tiket tidak ditemukan'
@@ -713,9 +709,9 @@ exports.getGroupedTicketById = async (req, res) => {
     const groupedTickets = await Tiket.findAll({
       where: {
         id_user: req.user.id_user,
-        id_rute: mainTicket.id_rute,
-        tanggal_pemesanan: mainTicket.tanggal_pemesanan,
-        status_tiket: mainTicket.status_tiket
+        id_rute: referenceTicket.id_rute,
+        tanggal_pemesanan: referenceTicket.tanggal_pemesanan,
+        status_tiket: referenceTicket.status_tiket
       },
       include: [
         {
@@ -744,7 +740,7 @@ exports.getGroupedTicketById = async (req, res) => {
 
     // Create combined ticket object
     const combinedTicket = {
-      ...mainTicket.toJSON(),
+      ...referenceTicket.toJSON(),
       nomor_kursi: allSeats,
       total_bayar: totalPayment,
       ticket_count: groupedTickets.length,
@@ -757,7 +753,6 @@ exports.getGroupedTicketById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

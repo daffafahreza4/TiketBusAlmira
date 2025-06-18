@@ -409,16 +409,6 @@ const TicketDetailPage = ({
                     Cetak Tiket
                   </button>
                 )}
-
-                {(mainTicket?.status_tiket === 'confirmed' || mainTicket?.status_tiket === 'pending') && 
-                 !['cancelled', 'expired', 'completed'].includes(mainTicket?.status_tiket) && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm sm:text-base"
-                  >
-                    Batalkan Tiket
-                  </button>
-                )}
               </div>
             </div>
 

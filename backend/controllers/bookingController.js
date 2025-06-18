@@ -87,7 +87,7 @@ async function validateAndGetRoute(id_rute, transaction) {
 }
 
 /**
- * Check seat availability for single or multiple seats - FIXED VERSION
+ * PERBAIKAN: Check seat availability for single or multiple seats
  */
 async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction) {
   const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
@@ -106,7 +106,7 @@ async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction)
       },
       transaction
     }),
-    // Check active reservations (exclude current user)
+    // PERBAIKAN KRITIS: Check active reservations EXCLUDING current user
     ReservasiSementara.findAll({
       where: {
         id_rute,
@@ -116,6 +116,7 @@ async function checkSeatAvailability(id_rute, nomor_kursi, id_user, transaction)
         waktu_expired: {
           [Op.gt]: new Date()
         },
+        // PERBAIKAN: Exclude reservations by current user
         id_user: {
           [Op.ne]: id_user
         }
@@ -232,12 +233,14 @@ async function createMultipleTicketsWithPayments(baseTicketData, seats, metode_p
 }
 
 /**
- * Clear user's reservations for specific seats
+ * PERBAIKAN: Clear user's reservations for specific seats - CONDITIONAL DELETE
  */
 async function clearUserReservations(id_user, id_rute, nomor_kursi, transaction) {
   const seats = Array.isArray(nomor_kursi) ? nomor_kursi : [nomor_kursi];
 
-  await ReservasiSementara.destroy({
+  // PERBAIKAN: Only delete reservations that are actually converting to tickets
+  // This prevents premature deletion when user just browsing
+  const result = await ReservasiSementara.destroy({
     where: {
       id_user,
       id_rute,
@@ -247,6 +250,9 @@ async function clearUserReservations(id_user, id_rute, nomor_kursi, transaction)
     },
     transaction
   });
+
+  console.log(`🧹 Cleared ${result} reservations for user ${id_user}, seats: ${seats.join(',')}`);
+  return result;
 }
 
 /**
@@ -347,7 +353,7 @@ function formatTicketResponse(tickets, payment, orderData = null) {
 // ============= MAIN CONTROLLER FUNCTIONS =============
 
 /**
- * Create ticket from reservation with automatic Midtrans integration
+ * PERBAIKAN: Create ticket from reservation with automatic Midtrans integration
  */
 exports.createTicketFromReservation = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -396,10 +402,11 @@ exports.createTicketFromReservation = async (req, res) => {
           transaction
         );
 
-        // Clear any existing reservations by this user for these seats
+        // PERBAIKAN: HANYA clear reservations SETELAH tickets berhasil dibuat
         await clearUserReservations(req.user.id_user, id_rute, nomor_kursi, transaction);
 
         await transaction.commit();
+        console.log(`✅ Successfully created ${tickets.length} tickets and cleared reservations`);
 
         // Get complete ticket data for response
         const completeTickets = await getMultipleCompleteTicketData(

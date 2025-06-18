@@ -4,9 +4,8 @@ const { Op } = require('sequelize');
 
 let cleanupInterval = null;
 
-
-//  Start the cleanup job to check for expired reservations and tickets
-//  Runs every 2 minutes for responsive cleanup
+// Start the cleanup job to check for expired reservations and tickets
+// Runs every 2 minutes for responsive cleanup
 const startCleanupJob = () => {
   // Run immediately on start
   runCleanup();
@@ -16,21 +15,19 @@ const startCleanupJob = () => {
     runCleanup();
   }, 1 * 60 * 1000); 
   
-  console.log(' Cleanup job started - running every 1 minute');
+  console.log('🧹 Cleanup job started - running every 1 minute');
 };
 
-
 // Stop the cleanup job
-
 const stopCleanupJob = () => {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    console.log(' Cleanup job stopped');
+    console.log('🛑 Cleanup job stopped');
   }
 };
 
-// Run the comprehensive cleanup process
+// PERBAIKAN: Run the comprehensive cleanup process
 const runCleanup = async () => {
   try {
     let totalCleaned = 0;
@@ -39,34 +36,34 @@ const runCleanup = async () => {
     const reservationResult = await checkExpiredReservations();
     if (reservationResult.success && reservationResult.deletedCount > 0) {
       totalCleaned += reservationResult.deletedCount;
-      console.log(` Cleaned ${reservationResult.deletedCount} expired reservations`);
+      console.log(`🧹 Cleaned ${reservationResult.deletedCount} expired reservations`);
     }
 
     // 2. Clean expired pending tickets (30 minutes old)
     const expiredTickets = await cleanExpiredTickets();
     if (expiredTickets > 0) {
       totalCleaned += expiredTickets;
-      console.log(` Cleaned ${expiredTickets} expired pending tickets`);
+      console.log(`🧹 Cleaned ${expiredTickets} expired pending tickets`);
     }
 
     // 3. AUTO-CANCEL DEPARTED TICKETS - TAMBAH INI
     const cancelledTickets = await autoCancelDepartedTickets();
     if (cancelledTickets > 0) {
       totalCleaned += cancelledTickets;
-      console.log(` Auto-cancelled ${cancelledTickets} tickets for departed buses`);
+      console.log(`🧹 Auto-cancelled ${cancelledTickets} tickets for departed buses`);
     }
 
     // Log total cleanup if any items were cleaned
     if (totalCleaned > 0) {
-      console.log(` Total cleanup completed: ${totalCleaned} items cleaned`);
+      console.log(`✅ Total cleanup completed: ${totalCleaned} items cleaned`);
     }
 
   } catch (error) {
-    console.error(' Cleanup error:', error.message);
+    console.error('❌ Cleanup error:', error.message);
   }
 };
 
-// Clean expired pending tickets (30 minutes after creation)
+// PERBAIKAN: Clean expired pending tickets (30 minutes after creation)
 const cleanExpiredTickets = async () => {
   try {
     // Find tickets that are pending and older than 30 minutes
@@ -161,23 +158,20 @@ const getCleanupStatus = () => {
   return {
     isRunning: cleanupInterval !== null,
     intervalId: cleanupInterval,
-    intervalMinutes: 2,
+    intervalMinutes: 1,
     reservationTimeout: 30, // minutes
     ticketTimeout: 30, // minutes
-    nextRunIn: cleanupInterval ? '< 2 minutes' : 'Not scheduled'
+    nextRunIn: cleanupInterval ? '< 1 minute' : 'Not scheduled'
   };
 };
 
 // Manual cleanup trigger (for testing or manual intervention)
-
 const triggerManualCleanup = async () => {
   console.log('🔧 Manual cleanup triggered');
   return await runCleanup();
 };
 
-
 // Check if a specific reservation/ticket should be expired
-
 const shouldExpire = (createdAt, timeoutMinutes = 30) => {
   const expiryTime = new Date(createdAt.getTime() + (timeoutMinutes * 60 * 1000));
   return new Date() > expiryTime;

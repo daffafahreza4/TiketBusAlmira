@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
 import { getRutes } from '../../redux/actions/ruteActions';
-import { formatCurrency, formatTime } from '../../utils/formatters';
+import { formatCurrency, formatTime, formatDate } from '../../utils/formatters';
 
 const RouteList = ({ routes, loading, error, getRutes }) => {
   // Fetch all routes when component mounts
@@ -74,7 +74,7 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
             route.minutes_until_departure <= 10 ? 'border-l-4 border-red-500' : ''
           }`}
         >
-          {/* TAMBAH: Warning untuk rute yang hampir tutup */}
+          {/* Warning untuk rute yang hampir tutup */}
           {route.minutes_until_departure <= 30 && route.minutes_until_departure > 10 && (
             <div className="mb-4 p-2 sm:p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
               <i className="fas fa-exclamation-triangle mr-2"></i>
@@ -105,6 +105,11 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
                 <div className="text-sm text-gray-600">
                   <i className="fas fa-bus mr-1"></i>
                   {route.nama_bus || 'Bus Tidak Diketahui'}
+                </div>
+                {/* TAMBAH: Tanggal dan Waktu untuk Mobile */}
+                <div className="text-sm text-gray-600 mt-1">
+                  <i className="fas fa-calendar mr-1"></i>
+                  {formatDate(route.waktu_berangkat)}
                 </div>
               </div>
               <div className="text-right">
@@ -147,6 +152,19 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
               </div>
             </div>
 
+            {/* TAMBAH: Date display untuk mobile - lebih prominent */}
+            <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center text-blue-800">
+                  <i className="fas fa-calendar mr-2"></i>
+                  <span className="text-sm font-medium">Tanggal Keberangkatan</span>
+                </div>
+                <span className="text-sm font-bold text-blue-900">
+                  {formatDate(route.waktu_berangkat)}
+                </span>
+              </div>
+            </div>
+
             {/* Bus Info */}
             <div className="pt-3 border-t border-gray-100">
               <div className="text-xs text-gray-600">
@@ -156,69 +174,84 @@ const RouteList = ({ routes, loading, error, getRutes }) => {
           </div>
 
           {/* Desktop Layout */}
-          <div className="hidden lg:flex justify-between items-center">
-            {/* Waktu & Rute */}
-            <div className="flex items-center space-x-8">
-              {/* Departure */}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
-                  {formatTime(route.waktu_berangkat)}
+          <div className="hidden lg:block">
+            {/* TAMBAH: Tanggal keberangkatan untuk Desktop - di atas */}
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center text-blue-800">
+                  <i className="fas fa-calendar mr-2"></i>
+                  <span className="font-medium">Tanggal Keberangkatan</span>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {route.asal}
+                <span className="font-bold text-blue-900">
+                  {formatDate(route.waktu_berangkat)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              {/* Waktu & Rute */}
+              <div className="flex items-center space-x-8">
+                {/* Departure */}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatTime(route.waktu_berangkat)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {route.asal}
+                  </div>
+                </div>
+                
+                {/* Route Line */}
+                <div className="flex-1 relative px-8">
+                  <div className="border-t-2 border-gray-300 relative">
+                    <div className="absolute left-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+                    <div className="absolute right-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+                  </div>
+                </div>
+                
+                {/* Arrival */}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatTime(route.perkiraan_tiba)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {route.tujuan}
+                  </div>
                 </div>
               </div>
               
-              {/* Route Line */}
-              <div className="flex-1 relative px-8">
-                <div className="border-t-2 border-gray-300 relative">
-                  <div className="absolute left-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
-                  <div className="absolute right-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+              {/* Harga & Tombol */}
+              <div className="text-right ml-6">
+                <div className="text-xl font-bold text-gray-900 mb-2">
+                  {formatCurrency(route.harga)}
                 </div>
-              </div>
-              
-              {/* Arrival */}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
-                  {formatTime(route.perkiraan_tiba)}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {route.tujuan}
-                </div>
+                {route.booking_allowed ? (
+                  <Link
+                    to={`/booking/${route.id_rute}`}
+                    className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
+                  >
+                    Pesan
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-gray-400 text-white px-6 py-2 rounded-full cursor-not-allowed font-medium"
+                  >
+                    Tutup
+                  </button>
+                )}
               </div>
             </div>
             
-            {/* Harga & Tombol */}
-            <div className="text-right ml-6">
-              <div className="text-xl font-bold text-gray-900 mb-2">
-                {formatCurrency(route.harga)}
-              </div>
-              {route.booking_allowed ? (
-                <Link
-                  to={`/booking/${route.id_rute}`}
-                  className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
-                >
-                  Pesan
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="bg-gray-400 text-white px-6 py-2 rounded-full cursor-not-allowed font-medium"
-                >
-                  Tutup
-                </button>
-              )}
-            </div>
-          </div>
-          
-          {/* Show bus info clearly - Desktop only */}
-          <div className="hidden lg:block mt-4 pt-3 border-t border-gray-100">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center text-gray-600">
-                <i className="fas fa-bus mr-2"></i>
-                <span>Bus: <strong>{route.nama_bus || 'Bus Tidak Diketahui'}</strong></span>
-                <span className="mx-2">•</span>
-                <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
+            {/* Show bus info clearly - Desktop only */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-gray-600">
+                  <i className="fas fa-bus mr-2"></i>
+                  <span>Bus: <strong>{route.nama_bus || 'Bus Tidak Diketahui'}</strong></span>
+                  <span className="mx-2">•</span>
+                  <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
+                </div>
               </div>
             </div>
           </div>

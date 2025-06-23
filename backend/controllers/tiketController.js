@@ -307,7 +307,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// FIXED: Get available seats for a route (Enhanced with reservation check)
+// Get available seats for a route (Enhanced with reservation check) - FIXED VERSION
 exports.getAvailableSeats = async (req, res) => {
   try {
     const { routeId } = req.params;
@@ -354,9 +354,8 @@ exports.getAvailableSeats = async (req, res) => {
       attributes: ['nomor_kursi']
     });
 
-    // PERBAIKAN UTAMA: Get reserved seats (temporary reservations that haven't expired)
-    // PENTING: Jangan filter by user ID di sini, biarkan semua reservasi masuk dulu
-    const allReservedSeats = await ReservasiSementara.findAll({
+    // PERBAIKAN: Get reserved seats (temporary reservations that haven't expired)
+    const reservedSeats = await ReservasiSementara.findAll({
       where: {
         id_rute: routeId,
         waktu_expired: {
@@ -394,35 +393,26 @@ exports.getAvailableSeats = async (req, res) => {
     // PERBAIKAN: Mark booked seats (ensure all booked seats are marked)
     const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
 
-    // PERBAIKAN KRITIS: Handle reserved seats dengan logic yang benar
-    const currentUserId = req.user?.id_user;
-    
-    // Pisahkan reservasi milik user sendiri vs orang lain
-    const myReservations = allReservedSeats.filter(seat => seat.id_user === currentUserId);
-    const otherReservations = allReservedSeats.filter(seat => seat.id_user !== currentUserId);
-
-    const myReservedSeats = myReservations.map(seat => seat.nomor_kursi);
-    const otherReservedSeats = otherReservations.map(seat => seat.nomor_kursi);
+    // PERBAIKAN: Mark reserved seats (handle user's own reservations vs others)
+    const reservedSeatInfo = reservedSeats.reduce((acc, seat) => {
+      acc[seat.nomor_kursi] = {
+        isMyReservation: seat.id_user === req.user?.id_user,
+        expiredAt: seat.waktu_expired
+      };
+      return acc;
+    }, {});
 
     // PERBAIKAN: Update seat statuses dengan logic yang benar
     const seatsWithStatus = allSeats.map(seat => {
       if (bookedSeatNumbers.includes(seat.number)) {
         return { ...seat, status: 'booked' };
-      } else if (myReservedSeats.includes(seat.number)) {
-        // PERBAIKAN KRITIS: Kursi yang direservasi oleh user sendiri = 'my_reservation'
-        return { 
-          ...seat, 
-          status: 'my_reservation',
-          reserved_by: 'me',
-          expiredAt: myReservations.find(r => r.nomor_kursi === seat.number)?.waktu_expired
-        };
-      } else if (otherReservedSeats.includes(seat.number)) {
-        // Kursi yang direservasi oleh orang lain = 'reserved'
-        return { 
-          ...seat, 
-          status: 'reserved',
-          reserved_by: 'other',
-          expiredAt: otherReservations.find(r => r.nomor_kursi === seat.number)?.waktu_expired
+      } else if (reservedSeatInfo[seat.number]) {
+        const reservationInfo = reservedSeatInfo[seat.number];
+        // Bedakan antara reservasi milik sendiri vs orang lain
+        return {
+          ...seat,
+          status: reservationInfo.isMyReservation ? 'my_reservation' : 'reserved',
+          expiredAt: reservationInfo.expiredAt
         };
       }
       return { ...seat, status: 'available' };
@@ -452,7 +442,7 @@ exports.getAvailableSeats = async (req, res) => {
           rows: totalRows,
           seatsPerRow: seatsPerRow
         },
-        // PERBAIKAN: Format yang mudah di-parse frontend dengan status yang benar
+        // Format yang mudah di-parse frontend
         seatStatuses: seatsWithStatus.reduce((acc, seat) => {
           acc[seat.number] = seat.status;
           return acc;
@@ -460,11 +450,7 @@ exports.getAvailableSeats = async (req, res) => {
         // Array sederhana untuk backward compatibility
         availableSeats: seatsWithStatus
           .filter(seat => seat.status === 'available')
-          .map(seat => seat.number),
-        // TAMBAH: Informasi tambahan untuk debugging
-        myReservedSeats,
-        otherReservedSeats,
-        currentUserId
+          .map(seat => seat.number)
       }
     });
 
@@ -511,8 +497,7 @@ exports.checkSeatAvailability = async (req, res) => {
       attributes: ['nomor_kursi']
     });
 
-    // PERBAIKAN: Check reserved seats (active reservations)
-    // Exclude current user's reservations from conflicts
+    // Check reserved seats (active reservations)
     const reservedSeats = await ReservasiSementara.findAll({
       where: {
         id_rute: routeId,
@@ -521,17 +506,15 @@ exports.checkSeatAvailability = async (req, res) => {
         },
         waktu_expired: {
           [Op.gt]: new Date()
-        },
-        // PERBAIKAN KRITIS: Exclude user's own reservations
-        id_user: {
-          [Op.ne]: req.user?.id_user
         }
       },
       attributes: ['nomor_kursi', 'id_user']
     });
 
     const bookedSeatNumbers = bookedSeats.map(seat => seat.nomor_kursi);
-    const reservedSeatNumbers = reservedSeats.map(seat => seat.nomor_kursi);
+    const reservedSeatNumbers = reservedSeats
+      .filter(seat => seat.id_user !== req.user?.id_user)
+      .map(seat => seat.nomor_kursi);
 
     // PERBAIKAN: Fix variable reference dan logic
     const unavailableSeats = [...bookedSeatNumbers, ...reservedSeatNumbers];

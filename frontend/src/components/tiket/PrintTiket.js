@@ -145,7 +145,7 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
           </div>
           <div className="text-center sm:text-right">
             <img 
-              src="\assets\img\bus.jpg" 
+              src="\assets\img\LogoAlmira.png" 
               alt="Logo" 
               className="h-8 sm:h-12 mx-auto sm:mx-0"
             />

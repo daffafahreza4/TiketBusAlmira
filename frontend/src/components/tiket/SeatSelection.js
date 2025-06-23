@@ -4,10 +4,9 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getAvailableSeats, setSelectedSeats, checkSeatAvailability } from '../../redux/actions/tiketActions';
-import { createTempReservation } from '../../redux/actions/reservasiActions';
+import { createTempReservation, cancelReservation } from '../../redux/actions/reservasiActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatCurrency } from '../../utils/formatters';
-
 
 const SeatSelection = ({
   routeId,
@@ -19,7 +18,9 @@ const SeatSelection = ({
   getAvailableSeats,
   setSelectedSeats,
   createTempReservation,
-  checkSeatAvailability
+  cancelReservation,
+  checkSeatAvailability,
+  setAlert
 }) => {
   const navigate = useNavigate();
   const [selectedSeatsList, setSelectedSeatsList] = useState(selectedSeats || []);
@@ -27,6 +28,116 @@ const SeatSelection = ({
   const [seatStatuses, setSeatStatuses] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingSeats, setIsCheckingSeats] = useState(false);
+  const [userReservations, setUserReservations] = useState([]); // Track user's active reservations
+
+  // TAMBAH: Function to handle cancel all user reservations for this route
+  const cancelAllUserReservations = useCallback(async () => {
+    try {
+      // Get all user reservations for this route from sessionStorage
+      const storedReservations = sessionStorage.getItem(`reservations_${routeId}`);
+      if (storedReservations) {
+        const reservationIds = JSON.parse(storedReservations);
+        
+        // Cancel each reservation
+        for (const reservationId of reservationIds) {
+          try {
+            await cancelReservation(reservationId);
+            console.log(`✅ Cancelled reservation: ${reservationId}`);
+          } catch (error) {
+            console.warn(`⚠️ Could not cancel reservation ${reservationId}:`, error);
+          }
+        }
+        
+        // Clear stored reservations
+        sessionStorage.removeItem(`reservations_${routeId}`);
+        setUserReservations([]);
+        
+        console.log('🧹 All user reservations cancelled for route:', routeId);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error cancelling user reservations:', error);
+    }
+  }, [routeId, cancelReservation]);
+
+  // TAMBAH: useEffect to handle page load and check for existing reservations
+  useEffect(() => {
+    const handlePageLoad = async () => {
+      // Check if user came from BookingSummary (detect back navigation)
+      const navigationEntries = performance.getEntriesByType('navigation');
+      const isBackNavigation = navigationEntries.length > 0 && 
+        navigationEntries[0].type === 'back_forward';
+
+      // Also check if there are URL params indicating return from booking
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromBooking = urlParams.get('from') === 'booking';
+      const shouldCancelReservations = urlParams.get('cancel') === 'true';
+
+      if (isBackNavigation || fromBooking || shouldCancelReservations) {
+        console.log('🔄 User returned to seat selection - cancelling existing reservations');
+        
+        // Cancel any existing reservations
+        await cancelAllUserReservations();
+        
+        // Clear selected seats
+        setSelectedSeatsList([]);
+        setSelectedSeats([]);
+        
+        // Clear sessionStorage
+        try {
+          sessionStorage.removeItem('selectedSeats');
+          sessionStorage.removeItem(`reservations_${routeId}`);
+        } catch (error) {
+          console.warn('Could not clear sessionStorage:', error);
+        }
+        
+        // Clean URL
+        if (fromBooking || shouldCancelReservations) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+        
+        // Show success message
+        setAlert('Reservasi sebelumnya telah dibatalkan. Silakan pilih kursi kembali.', 'info');
+        
+        // Refresh seat data
+        setTimeout(() => {
+          refreshSeatData();
+        }, 1000);
+      }
+    };
+
+    if (routeId) {
+      handlePageLoad();
+    }
+  }, [routeId, cancelAllUserReservations, setSelectedSeats, setAlert]);
+
+  // TAMBAH: Function to detect user leaving page and cleanup
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // If user is leaving without completing booking, cleanup reservations
+      const hasSelectedSeats = selectedSeatsList.length > 0;
+      const storedReservations = sessionStorage.getItem(`reservations_${routeId}`);
+      
+      if (hasSelectedSeats && storedReservations) {
+        // Set flag to cancel reservations on next visit
+        sessionStorage.setItem('shouldCancelReservations', 'true');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [selectedSeatsList.length, routeId]);
+
+  // TAMBAH: Check and cleanup reservations on component mount
+  useEffect(() => {
+    const shouldCancel = sessionStorage.getItem('shouldCancelReservations');
+    if (shouldCancel === 'true') {
+      sessionStorage.removeItem('shouldCancelReservations');
+      cancelAllUserReservations();
+    }
+  }, [cancelAllUserReservations]);
 
   // FIXED: Memoize generateAllSeats function
   const generateAllSeats = useCallback(() => {
@@ -163,10 +274,38 @@ const SeatSelection = ({
 
     const interval = setInterval(() => {
       refreshSeatData();
-    }, 15000); // Refresh setiap 5 detik untuk real-time experience
+    }, 15000); // Refresh setiap 15 detik untuk real-time experience
 
     return () => clearInterval(interval);
   }, [routeId, refreshSeatData]);
+
+  // TAMBAH: Function to clear all selections and reservations
+  const clearAllSelections = async () => {
+    try {
+      // Cancel any active reservations
+      await cancelAllUserReservations();
+      
+      // Clear selected seats
+      setSelectedSeatsList([]);
+      setSelectedSeats([]);
+      
+      // Clear sessionStorage
+      try {
+        sessionStorage.removeItem('selectedSeats');
+        sessionStorage.removeItem(`reservations_${routeId}`);
+      } catch (error) {
+        console.warn('Could not clear sessionStorage:', error);
+      }
+      
+      // Refresh seat data
+      refreshSeatData();
+      
+      setAlert('Semua pilihan kursi telah dibersihkan', 'info');
+    } catch (error) {
+      console.error('Error clearing selections:', error);
+      setAlert('Gagal membersihkan pilihan kursi', 'danger');
+    }
+  };
 
   // Handle seat click
   const handleSeatClick = async (seatNumber) => {
@@ -218,6 +357,7 @@ const SeatSelection = ({
       console.warn('Could not store in sessionStorage:', error);
     }
   };
+  
   // CRITICAL FIX: Ensure seats are properly passed to BookingSummary
   const handleSubmit = async () => {
     if (selectedSeatsList.length === 0) {
@@ -265,6 +405,17 @@ const SeatSelection = ({
         const result = await createTempReservation(reservationData);
 
         if (result.success) {
+          // TAMBAH: Store reservation IDs for cleanup later
+          if (result.reservations && result.reservations.length > 0) {
+            const reservationIds = result.reservations.map(r => r.id_reservasi);
+            try {
+              sessionStorage.setItem(`reservations_${routeId}`, JSON.stringify(reservationIds));
+              setUserReservations(reservationIds);
+            } catch (error) {
+              console.warn('Could not store reservation IDs:', error);
+            }
+          }
+
           // PERBAIKAN: Refresh seat data immediately after successful reservation
           await refreshSeatData();
 
@@ -423,7 +574,7 @@ const SeatSelection = ({
       case 'available':
         return 'seat-available'; // ABU-ABU
       case 'my_reservation':
-        return 'seat-my-reservation'; // BIRU - kursi yang saya reservasi
+        return 'seat-my-reservation';
       case 'booked':
       case 'reserved':
       default:
@@ -458,17 +609,30 @@ const SeatSelection = ({
             </div>
           )}
 
-          {/* Refresh Button */}
+          {/* Refresh Button & Clear Selection */}
           <div className="mb-4 flex justify-between items-center">
             <h3 className="font-bold text-lg">Pilih Kursi Anda</h3>
-            <button
-              onClick={refreshSeatData}
-              className="px-3 py-1 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
-              disabled={loading}
-            >
-              <i className="fas fa-sync-alt mr-1"></i>
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              {/* TAMBAH: Clear Selection Button */}
+              {selectedSeatsList.length > 0 && (
+                <button
+                  onClick={clearAllSelections}
+                  className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors text-sm"
+                  disabled={loading}
+                >
+                  <i className="fas fa-times mr-1"></i>
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={refreshSeatData}
+                className="px-3 py-1 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
+                disabled={loading}
+              >
+                <i className="fas fa-sync-alt mr-1"></i>
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Legend - 4 Status */}
@@ -521,7 +685,18 @@ const SeatSelection = ({
                 </div>
 
                 <div className="border-t border-gray-300 my-4 pt-4">
-                  <h4 className="font-semibold mb-2">Kursi Dipilih</h4>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold">Kursi Dipilih</h4>
+                    {/* TAMBAH: Clear button in summary */}
+                    {selectedSeatsList.length > 0 && (
+                      <button
+                        onClick={clearAllSelections}
+                        className="text-xs text-red-600 hover:text-red-800 underline"
+                      >
+                        Hapus Semua
+                      </button>
+                    )}
+                  </div>
 
                   {selectedSeatsList.length === 0 ? (
                     <p className="text-gray-500 italic">Belum ada kursi yang dipilih</p>
@@ -530,9 +705,12 @@ const SeatSelection = ({
                       {selectedSeatsList.map(seat => (
                         <span
                           key={seat}
-                          className="inline-block px-2 py-1 bg-pink-100 text-pink-800 rounded font-medium"
+                          className="inline-flex items-center px-2 py-1 bg-pink-100 text-pink-800 rounded font-medium cursor-pointer hover:bg-pink-200"
+                          onClick={() => handleSeatClick(seat)}
+                          title="Klik untuk batal pilih"
                         >
                           {seat}
+                          <i className="ml-1 text-xs"></i>
                         </span>
                       ))}
                     </div>
@@ -592,6 +770,7 @@ SeatSelection.propTypes = {
   getAvailableSeats: PropTypes.func.isRequired,
   setSelectedSeats: PropTypes.func.isRequired,
   createTempReservation: PropTypes.func.isRequired,
+  cancelReservation: PropTypes.func.isRequired,
   checkSeatAvailability: PropTypes.func.isRequired,
   setAlert: PropTypes.func.isRequired
 };
@@ -608,6 +787,7 @@ export default connect(mapStateToProps, {
   getAvailableSeats,
   setSelectedSeats,
   createTempReservation,
+  cancelReservation,
   checkSeatAvailability,
   setAlert
 })(SeatSelection);

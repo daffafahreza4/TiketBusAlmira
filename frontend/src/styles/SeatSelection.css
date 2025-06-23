@@ -37,15 +37,15 @@
 
 /* BIRU - Reservasi Milik Saya */
 .seat-my-reservation {
-  background-color: #3b82f6 !important;
+  background-color: #9ca3af !important;
   color: white !important;
-  border-color: #2563eb !important;
+  border-color: #6b7280 !important;
   cursor: not-allowed !important;
   opacity: 0.9 !important;
 }
 
 .seat-my-reservation:hover {
-  background-color: #3b82f6 !important;
+  background-color: #9ca3af !important;
   transform: none !important;
 }
 

@@ -6,7 +6,7 @@ import {
   getAllUsers, 
   deleteUser, 
   makeUserAdmin,
-  updateUser  // Tambahkan import updateUser
+  updateUser  
 } from '../../redux/actions/adminActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatDate } from '../../utils/formatters';
@@ -15,7 +15,7 @@ const UserList = ({
   getAllUsers, 
   deleteUser, 
   makeUserAdmin,
-  updateUser,  // Tambahkan updateUser ke props
+  updateUser,  
   setAlert,
   users, 
   loading, 
@@ -27,7 +27,11 @@ const UserList = ({
   const [userToDelete, setUserToDelete] = useState(null);
   const [filteredUsers, setFilteredUsers] = useState([]);
   
-  // Tambahkan state untuk Edit Modal
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -53,8 +57,67 @@ const UserList = ({
       }
 
       setFilteredUsers(filtered);
+      // Reset to first page when filters change
+      setCurrentPage(1);
     }
   }, [users, searchTerm, filterRole]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top of table
+    document.querySelector('.user-table-container')?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
 
   const handleDeleteClick = (user) => {
     setUserToDelete(user);
@@ -75,7 +138,7 @@ const UserList = ({
     }
   };
 
-  // Tambahkan handler untuk Edit
+  // Edit handlers
   const handleEditClick = (user) => {
     setUserToEdit(user);
     setEditFormData({
@@ -115,16 +178,23 @@ const UserList = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 user-table-container">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
         <h2 className="text-lg sm:text-xl font-bold">Kelola User</h2>
-        <span className="bg-pink-100 text-pink-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full self-start sm:self-auto">
-          Total: {users ? users.length : 0}
-        </span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <span className="bg-pink-100 text-pink-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full self-start sm:self-auto">
+            Total: {filteredUsers.length}
+          </span>
+          {filteredUsers.length > 0 && (
+            <span className="text-xs sm:text-sm text-gray-600">
+              Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} dari {filteredUsers.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
           <input
             type="text"
@@ -143,6 +213,18 @@ const UserList = ({
             <option value="all">Semua Role</option>
             <option value="user">User</option>
             <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={5}>5 per halaman</option>
+            <option value={10}>10 per halaman</option>
+            <option value={25}>25 per halaman</option>
+            <option value={50}>50 per halaman</option>
           </select>
         </div>
       </div>
@@ -170,7 +252,7 @@ const UserList = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredUsers.length === 0 ? (
+            {currentUsers.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                   <div className="text-4xl mb-2">👥</div>
@@ -178,7 +260,7 @@ const UserList = ({
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => (
+              currentUsers.map((user) => (
                 <tr key={user.id_user} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -258,13 +340,13 @@ const UserList = ({
 
       {/* Users Cards - Mobile */}
       <div className="lg:hidden space-y-3">
-        {filteredUsers.length === 0 ? (
+        {currentUsers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">👥</div>
             <p className="text-sm">Tidak ada user yang ditemukan</p>
           </div>
         ) : (
-          filteredUsers.map((user) => (
+          currentUsers.map((user) => (
             <div key={user.id_user} className="bg-gray-50 rounded-lg p-4 border">
               {/* User Info */}
               <div className="flex items-start space-x-3 mb-3">
@@ -333,6 +415,65 @@ const UserList = ({
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredUsers.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+          <div className="text-sm text-gray-700">
+            Menampilkan <span className="font-medium">{startIndex + 1}</span> sampai{' '}
+            <span className="font-medium">{Math.min(endIndex, filteredUsers.length)}</span> dari{' '}
+            <span className="font-medium">{filteredUsers.length}</span> hasil
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* Previous Button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-1">
+              {getPageNumbers().map((page, index) => (
+                <button
+                  key={index}
+                  onClick={() => typeof page === 'number' && handlePageChange(page)}
+                  disabled={page === '...'}
+                  className={`px-3 py-1 rounded text-sm ${
+                    page === currentPage
+                      ? 'bg-pink-500 text-white'
+                      : page === '...'
+                      ? 'bg-white text-gray-400 cursor-default'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {showEditModal && userToEdit && (
@@ -477,7 +618,7 @@ UserList.propTypes = {
   getAllUsers: PropTypes.func.isRequired,
   deleteUser: PropTypes.func.isRequired,
   makeUserAdmin: PropTypes.func.isRequired,
-  updateUser: PropTypes.func.isRequired,  // Tambahkan PropTypes
+  updateUser: PropTypes.func.isRequired,  
   setAlert: PropTypes.func.isRequired,
   users: PropTypes.array,
   loading: PropTypes.bool,

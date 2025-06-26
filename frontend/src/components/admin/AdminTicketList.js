@@ -27,6 +27,10 @@ const AdminTicketList = ({
   const [newStatus, setNewStatus] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     getAllAdminTickets();
@@ -47,8 +51,67 @@ const AdminTicketList = ({
       }
 
       setFilteredTickets(filtered);
+      // Reset to first page when filters change
+      setCurrentPage(1);
     }
   }, [tickets, searchTerm, filterStatus]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentTickets = filteredTickets.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top of table
+    document.querySelector('.ticket-table-container')?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
 
   // Status update handlers
   const handleStatusClick = (ticket) => {
@@ -99,18 +162,23 @@ const AdminTicketList = ({
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 ticket-table-container">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
         <h2 className="text-lg sm:text-xl font-bold">Kelola Tiket</h2>
-        <div className="flex items-center">
+        <div className="flex items-center space-x-4">
           <span className="bg-pink-100 text-pink-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full">
-            Total: {tickets ? tickets.length : 0}
+            Total: {filteredTickets.length}
           </span>
+          {filteredTickets.length > 0 && (
+            <span className="text-xs sm:text-sm text-gray-600">
+              Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredTickets.length)} dari {filteredTickets.length}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
           <input
             type="text"
@@ -131,6 +199,18 @@ const AdminTicketList = ({
             <option value="confirmed">Confirmed</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={5}>5 per halaman</option>
+            <option value={10}>10 per halaman</option>
+            <option value={25}>25 per halaman</option>
+            <option value={50}>50 per halaman</option>
           </select>
         </div>
       </div>
@@ -158,7 +238,7 @@ const AdminTicketList = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredTickets.length === 0 ? (
+            {currentTickets.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                   <div className="text-4xl mb-2">🎫</div>
@@ -166,7 +246,7 @@ const AdminTicketList = ({
                 </td>
               </tr>
             ) : (
-              filteredTickets.map((ticket) => {
+              currentTickets.map((ticket) => {
                 const status = formatStatus(ticket.status_tiket);
                 return (
                   <tr key={ticket.id_tiket} className="hover:bg-gray-50">
@@ -249,13 +329,13 @@ const AdminTicketList = ({
 
       {/* Tickets Cards - Mobile */}
       <div className="lg:hidden space-y-3">
-        {filteredTickets.length === 0 ? (
+        {currentTickets.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">🎫</div>
             <p className="text-sm">Tidak ada tiket yang ditemukan</p>
           </div>
         ) : (
-          filteredTickets.map((ticket) => {
+          currentTickets.map((ticket) => {
             const status = formatStatus(ticket.status_tiket);
             return (
               <div key={ticket.id_tiket} className="bg-gray-50 rounded-lg p-4 border">
@@ -345,6 +425,65 @@ const AdminTicketList = ({
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredTickets.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+          <div className="text-sm text-gray-700">
+            Menampilkan <span className="font-medium">{startIndex + 1}</span> sampai{' '}
+            <span className="font-medium">{Math.min(endIndex, filteredTickets.length)}</span> dari{' '}
+            <span className="font-medium">{filteredTickets.length}</span> hasil
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* Previous Button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-1">
+              {getPageNumbers().map((page, index) => (
+                <button
+                  key={index}
+                  onClick={() => typeof page === 'number' && handlePageChange(page)}
+                  disabled={page === '...'}
+                  className={`px-3 py-1 rounded text-sm ${
+                    page === currentPage
+                      ? 'bg-pink-500 text-white'
+                      : page === '...'
+                      ? 'bg-white text-gray-400 cursor-default'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Status Update Modal */}
       {showStatusModal && ticketToUpdate && (

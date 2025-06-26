@@ -30,6 +30,10 @@ const AdminRouteList = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState(null);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [routeToEdit, setRouteToEdit] = useState(null);
@@ -72,8 +76,67 @@ const AdminRouteList = ({
       }
 
       setFilteredRoutes(filtered);
+      // Reset to first page when filters change
+      setCurrentPage(1);
     }
   }, [routes, searchTerm, filterStatus]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredRoutes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentRoutes = filteredRoutes.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top of table
+    document.querySelector('.route-table-container')?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
 
   // Delete handlers
   const handleDeleteClick = (route) => {
@@ -162,13 +225,18 @@ const AdminRouteList = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 route-table-container">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
         <h2 className="text-lg sm:text-xl font-bold">Kelola Rute</h2>
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           <span className="bg-pink-100 text-pink-800 text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full">
-            Total: {routes ? routes.length : 0}
+            Total: {filteredRoutes.length}
           </span>
+          {filteredRoutes.length > 0 && (
+            <span className="text-xs sm:text-sm text-gray-600">
+              Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredRoutes.length)} dari {filteredRoutes.length}
+            </span>
+          )}
           <button
             onClick={handleCreateClick}
             className="w-full sm:w-auto bg-pink-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors text-sm sm:text-base"
@@ -180,7 +248,7 @@ const AdminRouteList = ({
       </div>
 
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="lg:col-span-2">
           <input
             type="text"
@@ -199,6 +267,18 @@ const AdminRouteList = ({
             <option value="all">Semua Status</option>
             <option value="aktif">Aktif</option>
             <option value="nonaktif">Non-aktif</option>
+          </select>
+        </div>
+        <div>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={5}>5 per halaman</option>
+            <option value={10}>10 per halaman</option>
+            <option value={25}>25 per halaman</option>
+            <option value={50}>50 per halaman</option>
           </select>
         </div>
       </div>
@@ -226,7 +306,7 @@ const AdminRouteList = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredRoutes.length === 0 ? (
+            {currentRoutes.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                   <div className="text-4xl mb-2">🚌</div>
@@ -234,7 +314,7 @@ const AdminRouteList = ({
                 </td>
               </tr>
             ) : (
-              filteredRoutes.map((route) => (
+              currentRoutes.map((route) => (
                 <tr key={route.id_rute} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -303,13 +383,13 @@ const AdminRouteList = ({
 
       {/* Routes Cards - Mobile */}
       <div className="lg:hidden space-y-3">
-        {filteredRoutes.length === 0 ? (
+        {currentRoutes.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">🚌</div>
             <p className="text-sm">Tidak ada rute yang ditemukan</p>
           </div>
         ) : (
-          filteredRoutes.map((route) => (
+          currentRoutes.map((route) => (
             <div key={route.id_rute} className="bg-gray-50 rounded-lg p-4 border">
               {/* Route Info */}
               <div className="flex items-start space-x-3 mb-3">
@@ -370,6 +450,65 @@ const AdminRouteList = ({
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredRoutes.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+          <div className="text-sm text-gray-700">
+            Menampilkan <span className="font-medium">{startIndex + 1}</span> sampai{' '}
+            <span className="font-medium">{Math.min(endIndex, filteredRoutes.length)}</span> dari{' '}
+            <span className="font-medium">{filteredRoutes.length}</span> hasil
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* Previous Button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-1">
+              {getPageNumbers().map((page, index) => (
+                <button
+                  key={index}
+                  onClick={() => typeof page === 'number' && handlePageChange(page)}
+                  disabled={page === '...'}
+                  className={`px-3 py-1 rounded text-sm ${
+                    page === currentPage
+                      ? 'bg-pink-500 text-white'
+                      : page === '...'
+                      ? 'bg-white text-gray-400 cursor-default'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-2 py-1 rounded text-sm ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreateModal && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -17,7 +17,6 @@ const PaymentFinishPage = ({
   getGroupedTicketById
 }) => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [paymentData, setPaymentData] = useState(null);
   const [groupedTicketData, setGroupedTicketData] = useState(null);
@@ -25,7 +24,6 @@ const PaymentFinishPage = ({
 
   // Extract parameters from URL
   const orderId = searchParams.get('order_id');
-  const statusCode = searchParams.get('status_code');
   const transactionStatus = searchParams.get('transaction_status');
 
   useEffect(() => {
@@ -89,7 +87,7 @@ const PaymentFinishPage = ({
     };
 
     checkPayment();
-  }, [orderId, transactionStatus, checkPaymentStatus, setAlert]);
+  }, [orderId, transactionStatus, checkPaymentStatus, setAlert, getGroupedTicketById]);
 
   const getStatusInfo = () => {
     if (!transactionStatus) return { color: 'gray', text: 'Unknown', icon: 'question-circle' };
@@ -117,11 +115,11 @@ const PaymentFinishPage = ({
     return (
       <div className="flex flex-col min-h-screen">
         <Navbar />
-        <main className="flex-grow bg-gray-100 py-8">
+        <main className="flex-grow bg-gray-100 py-4 sm:py-8">
           <div className="container mx-auto px-4 flex justify-center items-center">
             <div className="text-center">
               <Spinner />
-              <p className="mt-4 text-gray-600">Mengecek status pembayaran...</p>
+              <p className="mt-4 text-gray-600 text-sm sm:text-base">Mengecek status pembayaran...</p>
             </div>
           </div>
         </main>
@@ -135,24 +133,24 @@ const PaymentFinishPage = ({
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <Alert />
-        <main className="flex-grow bg-gray-100 py-8">
+        <main className="flex-grow bg-gray-100 py-4 sm:py-8">
           <div className="container mx-auto px-4">
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6 text-center">
+            <div className="max-w-sm sm:max-w-md mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 text-center">
               <div className="text-red-500 mb-4">
-                <i className="fas fa-exclamation-triangle text-4xl"></i>
+                <i className="fas fa-exclamation-triangle text-3xl sm:text-4xl"></i>
               </div>
-              <h2 className="text-xl font-bold mb-4">Error</h2>
-              <p className="text-gray-600 mb-6">{error}</p>
+              <h2 className="text-lg sm:text-xl font-bold mb-4">Error</h2>
+              <p className="text-gray-600 mb-6 text-sm sm:text-base">{error}</p>
               <div className="space-y-3">
                 <Link
                   to="/my-tickets"
-                  className="block w-full px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition"
+                  className="block w-full px-4 py-2 sm:py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition text-sm sm:text-base"
                 >
                   Lihat Tiket Saya
                 </Link>
                 <Link
                   to="/"
-                  className="block w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
+                  className="block w-full px-4 py-2 sm:py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base"
                 >
                   Kembali ke Beranda
                 </Link>
@@ -170,53 +168,53 @@ const PaymentFinishPage = ({
       <Navbar />
       <Alert />
       
-      <main className="flex-grow bg-gray-100 py-8">
+      <main className="flex-grow bg-gray-100 py-4 sm:py-8">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
             {/* Status Header */}
-            <div className={`p-6 text-center bg-${statusInfo.color}-50 border-b`}>
-              <div className={`text-${statusInfo.color}-500 mb-4`}>
-                <i className={`fas fa-${statusInfo.icon} text-5xl`}></i>
+            <div className={`p-4 sm:p-6 text-center bg-${statusInfo.color}-50 border-b`}>
+              <div className={`text-${statusInfo.color}-500 mb-3 sm:mb-4`}>
+                <i className={`fas fa-${statusInfo.icon} text-3xl sm:text-4xl lg:text-5xl`}></i>
               </div>
-              <h1 className={`text-2xl font-bold text-${statusInfo.color}-800 mb-2`}>
+              <h1 className={`text-lg sm:text-xl lg:text-2xl font-bold text-${statusInfo.color}-800 mb-2`}>
                 Pembayaran {statusInfo.text}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-xs sm:text-sm lg:text-base break-all">
                 Order ID: {orderId}
               </p>
             </div>
 
             {/* Payment Details */}
             {paymentData && (
-              <div className="p-6">
-                <h3 className="font-bold text-lg mb-4">Detail Pembayaran</h3>
+              <div className="p-4 sm:p-6">
+                <h3 className="font-bold text-base sm:text-lg mb-4">Detail Pembayaran</h3>
                 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status Pembayaran:</span>
-                    <span className={`font-semibold text-${statusInfo.color}-600`}>
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="text-gray-600 text-sm sm:text-base">Status Pembayaran:</span>
+                    <span className={`font-semibold text-${statusInfo.color}-600 text-sm sm:text-base`}>
                       {paymentData.payment?.status || 'Unknown'}
                     </span>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Metode Pembayaran:</span>
-                    <span className="font-semibold">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="text-gray-600 text-sm sm:text-base">Metode Pembayaran:</span>
+                    <span className="font-semibold text-sm sm:text-base">
                       {paymentData.payment?.metode || 'Midtrans'}
                     </span>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Bayar:</span>
-                    <span className="font-bold text-lg">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                    <span className="text-gray-600 text-sm sm:text-base">Total Bayar:</span>
+                    <span className="font-bold text-base sm:text-lg text-pink-600">
                       {formatCurrency(paymentData.ticket?.total_bayar || 0)}
                     </span>
                   </div>
                   
                   {paymentData.payment?.waktu_pembayaran && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Waktu Pembayaran:</span>
-                      <span className="font-semibold">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <span className="text-gray-600 text-sm sm:text-base">Waktu Pembayaran:</span>
+                      <span className="font-semibold text-sm sm:text-base">
                         {new Date(paymentData.payment.waktu_pembayaran).toLocaleString('id-ID')}
                       </span>
                     </div>
@@ -225,34 +223,36 @@ const PaymentFinishPage = ({
 
                 {/* Ticket Details */}
                 {(groupedTicketData || paymentData.ticket) && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4">Detail Tiket</h3>
+                  <div className="border-t pt-4 sm:pt-6">
+                    <h3 className="font-bold text-base sm:text-lg mb-4">Detail Tiket</h3>
                     
                     {groupedTicketData && groupedTicketData.order ? (
                       // Show grouped order details
                       <div className="space-y-3 mb-6">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Nomor Pesanan:</span>
-                          <span className="font-semibold">{groupedTicketData.order.order_group_id}</span>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Nomor Pesanan:</span>
+                          <span className="font-semibold text-sm sm:text-base break-all">
+                            {groupedTicketData.order.order_group_id}
+                          </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Rute:</span>
-                          <span className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Rute:</span>
+                          <span className="font-semibold text-sm sm:text-base">
                             {groupedTicketData.route?.asal} → {groupedTicketData.route?.tujuan}
                           </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Jumlah Tiket:</span>
-                          <span className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Jumlah Tiket:</span>
+                          <span className="font-semibold text-sm sm:text-base">
                             {groupedTicketData.order.total_tickets} tiket
                           </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Kursi:</span>
-                          <span className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Kursi:</span>
+                          <span className="font-semibold text-sm sm:text-base">
                             {Array.isArray(groupedTicketData.order.seats) ? 
                               groupedTicketData.order.seats.join(', ') : 
                               groupedTicketData.order.seats
@@ -260,9 +260,9 @@ const PaymentFinishPage = ({
                           </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Status Tiket:</span>
-                          <span className={`font-semibold ${
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Status Tiket:</span>
+                          <span className={`font-semibold text-sm sm:text-base ${
                             groupedTicketData.tickets?.[0]?.status_tiket === 'confirmed' ? 'text-green-600' : 
                             groupedTicketData.tickets?.[0]?.status_tiket === 'pending' ? 'text-yellow-600' : 'text-red-600'
                           }`}>
@@ -273,28 +273,28 @@ const PaymentFinishPage = ({
                     ) : (
                       // Show single ticket details (fallback)
                       <div className="space-y-3 mb-6">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Nomor Tiket:</span>
-                          <span className="font-semibold">TB-{paymentData.ticket.id}</span>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Nomor Tiket:</span>
+                          <span className="font-semibold text-sm sm:text-base">TB-{paymentData.ticket.id}</span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Rute:</span>
-                          <span className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Rute:</span>
+                          <span className="font-semibold text-sm sm:text-base">
                             {paymentData.route?.asal} → {paymentData.route?.tujuan}
                           </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Kursi:</span>
-                          <span className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Kursi:</span>
+                          <span className="font-semibold text-sm sm:text-base">
                             {paymentData.ticket.nomor_kursi}
                           </span>
                         </div>
                         
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Status Tiket:</span>
-                          <span className={`font-semibold ${
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                          <span className="text-gray-600 text-sm sm:text-base">Status Tiket:</span>
+                          <span className={`font-semibold text-sm sm:text-base ${
                             paymentData.ticket.status === 'confirmed' ? 'text-green-600' : 
                             paymentData.ticket.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
                           }`}>
@@ -307,28 +307,34 @@ const PaymentFinishPage = ({
                 )}
 
                 {/* Actions */}
-                <div className="border-t pt-6 flex flex-col sm:flex-row gap-3">
+                <div className="border-t pt-4 sm:pt-6 space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3">
                   {(groupedTicketData?.order?.master_ticket_id || paymentData?.ticket?.id) && (
                     <Link
                       to={`/ticket/${groupedTicketData?.order?.master_ticket_id || paymentData.ticket.id}`}
-                      className="flex-1 px-4 py-3 bg-pink-500 text-white text-center rounded-lg hover:bg-pink-700 transition"
+                      className="block sm:flex-1 px-4 py-3 bg-pink-500 text-white text-center rounded-lg hover:bg-pink-700 transition text-sm sm:text-base font-medium"
                     >
-                      Lihat Detail Tiket
+                      <i className="fas fa-ticket-alt mr-2 sm:mr-1"></i>
+                      <span className="hidden sm:inline">Lihat Detail Tiket</span>
+                      <span className="sm:hidden">Detail Tiket</span>
                     </Link>
                   )}
                   
                   <Link
                     to="/my-tickets"
-                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 text-center rounded-lg hover:bg-gray-300 transition"
+                    className="block sm:flex-1 px-4 py-3 bg-gray-200 text-gray-800 text-center rounded-lg hover:bg-gray-300 transition text-sm sm:text-base font-medium"
                   >
-                    Semua Tiket Saya
+                    <i className="fas fa-list mr-2 sm:mr-1"></i>
+                    <span className="hidden sm:inline">Semua Tiket Saya</span>
+                    <span className="sm:hidden">Tiket Saya</span>
                   </Link>
                   
                   <Link
                     to="/"
-                    className="flex-1 px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition"
+                    className="block sm:flex-1 px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition text-sm sm:text-base font-medium"
                   >
-                    Pesan Tiket Lagi
+                    <i className="fas fa-plus mr-2 sm:mr-1"></i>
+                    <span className="hidden sm:inline">Pesan Tiket Lagi</span>
+                    <span className="sm:hidden">Pesan Lagi</span>
                   </Link>
                 </div>
               </div>

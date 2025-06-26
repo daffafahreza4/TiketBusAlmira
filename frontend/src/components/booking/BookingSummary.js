@@ -361,11 +361,10 @@ const BookingSummary = ({
     );
   }
 
-  // Calculate values
+  // Calculate values - MODIFIED: Removed admin fee
   const basePrice = summaryData?.route?.harga || selectedRoute?.harga || 0;
-  const adminFee = 5000;
   const seatCount = finalSeats.length;
-  const totalPrice = (basePrice * seatCount) + adminFee;
+  const totalPrice = basePrice * seatCount; // REMOVED: adminFee
 
   const timeRemaining = summaryData?.waktu_expired ?
     new Date(summaryData.waktu_expired) - new Date() : 0;
@@ -560,7 +559,7 @@ const BookingSummary = ({
               </div>
             </div>
 
-            {/* Pricing Breakdown */}
+            {/* Pricing Breakdown - MODIFIED: Removed admin fee section */}
             <div className="border-b pb-4 mb-4 space-y-2 text-sm sm:text-base">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal:</span>
@@ -568,10 +567,7 @@ const BookingSummary = ({
                   {formatCurrency(basePrice * seatCount)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Biaya Admin:</span>
-                <span className="font-medium">{formatCurrency(adminFee)}</span>
-              </div>
+              {/* REMOVED: Admin fee display */}
             </div>
 
             {/* Total */}
@@ -581,7 +577,7 @@ const BookingSummary = ({
                 <span className="text-pink-600">{formatCurrency(totalPrice)}</span>
               </div>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                *Sudah termasuk pajak dan biaya layanan
+                *Sudah termasuk pajak
               </p>
             </div>
 

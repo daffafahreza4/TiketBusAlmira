@@ -198,7 +198,7 @@ const Login = ({ login, verifyOTP, resendOTP, isAuthenticated, loading, user, se
                   <p className="text-sm">
                     Belum punya akun?{' '}
                     <Link to="/register" className="text-pink-600 hover:underline">
-                      Daftar
+                      Registrasi
                     </Link>
                   </p>
                   <p className="text-sm">

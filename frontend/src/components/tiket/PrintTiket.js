@@ -249,15 +249,13 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
           <ul className="list-disc text-left pl-4 sm:pl-8 space-y-1 text-xs sm:text-sm leading-relaxed">
             <li>Harap tiba di terminal minimal 30 menit sebelum keberangkatan.</li>
             <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
-            <li>Pembatalan tiket harus dilakukan minimal 24 jam sebelum keberangkatan.</li>
-            <li>Bagasi yang diperbolehkan maksimal 20kg per penumpang.</li>
             <li>Untuk informasi lebih lanjut, hubungi customer service Almira di 0812-2549-6270.</li>
           </ul>
         </div>
         
         <div className="border-t border-gray-200 pt-3 sm:pt-4 text-center text-xs text-gray-500">
           <p>Tiket ini diterbitkan oleh Almira © {new Date().getFullYear()}</p>
-          <p>www.Almira.com</p>
+          <p>almiratravel.site</p>
         </div>
       </div>
     </div>

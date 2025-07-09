@@ -95,7 +95,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
           to="/register"
           className="text-white hover:text-gray-200 transition-colors duration-200 px-3 py-2 rounded-md hover:bg-pink-600 text-sm lg:text-base font-medium"
         >
-          Daftar
+          Registrasi
         </Link>
       </div>
       <Link
@@ -273,7 +273,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                     className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Daftar
+                    Registrasi
                   </Link>
                   <Link
                     to="/login"

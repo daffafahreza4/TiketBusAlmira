@@ -58,7 +58,7 @@ const SearchResultsPage = ({ isAuthenticated }) => {
                   href="/register" 
                   className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2 bg-white text-pink-600 font-medium rounded-lg border border-pink-600 hover:bg-blue-50 transition-colors text-center text-sm sm:text-base"
                 >
-                  Daftar
+                  Registrasi
                 </a>
               </div>
             </div>

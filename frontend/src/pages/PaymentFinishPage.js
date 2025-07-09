@@ -111,6 +111,46 @@ const PaymentFinishPage = ({
 
   const statusInfo = getStatusInfo();
 
+  // Helper function to get background color based on status
+  const getStatusBgColor = () => {
+    switch (statusInfo.color) {
+      case 'green': return 'bg-green-50';
+      case 'yellow': return 'bg-yellow-50';
+      case 'red': return 'bg-red-50';
+      default: return 'bg-gray-50';
+    }
+  };
+
+  // Helper function to get text color based on status
+  const getStatusTextColor = () => {
+    switch (statusInfo.color) {
+      case 'green': return 'text-green-800';
+      case 'yellow': return 'text-yellow-800';
+      case 'red': return 'text-red-800';
+      default: return 'text-gray-800';
+    }
+  };
+
+  // Helper function to get icon color based on status
+  const getStatusIconColor = () => {
+    switch (statusInfo.color) {
+      case 'green': return 'text-green-500';
+      case 'yellow': return 'text-yellow-500';
+      case 'red': return 'text-red-500';
+      default: return 'text-gray-500';
+    }
+  };
+
+  // Helper function to get status value color
+  const getStatusValueColor = () => {
+    switch (statusInfo.color) {
+      case 'green': return 'text-green-600';
+      case 'yellow': return 'text-yellow-600';
+      case 'red': return 'text-red-600';
+      default: return 'text-gray-600';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -135,11 +175,11 @@ const PaymentFinishPage = ({
         <Alert />
         <main className="flex-grow bg-gray-100 py-4 sm:py-8">
           <div className="container mx-auto px-4">
-            <div className="max-w-sm sm:max-w-md mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 text-center">
+            <div className="max-w-sm sm:max-w-md lg:max-w-lg mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 text-center">
               <div className="text-red-500 mb-4">
                 <i className="fas fa-exclamation-triangle text-3xl sm:text-4xl"></i>
               </div>
-              <h2 className="text-lg sm:text-xl font-bold mb-4">Error</h2>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4">Error</h2>
               <p className="text-gray-600 mb-6 text-sm sm:text-base">{error}</p>
               <div className="space-y-3">
                 <Link
@@ -170,13 +210,13 @@ const PaymentFinishPage = ({
       
       <main className="flex-grow bg-gray-100 py-4 sm:py-8">
         <div className="container mx-auto px-4">
-          <div className="max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="max-w-sm sm:max-w-xl lg:max-w-2xl xl:max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
             {/* Status Header */}
-            <div className={`p-4 sm:p-6 text-center bg-${statusInfo.color}-50 border-b`}>
-              <div className={`text-${statusInfo.color}-500 mb-3 sm:mb-4`}>
+            <div className={`p-4 sm:p-6 lg:p-8 text-center ${getStatusBgColor()} border-b`}>
+              <div className={`${getStatusIconColor()} mb-3 sm:mb-4`}>
                 <i className={`fas fa-${statusInfo.icon} text-3xl sm:text-4xl lg:text-5xl`}></i>
               </div>
-              <h1 className={`text-lg sm:text-xl lg:text-2xl font-bold text-${statusInfo.color}-800 mb-2`}>
+              <h1 className={`text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold ${getStatusTextColor()} mb-2`}>
                 Pembayaran {statusInfo.text}
               </h1>
               <p className="text-gray-600 text-xs sm:text-sm lg:text-base break-all">
@@ -186,13 +226,13 @@ const PaymentFinishPage = ({
 
             {/* Payment Details */}
             {paymentData && (
-              <div className="p-4 sm:p-6">
-                <h3 className="font-bold text-base sm:text-lg mb-4">Detail Pembayaran</h3>
+              <div className="p-4 sm:p-6 lg:p-8">
+                <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-4 sm:mb-6">Detail Pembayaran</h3>
                 
-                <div className="space-y-3 mb-6">
+                <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                     <span className="text-gray-600 text-sm sm:text-base">Status Pembayaran:</span>
-                    <span className={`font-semibold text-${statusInfo.color}-600 text-sm sm:text-base`}>
+                    <span className={`font-semibold text-sm sm:text-base ${getStatusValueColor()}`}>
                       {paymentData.payment?.status || 'Unknown'}
                     </span>
                   </div>
@@ -206,7 +246,7 @@ const PaymentFinishPage = ({
                   
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                     <span className="text-gray-600 text-sm sm:text-base">Total Bayar:</span>
-                    <span className="font-bold text-base sm:text-lg text-pink-600">
+                    <span className="font-bold text-base sm:text-lg lg:text-xl text-pink-600">
                       {formatCurrency(paymentData.ticket?.total_bayar || 0)}
                     </span>
                   </div>
@@ -224,11 +264,11 @@ const PaymentFinishPage = ({
                 {/* Ticket Details */}
                 {(groupedTicketData || paymentData.ticket) && (
                   <div className="border-t pt-4 sm:pt-6">
-                    <h3 className="font-bold text-base sm:text-lg mb-4">Detail Tiket</h3>
+                    <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-4 sm:mb-6">Detail Tiket</h3>
                     
                     {groupedTicketData && groupedTicketData.order ? (
                       // Show grouped order details
-                      <div className="space-y-3 mb-6">
+                      <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Nomor Pesanan:</span>
                           <span className="font-semibold text-sm sm:text-base break-all">
@@ -250,9 +290,9 @@ const PaymentFinishPage = ({
                           </span>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Kursi:</span>
-                          <span className="font-semibold text-sm sm:text-base">
+                          <span className="font-semibold text-sm sm:text-base text-right">
                             {Array.isArray(groupedTicketData.order.seats) ? 
                               groupedTicketData.order.seats.join(', ') : 
                               groupedTicketData.order.seats
@@ -272,7 +312,7 @@ const PaymentFinishPage = ({
                       </div>
                     ) : (
                       // Show single ticket details (fallback)
-                      <div className="space-y-3 mb-6">
+                      <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Nomor Tiket:</span>
                           <span className="font-semibold text-sm sm:text-base">TB-{paymentData.ticket.id}</span>
@@ -307,34 +347,34 @@ const PaymentFinishPage = ({
                 )}
 
                 {/* Actions */}
-                <div className="border-t pt-4 sm:pt-6 space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3">
+                <div className="border-t pt-4 sm:pt-6 space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3 lg:gap-4">
                   {(groupedTicketData?.order?.master_ticket_id || paymentData?.ticket?.id) && (
                     <Link
                       to={`/ticket/${groupedTicketData?.order?.master_ticket_id || paymentData.ticket.id}`}
-                      className="block sm:flex-1 px-4 py-3 bg-pink-500 text-white text-center rounded-lg hover:bg-pink-700 transition text-sm sm:text-base font-medium"
+                      className="block sm:flex-1 px-4 py-3 bg-pink-500 text-white text-center rounded-lg hover:bg-pink-700 transition duration-300 text-sm sm:text-base font-medium"
                     >
                       <i className="fas fa-ticket-alt mr-2 sm:mr-1"></i>
-                      <span className="hidden sm:inline">Lihat Detail Tiket</span>
-                      <span className="sm:hidden">Detail Tiket</span>
+                      <span className="hidden sm:inline lg:hidden xl:inline">Lihat Detail Tiket</span>
+                      <span className="sm:hidden lg:inline xl:hidden">Detail Tiket</span>
                     </Link>
                   )}
                   
                   <Link
                     to="/my-tickets"
-                    className="block sm:flex-1 px-4 py-3 bg-gray-200 text-gray-800 text-center rounded-lg hover:bg-gray-300 transition text-sm sm:text-base font-medium"
+                    className="block sm:flex-1 px-4 py-3 bg-gray-200 text-gray-800 text-center rounded-lg hover:bg-gray-300 transition duration-300 text-sm sm:text-base font-medium"
                   >
                     <i className="fas fa-list mr-2 sm:mr-1"></i>
-                    <span className="hidden sm:inline">Semua Tiket Saya</span>
-                    <span className="sm:hidden">Tiket Saya</span>
+                    <span className="hidden sm:inline lg:hidden xl:inline">Semua Tiket Saya</span>
+                    <span className="sm:hidden lg:inline xl:hidden">Tiket Saya</span>
                   </Link>
                   
                   <Link
-                    to="/"
-                    className="block sm:flex-1 px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition text-sm sm:text-base font-medium"
+                    to="/search-results"
+                    className="block sm:flex-1 px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition duration-300 text-sm sm:text-base font-medium"
                   >
                     <i className="fas fa-plus mr-2 sm:mr-1"></i>
-                    <span className="hidden sm:inline">Pesan Tiket Lagi</span>
-                    <span className="sm:hidden">Pesan Lagi</span>
+                    <span className="hidden sm:inline lg:hidden xl:inline">Pesan Tiket Lagi</span>
+                    <span className="sm:hidden lg:inline xl:hidden">Pesan Lagi</span>
                   </Link>
                 </div>
               </div>

@@ -68,20 +68,12 @@ const DashboardPage = ({
             ) : (
               <div className="space-y-6 pb-8">  
                 {/* Row 1: Three equal columns */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <PaymentStatusWidget 
                       tickets={tickets || []} 
                       loading={isLoading} 
                     />
                   </div>
-                  <div>
-                    <UpcomingTicketsWidget 
-                      tickets={tickets || []} 
-                      loading={isLoading} 
-                    />
-                  </div>
-                </div>
                 
                 {/* Row 2: Recent Tickets - Full width */}
                 <div>

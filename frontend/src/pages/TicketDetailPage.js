@@ -421,41 +421,11 @@ const TicketDetailPage = ({
               <ul className="list-disc pl-4 sm:pl-6 text-yellow-800 space-y-1 text-xs sm:text-sm">
                 <li>Harap tiba di terminal minimal 30 menit sebelum keberangkatan.</li>
                 <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
-                <li>Pembatalan tiket harus dilakukan minimal 30 menit sebelum keberangkatan.</li>
               </ul>
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Cancel Ticket Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6 mx-4">
-            <h2 className="text-lg sm:text-xl font-bold mb-4">Batalkan Tiket</h2>
-            <p className="mb-6 text-gray-700 text-sm sm:text-base">
-              Apakah Anda yakin ingin membatalkan {orderData ? 'pesanan' : 'tiket'} ini? 
-              {orderData && `Semua ${orderData.total_tickets} tiket dalam pesanan akan dibatalkan. `}
-              Pembatalan tidak dapat dibatalkan.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleCancelTicket}
-                className="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm sm:text-base"
-              >
-                Ya, Batalkan Tiket
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      </main> 
       <Footer />
     </div>
   );

@@ -218,7 +218,7 @@ exports.createPaymentToken = async (req, res) => {
 };
 
 // Handle Midtrans webhook notification
-// Handle Midtrans webhook notification - FIXED VERSION
+// FIXED: Replace handleNotification function di pembayaranController.js
 exports.handleNotification = async (req, res) => {
   const webhookLogger = require('../utils/webhookLogger');
 
@@ -227,9 +227,6 @@ exports.handleNotification = async (req, res) => {
     const orderId = notification.order_id;
     const transactionStatus = notification.transaction_status;
     const fraudStatus = notification.fraud_status;
-
-    // Log webhook received
-    webhookLogger.logWebhookReceived(notification);
 
     // Verify notification authenticity
     const hash = crypto
@@ -317,17 +314,14 @@ exports.handleNotification = async (req, res) => {
       }
       await payment.save({ transaction });
 
-      // CRITICAL FIX: Update ticket status - IMPROVED GROUPED TICKETS HANDLING
+      // Update ALL tickets in order group
       const masterTicket = payment.Tiket;
       const oldTicketStatus = masterTicket.status_tiket;
       
-      let updatedTicketCount = 0;
-      
       if (masterTicket.order_group_id) {
-        // NEW SYSTEM: Update all tickets in the order group with explicit logging
-        console.log(`🔄 Updating grouped tickets for order: ${masterTicket.order_group_id}`);
+        console.log('orderGroupId:', masterTicket.order_group_id);
         
-        // First, get all tickets in the group to verify
+        // Get all tickets in the group
         const allTicketsInGroup = await Tiket.findAll({
           where: {
             order_group_id: masterTicket.order_group_id
@@ -335,96 +329,29 @@ exports.handleNotification = async (req, res) => {
           attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
           transaction
         });
-        
-        console.log(`📋 Found ${allTicketsInGroup.length} tickets in group:`, 
-          allTicketsInGroup.map(t => `${t.id_tiket}:${t.nomor_kursi}:${t.status_tiket}`));
-        
-        // Update all tickets in the order group
-        const [updateCount] = await Tiket.update(
-          { 
-            status_tiket: newTicketStatus 
-          },
-          {
-            where: {
-              order_group_id: masterTicket.order_group_id
-            },
-            transaction
+
+        // Update each ticket individually
+        for (const ticketInGroup of allTicketsInGroup) {
+          try {
+            await Tiket.update(
+              { status_tiket: newTicketStatus },
+              { 
+                where: { id_tiket: ticketInGroup.id_tiket },
+                transaction 
+              }
+            );
+          } catch (individualError) {
+            console.error(`Update failed for ticket ${ticketInGroup.id_tiket}:`, individualError.message);
           }
-        );
-        
-        updatedTicketCount = updateCount;
-        console.log(`✅ Updated ${updateCount} tickets in order group ${masterTicket.order_group_id} to status: ${newTicketStatus}`);
-        
-        // ADDITIONAL VERIFICATION: Double-check the update worked
-        const verifyTickets = await Tiket.findAll({
-          where: {
-            order_group_id: masterTicket.order_group_id
-          },
-          attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
-          transaction
-        });
-        
-        console.log(`🔍 Verification - Updated tickets status:`, 
-          verifyTickets.map(t => `${t.id_tiket}:${t.nomor_kursi}:${t.status_tiket}`));
-        
-        // FALLBACK: If bulk update failed, update individually
-        if (updateCount === 0 || updateCount < allTicketsInGroup.length) {
-          console.log(`⚠️ Bulk update incomplete (${updateCount}/${allTicketsInGroup.length}), trying individual updates...`);
-          
-          for (const ticketInGroup of allTicketsInGroup) {
-            try {
-              await Tiket.update(
-                { status_tiket: newTicketStatus },
-                { 
-                  where: { id_tiket: ticketInGroup.id_tiket },
-                  transaction 
-                }
-              );
-              console.log(`✅ Individual update success for ticket ${ticketInGroup.id_tiket} (seat ${ticketInGroup.nomor_kursi})`);
-              updatedTicketCount++;
-            } catch (individualError) {
-              console.error(`❌ Individual update failed for ticket ${ticketInGroup.id_tiket}:`, individualError.message);
-            }
-          }
-        }
-        
-        // FINAL VERIFICATION
-        const finalVerification = await Tiket.findAll({
-          where: {
-            order_group_id: masterTicket.order_group_id
-          },
-          attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
-          transaction
-        });
-        
-        const successCount = finalVerification.filter(t => t.status_tiket === newTicketStatus).length;
-        console.log(`🎯 Final verification: ${successCount}/${finalVerification.length} tickets have correct status`);
-        
-        if (successCount < finalVerification.length) {
-          console.error(`❌ CRITICAL: Not all tickets updated correctly!`);
-          console.error(`Expected status: ${newTicketStatus}`);
-          console.error(`Actual statuses:`, finalVerification.map(t => `${t.nomor_kursi}:${t.status_tiket}`));
         }
         
       } else {
-        // LEGACY SYSTEM: Update single ticket
-        console.log(`🔄 Updating single ticket: ${masterTicket.id_tiket}`);
+        // Single ticket update
         masterTicket.status_tiket = newTicketStatus;
         await masterTicket.save({ transaction });
-        updatedTicketCount = 1;
-        console.log(`✅ Updated single ticket ${masterTicket.id_tiket} to status: ${newTicketStatus}`);
       }
       
-      // Commit transaction
       await transaction.commit();
-      
-      // ENHANCED LOGGING
-      console.log(`🎉 Payment webhook processed successfully:`);
-      console.log(`   Order ID: ${orderId}`);
-      console.log(`   Payment Status: ${oldPaymentStatus} → ${newPaymentStatus}`);
-      console.log(`   Ticket Status: ${oldTicketStatus} → ${newTicketStatus}`);
-      console.log(`   Updated Tickets: ${updatedTicketCount}`);
-      console.log(`   Order Group: ${masterTicket.order_group_id || 'N/A'}`);
     
       // Log status changes
       webhookLogger.logPaymentStatusChange(
@@ -486,11 +413,10 @@ exports.handleNotification = async (req, res) => {
           };
           
           await sendPaymentConfirmation(ticketData);
-          console.log(`✅ Payment confirmation email sent successfully to: ${masterTicket.User.email} for ${allSeats.length} tickets`);
+          console.log('✅ Email confirmation sent successfully');
           
         } catch (emailError) {
           console.error('❌ Failed to send payment confirmation email:', emailError.message);
-          // Don't fail the whole transaction if email fails
         }
       }
 
@@ -501,11 +427,13 @@ exports.handleNotification = async (req, res) => {
       
     } catch (transactionError) {
       await transaction.rollback();
-      console.error('❌ Transaction rollback due to error:', transactionError);
+      console.error('❌ Transaction rollback:', transactionError.message);
       throw transactionError;
     }
 
   } catch (error) {
+    console.error('❌ Webhook error:', error.message);
+    
     const webhookLogger = require('../utils/webhookLogger');
     webhookLogger.logWebhookError(req.body?.order_id || 'unknown', error, req.body);
 
@@ -581,9 +509,42 @@ exports.checkPaymentStatus = async (req, res) => {
             payment.payment_type = statusResponse.payment_type;
             await payment.save({ transaction });
 
-            // Update ticket status
-            payment.Tiket.status_tiket = 'confirmed';
-            await payment.Tiket.save({ transaction });
+            // Update ALL tickets in order group
+            const masterTicket = payment.Tiket;
+            const newTicketStatus = 'confirmed';
+            
+            if (masterTicket.order_group_id) {
+              console.log('orderGroupId:', masterTicket.order_group_id);
+              
+              // Get all tickets in the group
+              const allTicketsInGroup = await Tiket.findAll({
+                where: {
+                  order_group_id: masterTicket.order_group_id
+                },
+                attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
+                transaction
+              });
+
+              // Update each ticket individually
+              for (const ticketInGroup of allTicketsInGroup) {
+                try {
+                  await Tiket.update(
+                    { status_tiket: newTicketStatus },
+                    { 
+                      where: { id_tiket: ticketInGroup.id_tiket },
+                      transaction 
+                    }
+                  );
+                } catch (individualError) {
+                  console.error(`Update failed for ticket ${ticketInGroup.id_tiket}:`, individualError.message);
+                }
+              }
+              
+            } else {
+              // Single ticket update
+              masterTicket.status_tiket = newTicketStatus;
+              await masterTicket.save({ transaction });
+            }
             
             await transaction.commit();
             statusUpdated = true;
@@ -596,25 +557,41 @@ exports.checkPaymentStatus = async (req, res) => {
             try {
               const { sendPaymentConfirmation } = require('../utils/sendEmail');
               
+              // Get all seats for email notification
+              let allSeats = [masterTicket.nomor_kursi];
+              if (masterTicket.order_group_id) {
+                const allTicketsInOrder = await Tiket.findAll({
+                  where: {
+                    order_group_id: masterTicket.order_group_id,
+                    id_user: masterTicket.id_user
+                  },
+                  attributes: ['nomor_kursi'],
+                  order: [['nomor_kursi', 'ASC']]
+                });
+                allSeats = allTicketsInOrder.map(t => t.nomor_kursi);
+              }
+              
               const ticketData = {
-                email: payment.Tiket.User.email,
-                username: payment.Tiket.User.username,
+                email: masterTicket.User.email,
+                username: masterTicket.User.username,
                 orderId: payment.transaction_id,
-                ticketId: payment.Tiket.id_tiket,
-                seatNumber: payment.Tiket.nomor_kursi,
+                ticketId: masterTicket.id_tiket,
+                seatNumber: allSeats.length > 1 ? allSeats.join(', ') : allSeats[0],
+                totalTickets: allSeats.length,
+                orderGroupId: masterTicket.order_group_id,
                 route: {
-                  asal: payment.Tiket.Rute.asal,
-                  tujuan: payment.Tiket.Rute.tujuan
+                  asal: masterTicket.Rute.asal,
+                  tujuan: masterTicket.Rute.tujuan
                 },
-                departureTime: payment.Tiket.Rute.waktu_berangkat,
-                busName: payment.Tiket.Rute.Bus?.nama_bus || 'Bus Almira',
+                departureTime: masterTicket.Rute.waktu_berangkat,
+                busName: masterTicket.Rute.Bus?.nama_bus || 'Bus Almira',
                 amount: parseFloat(statusResponse.gross_amount),
                 paymentMethod: statusResponse.payment_type || 'Midtrans',
                 paymentTime: new Date()
               };
               
               await sendPaymentConfirmation(ticketData);
-              console.log('✅ Payment confirmation email sent via polling to:', payment.Tiket.User.email);
+              console.log('✅ Payment confirmation email sent via polling to:', masterTicket.User.email);
               
             } catch (emailError) {
               console.error('❌ Failed to send payment confirmation email via polling:', emailError.message);

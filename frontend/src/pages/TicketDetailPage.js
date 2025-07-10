@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -21,8 +21,10 @@ const TicketDetailPage = ({
   error
 }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -66,13 +68,21 @@ const TicketDetailPage = ({
 
   const handleCancelTicket = async () => {
     try {
+      setCancelLoading(true);
       await cancelTicket(id);
       setShowCancelModal(false);
-      // Refresh ticket data setelah cancel
-      getGroupedTicketById(id);
+      setAlert('Tiket berhasil dibatalkan', 'success');
+      
+      // Refresh ticket data to show updated status
+      setTimeout(() => {
+        getGroupedTicketById(id);
+      }, 500);
     } catch (error) {
       console.error('Error cancelling ticket:', error);
       setShowCancelModal(false);
+      // Error message will be handled by the action
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -185,6 +195,9 @@ const TicketDetailPage = ({
       </div>
     );
   }
+
+  // Check if ticket can be cancelled (only pending status)
+  const canCancelTicket = (mainTicket?.status_tiket || ticket?.status_tiket) === 'pending';
 
   return (
     <div className="page-container">
@@ -385,20 +398,40 @@ const TicketDetailPage = ({
               {/* Actions */}
               <div className="border-t pt-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                 {mainTicket?.status_tiket === 'pending' && (
-                  <button
-                    onClick={handlePayNow}
-                    disabled={paymentLoading}
-                    className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
-                  >
-                    {paymentLoading ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Memproses...
-                      </div>
-                    ) : (
-                      'Bayar Sekarang'
+                  <>
+                    <button
+                      onClick={handlePayNow}
+                      disabled={paymentLoading}
+                      className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
+                    >
+                      {paymentLoading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Memproses...
+                        </div>
+                      ) : (
+                        'Bayar Sekarang'
+                      )}
+                    </button>
+
+                    {/* Cancel Button - Only show for pending status */}
+                    {canCancelTicket && (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        disabled={cancelLoading}
+                        className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed text-sm sm:text-base"
+                      >
+                        {cancelLoading ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Membatalkan...
+                          </div>
+                        ) : (
+                          'Batalkan Tiket'
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </>
                 )}
 
                 {mainTicket?.status_tiket === 'confirmed' && (
@@ -421,11 +454,88 @@ const TicketDetailPage = ({
               <ul className="list-disc pl-4 sm:pl-6 text-yellow-800 space-y-1 text-xs sm:text-sm">
                 <li>Harap tiba di terminal minimal 30 menit sebelum keberangkatan.</li>
                 <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
+                {canCancelTicket && (
+                  <li className="text-red-700 font-medium">
+                    Tiket dapat dibatalkan selama status masih "Menunggu Pembayaran".
+                  </li>
+                )}
               </ul>
             </div>
           </div>
         </div>
-      </main> 
+      </main>
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 rounded-full p-2 mr-3">
+                <i className="fas fa-exclamation-triangle text-red-600"></i>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Konfirmasi Pembatalan</h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4 text-sm sm:text-base">
+                Apakah Anda yakin ingin membatalkan tiket ini?
+              </p>
+              
+              {/* Show ticket info */}
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <div className="font-semibold text-gray-900 mb-2">
+                  {routeData.asal} → {routeData.tujuan}
+                </div>
+                <div className="text-gray-600 space-y-1">
+                  <p>Tanggal: {formatDate(routeData.waktu_berangkat)}</p>
+                  <p>Jam: {formatTime(routeData.waktu_berangkat)}</p>
+                  {orderData ? (
+                    <p>Kursi: {Array.isArray(orderData.seats) ? orderData.seats.join(', ') : orderData.seats}</p>
+                  ) : (
+                    <p>Kursi: {ticket.nomor_kursi}</p>
+                  )}
+                  <p className="font-medium text-red-700">
+                    Total: {formatCurrency(orderData?.total_amount || ticket.total_bayar || 0)}
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-red-600 text-xs sm:text-sm mt-3 font-medium">
+                <i className="fas fa-warning mr-1"></i>
+                Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={cancelLoading}
+                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleCancelTicket}
+                disabled={cancelLoading}
+                className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm disabled:bg-gray-400"
+              >
+                {cancelLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Membatalkan...
+                  </div>
+                ) : (
+                  <>
+                    <i className="fas fa-times mr-2"></i>
+                    Ya, Batalkan Tiket
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <Footer />
     </div>
   );

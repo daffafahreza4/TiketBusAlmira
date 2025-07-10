@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getAvailableSeats, setSelectedSeats, checkSeatAvailability } from '../../redux/actions/tiketActions';
 import { createTempReservation, cancelReservation } from '../../redux/actions/reservasiActions';
@@ -23,12 +23,14 @@ const SeatSelection = ({
   setAlert
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedSeatsList, setSelectedSeatsList] = useState(selectedSeats || []);
   const [totalPrice, setTotalPrice] = useState(0);
   const [seatStatuses, setSeatStatuses] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingSeats, setIsCheckingSeats] = useState(false);
   const [userReservations, setUserReservations] = useState([]); // Track user's active reservations
+  const [lastRefreshTime, setLastRefreshTime] = useState(Date.now()); // Track last refresh for auto-refresh
 
   // TAMBAH: Function to handle cancel all user reservations for this route
   const cancelAllUserReservations = useCallback(async () => {
@@ -59,21 +61,40 @@ const SeatSelection = ({
     }
   }, [routeId, cancelReservation]);
 
-  // TAMBAH: useEffect to handle page load and check for existing reservations
+  // ENHANCED: Handle page load, back navigation, and payment returns
   useEffect(() => {
     const handlePageLoad = async () => {
-      // Check if user came from BookingSummary (detect back navigation)
+      // Check if user came from payment or booking (detect various return scenarios)
       const navigationEntries = performance.getEntriesByType('navigation');
       const isBackNavigation = navigationEntries.length > 0 && 
         navigationEntries[0].type === 'back_forward';
 
-      // Also check if there are URL params indicating return from booking
+      // Check URL params for return indicators
       const urlParams = new URLSearchParams(window.location.search);
       const fromBooking = urlParams.get('from') === 'booking';
       const shouldCancelReservations = urlParams.get('cancel') === 'true';
+      const fromPayment = urlParams.get('from') === 'payment' || urlParams.get('payment') === 'success';
 
-      if (isBackNavigation || fromBooking || shouldCancelReservations) {
-        console.log('🔄 User returned to seat selection - cancelling existing reservations');
+      // NEW: Check if user returned from Midtrans payment
+      const referrer = document.referrer;
+      const isFromMidtrans = referrer.includes('midtrans') || referrer.includes('snap');
+      
+      // NEW: Check localStorage for payment completion flag
+      const paymentCompleted = localStorage.getItem('payment_completed');
+      const lastPaymentTime = localStorage.getItem('last_payment_time');
+      const currentTime = Date.now();
+      
+      // Consider payment recently completed if within last 5 minutes
+      const isRecentPayment = lastPaymentTime && (currentTime - parseInt(lastPaymentTime)) < (5 * 60 * 1000);
+
+      if (isBackNavigation || fromBooking || shouldCancelReservations || fromPayment || isFromMidtrans || (paymentCompleted && isRecentPayment)) {
+        console.log('🔄 User returned to seat selection - performing cleanup and refresh');
+        console.log('  - Back navigation:', isBackNavigation);
+        console.log('  - From booking:', fromBooking);
+        console.log('  - Should cancel:', shouldCancelReservations);
+        console.log('  - From payment:', fromPayment);
+        console.log('  - From Midtrans:', isFromMidtrans);
+        console.log('  - Recent payment:', isRecentPayment);
         
         // Cancel any existing reservations
         await cancelAllUserReservations();
@@ -90,17 +111,28 @@ const SeatSelection = ({
           console.warn('Could not clear sessionStorage:', error);
         }
         
+        // Clear payment completion flags
+        if (paymentCompleted) {
+          localStorage.removeItem('payment_completed');
+          localStorage.removeItem('last_payment_time');
+        }
+        
         // Clean URL
-        if (fromBooking || shouldCancelReservations) {
+        if (fromBooking || shouldCancelReservations || fromPayment) {
           window.history.replaceState({}, '', window.location.pathname);
         }
         
-        // Show success message
-        setAlert('Reservasi sebelumnya telah dibatalkan. Silakan pilih kursi kembali.', 'info');
+        // Show appropriate message
+        if (fromPayment || isFromMidtrans || isRecentPayment) {
+          setAlert('Pembayaran selesai! Kursi yang telah dibeli ditampilkan dengan status terbaru.', 'success');
+        } else {
+          setAlert('Reservasi sebelumnya telah dibatalkan. Silakan pilih kursi kembali.', 'info');
+        }
         
-        // Refresh seat data
+        // CRITICAL: Force refresh seat data with a small delay
         setTimeout(() => {
-          refreshSeatData();
+          console.log('🔄 Force refreshing seat data after payment/navigation...');
+          refreshSeatData(true); // Pass true for force refresh
         }, 1000);
       }
     };
@@ -108,7 +140,51 @@ const SeatSelection = ({
     if (routeId) {
       handlePageLoad();
     }
-  }, [routeId, cancelAllUserReservations, setSelectedSeats, setAlert]);
+  }, [routeId, cancelAllUserReservations, setSelectedSeats, setAlert, location]);
+
+  // ENHANCED: Auto-refresh mechanism for payment completion detection
+  useEffect(() => {
+    if (!routeId) return;
+
+    // Function to check for payment completion indicators
+    const checkPaymentCompletion = () => {
+      const paymentCompleted = localStorage.getItem('payment_completed');
+      const lastPaymentTime = localStorage.getItem('last_payment_time');
+      const currentTime = Date.now();
+      
+      if (paymentCompleted && lastPaymentTime) {
+        const timeSincePayment = currentTime - parseInt(lastPaymentTime);
+        
+        // If payment was completed within last 2 minutes, refresh seats
+        if (timeSincePayment < (2 * 60 * 1000) && timeSincePayment > 5000) {
+          console.log('🔄 Recent payment detected, refreshing seats...');
+          refreshSeatData(true);
+          
+          // Clear the flags to avoid repeated refreshes
+          localStorage.removeItem('payment_completed');
+          localStorage.removeItem('last_payment_time');
+        }
+      }
+    };
+
+    // Check immediately
+    checkPaymentCompletion();
+
+    // Set up interval for auto-refresh (every 15 seconds)
+    const interval = setInterval(() => {
+      const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+      
+      // Auto-refresh every 15 seconds, but more frequently if recent activity
+      const refreshInterval = (timeSinceLastRefresh < (2 * 60 * 1000)) ? 10000 : 15000;
+      
+      if (timeSinceLastRefresh >= refreshInterval) {
+        refreshSeatData();
+        checkPaymentCompletion();
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [routeId, lastRefreshTime]);
 
   // TAMBAH: Function to detect user leaving page and cleanup
   useEffect(() => {
@@ -159,13 +235,24 @@ const SeatSelection = ({
     return allSeats;
   }, [availableSeats?.totalSeats, route?.total_kursi, route?.Bus?.total_kursi]);
 
-  // TAMBAHKAN function baru untuk refresh seat data
-  const refreshSeatData = useCallback(async () => {
+  // ENHANCED: Refresh seat data function with force option
+  const refreshSeatData = useCallback(async (force = false) => {
     try {
-      console.log('🔄 Refreshing seat data...');
+      console.log(`🔄 Refreshing seat data${force ? ' (forced)' : ''}...`);
+      
+      // Add cache busting for force refresh
+      if (force) {
+        // Clear any cached responses by adding timestamp
+        const timestamp = Date.now();
+        console.log(`🔄 Force refresh with timestamp: ${timestamp}`);
+      }
+      
       await getAvailableSeats(routeId);
+      setLastRefreshTime(Date.now());
+      
+      console.log('✅ Seat data refresh completed');
     } catch (error) {
-      console.error('Failed to refresh seat data:', error);
+      console.error('❌ Failed to refresh seat data:', error);
     }
   }, [getAvailableSeats, routeId]);
 
@@ -190,6 +277,7 @@ const SeatSelection = ({
       if (routeId) {
         try {
           await getAvailableSeats(routeId);
+          setLastRefreshTime(Date.now());
         } catch (error) {
           if (error.response?.data?.booking_closed) {
             setAlert('Pemesanan untuk rute ini sudah ditutup', 'warning');
@@ -268,18 +356,7 @@ const SeatSelection = ({
     console.log('🎨 Seat colors updated:', statusMap); // Debug
   }, [availableSeats, generateAllSeats]);
 
-  // TAMBAHKAN auto-refresh dengan interval lebih cepat
-  useEffect(() => {
-    if (!routeId) return;
-
-    const interval = setInterval(() => {
-      refreshSeatData();
-    }, 15000); // Refresh setiap 15 detik untuk real-time experience
-
-    return () => clearInterval(interval);
-  }, [routeId, refreshSeatData]);
-
-  // TAMBAH: Function to clear all selections and reservations
+  // TAMBAH: Clear all selections and reservations
   const clearAllSelections = async () => {
     try {
       // Cancel any active reservations
@@ -298,7 +375,7 @@ const SeatSelection = ({
       }
       
       // Refresh seat data
-      refreshSeatData();
+      refreshSeatData(true); // Force refresh
       
       setAlert('Semua pilihan kursi telah dibersihkan', 'info');
     } catch (error) {
@@ -334,7 +411,7 @@ const SeatSelection = ({
         if (!availabilityCheck.available) {
           setAlert(`Kursi ${seatNumber} sudah tidak tersedia. Silakan refresh halaman.`, 'danger');
           // Refresh seat data
-          getAvailableSeats(routeId);
+          refreshSeatData(true); // Force refresh
           setIsCheckingSeats(false);
           return;
         }
@@ -374,7 +451,7 @@ const SeatSelection = ({
       if (!availabilityCheck.available) {
         alert(`Kursi ${availabilityCheck.conflictSeats.join(', ')} sudah tidak tersedia. Silakan pilih kursi lain.`);
         // Refresh seat data dan clear selection
-        getAvailableSeats(routeId);
+        refreshSeatData(true); // Force refresh
         setSelectedSeatsList([]);
         setSelectedSeats([]);
         sessionStorage.removeItem('selectedSeats');
@@ -417,7 +494,7 @@ const SeatSelection = ({
           }
 
           // PERBAIKAN: Refresh seat data immediately after successful reservation
-          await refreshSeatData();
+          await refreshSeatData(true); // Force refresh
 
           let navigationUrl;
 
@@ -625,7 +702,7 @@ const SeatSelection = ({
                 </button>
               )}
               <button
-                onClick={refreshSeatData}
+                onClick={() => refreshSeatData(true)}
                 className="px-3 py-1 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
                 disabled={loading}
               >

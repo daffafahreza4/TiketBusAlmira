@@ -35,6 +35,11 @@ const PaymentFinishPage = ({
       }
 
       try {
+        // TAMBAH: Set payment completion flags untuk SeatSelection auto-refresh
+        localStorage.setItem('payment_completed', 'true');
+        localStorage.setItem('last_payment_time', Date.now().toString());
+        console.log('💳 Payment completion flags set for auto-refresh');
+
         // Extract ticket ID from order ID (format: ORDER-{id_tiket}-{timestamp})
         const ticketIdMatch = orderId.match(/ORDER-(\d+)-/);
         if (!ticketIdMatch) {
@@ -67,6 +72,13 @@ const PaymentFinishPage = ({
             try {
               sessionStorage.removeItem('selectedSeats');
               sessionStorage.removeItem('routeId');
+              // TAMBAH: Clear reservations juga
+              Object.keys(sessionStorage).forEach(key => {
+                if (key.startsWith('reservations_')) {
+                  sessionStorage.removeItem(key);
+                }
+              });
+              console.log('🧹 Cleared session storage after successful payment');
             } catch (error) {
               console.warn('Could not clear session storage:', error);
             }
@@ -74,6 +86,10 @@ const PaymentFinishPage = ({
             setAlert('Pembayaran sedang diproses. Silakan tunggu konfirmasi.', 'info');
           } else if (transactionStatus === 'deny' || transactionStatus === 'cancel' || transactionStatus === 'expire') {
             setAlert('Pembayaran gagal atau dibatalkan.', 'danger');
+            
+            // TAMBAH: Clear payment flags jika pembayaran gagal
+            localStorage.removeItem('payment_completed');
+            localStorage.removeItem('last_payment_time');
           }
         } else {
           setError('Gagal mengecek status pembayaran');
@@ -81,6 +97,10 @@ const PaymentFinishPage = ({
       } catch (err) {
         console.error('Error checking payment status:', err);
         setError('Terjadi kesalahan saat mengecek status pembayaran');
+        
+        // TAMBAH: Clear payment flags jika error
+        localStorage.removeItem('payment_completed');
+        localStorage.removeItem('last_payment_time');
       } finally {
         setLoading(false);
       }
@@ -88,7 +108,7 @@ const PaymentFinishPage = ({
 
     checkPayment();
   }, [orderId, transactionStatus, checkPaymentStatus, setAlert, getGroupedTicketById]);
-
+  
   const getStatusInfo = () => {
     if (!transactionStatus) return { color: 'gray', text: 'Unknown', icon: 'question-circle' };
     
@@ -155,7 +175,8 @@ const PaymentFinishPage = ({
     return (
       <div className="flex flex-col min-h-screen">
         <Navbar />
-        <main className="flex-grow bg-gray-100 py-4 sm:py-8">
+        {/* PERBAIKAN: Tambahkan padding-top untuk menghindari overlap dengan navbar */}
+        <main className="flex-grow bg-gray-100 py-4 sm:py-8 pt-20 sm:pt-24">
           <div className="container mx-auto px-4 flex justify-center items-center">
             <div className="text-center">
               <Spinner />
@@ -173,7 +194,8 @@ const PaymentFinishPage = ({
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <Alert />
-        <main className="flex-grow bg-gray-100 py-4 sm:py-8">
+        {/* PERBAIKAN: Tambahkan padding-top untuk menghindari overlap dengan navbar */}
+        <main className="flex-grow bg-gray-100 py-4 sm:py-8 pt-20 sm:pt-24">
           <div className="container mx-auto px-4">
             <div className="max-w-sm sm:max-w-md lg:max-w-lg mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6 text-center">
               <div className="text-red-500 mb-4">
@@ -208,7 +230,8 @@ const PaymentFinishPage = ({
       <Navbar />
       <Alert />
       
-      <main className="flex-grow bg-gray-100 py-4 sm:py-8">
+      {/* PERBAIKAN: Tambahkan padding-top untuk menghindari overlap dengan navbar */}
+      <main className="flex-grow bg-gray-100 py-4 sm:py-8 pt-20 sm:pt-24">
         <div className="container mx-auto px-4">
           <div className="max-w-sm sm:max-w-xl lg:max-w-2xl xl:max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
             {/* Status Header */}

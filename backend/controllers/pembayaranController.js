@@ -218,6 +218,7 @@ exports.createPaymentToken = async (req, res) => {
 };
 
 // Handle Midtrans webhook notification
+// Handle Midtrans webhook notification - FIXED VERSION
 exports.handleNotification = async (req, res) => {
   const webhookLogger = require('../utils/webhookLogger');
 
@@ -316,13 +317,30 @@ exports.handleNotification = async (req, res) => {
       }
       await payment.save({ transaction });
 
-      // Update ticket status - HANDLE GROUPED TICKETS
+      // CRITICAL FIX: Update ticket status - IMPROVED GROUPED TICKETS HANDLING
       const masterTicket = payment.Tiket;
       const oldTicketStatus = masterTicket.status_tiket;
       
+      let updatedTicketCount = 0;
+      
       if (masterTicket.order_group_id) {
-        // NEW SYSTEM: Update all tickets in the order group
-        const updateResult = await Tiket.update(
+        // NEW SYSTEM: Update all tickets in the order group with explicit logging
+        console.log(`🔄 Updating grouped tickets for order: ${masterTicket.order_group_id}`);
+        
+        // First, get all tickets in the group to verify
+        const allTicketsInGroup = await Tiket.findAll({
+          where: {
+            order_group_id: masterTicket.order_group_id
+          },
+          attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
+          transaction
+        });
+        
+        console.log(`📋 Found ${allTicketsInGroup.length} tickets in group:`, 
+          allTicketsInGroup.map(t => `${t.id_tiket}:${t.nomor_kursi}:${t.status_tiket}`));
+        
+        // Update all tickets in the order group
+        const [updateCount] = await Tiket.update(
           { 
             status_tiket: newTicketStatus 
           },
@@ -334,22 +352,79 @@ exports.handleNotification = async (req, res) => {
           }
         );
         
-        console.log(`Updated ${updateResult[0]} tickets in order group ${masterTicket.order_group_id} to status: ${newTicketStatus}`);
+        updatedTicketCount = updateCount;
+        console.log(`✅ Updated ${updateCount} tickets in order group ${masterTicket.order_group_id} to status: ${newTicketStatus}`);
         
-        // Also update the master ticket to ensure it's updated
-        if (updateResult[0] === 0) {
-          console.log(`Warning: No tickets were updated for order group ${masterTicket.order_group_id}, updating master ticket individually`);
-          masterTicket.status_tiket = newTicketStatus;
-          await masterTicket.save({ transaction });
+        // ADDITIONAL VERIFICATION: Double-check the update worked
+        const verifyTickets = await Tiket.findAll({
+          where: {
+            order_group_id: masterTicket.order_group_id
+          },
+          attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
+          transaction
+        });
+        
+        console.log(`🔍 Verification - Updated tickets status:`, 
+          verifyTickets.map(t => `${t.id_tiket}:${t.nomor_kursi}:${t.status_tiket}`));
+        
+        // FALLBACK: If bulk update failed, update individually
+        if (updateCount === 0 || updateCount < allTicketsInGroup.length) {
+          console.log(`⚠️ Bulk update incomplete (${updateCount}/${allTicketsInGroup.length}), trying individual updates...`);
+          
+          for (const ticketInGroup of allTicketsInGroup) {
+            try {
+              await Tiket.update(
+                { status_tiket: newTicketStatus },
+                { 
+                  where: { id_tiket: ticketInGroup.id_tiket },
+                  transaction 
+                }
+              );
+              console.log(`✅ Individual update success for ticket ${ticketInGroup.id_tiket} (seat ${ticketInGroup.nomor_kursi})`);
+              updatedTicketCount++;
+            } catch (individualError) {
+              console.error(`❌ Individual update failed for ticket ${ticketInGroup.id_tiket}:`, individualError.message);
+            }
+          }
         }
+        
+        // FINAL VERIFICATION
+        const finalVerification = await Tiket.findAll({
+          where: {
+            order_group_id: masterTicket.order_group_id
+          },
+          attributes: ['id_tiket', 'nomor_kursi', 'status_tiket'],
+          transaction
+        });
+        
+        const successCount = finalVerification.filter(t => t.status_tiket === newTicketStatus).length;
+        console.log(`🎯 Final verification: ${successCount}/${finalVerification.length} tickets have correct status`);
+        
+        if (successCount < finalVerification.length) {
+          console.error(`❌ CRITICAL: Not all tickets updated correctly!`);
+          console.error(`Expected status: ${newTicketStatus}`);
+          console.error(`Actual statuses:`, finalVerification.map(t => `${t.nomor_kursi}:${t.status_tiket}`));
+        }
+        
       } else {
         // LEGACY SYSTEM: Update single ticket
+        console.log(`🔄 Updating single ticket: ${masterTicket.id_tiket}`);
         masterTicket.status_tiket = newTicketStatus;
         await masterTicket.save({ transaction });
+        updatedTicketCount = 1;
+        console.log(`✅ Updated single ticket ${masterTicket.id_tiket} to status: ${newTicketStatus}`);
       }
       
       // Commit transaction
       await transaction.commit();
+      
+      // ENHANCED LOGGING
+      console.log(`🎉 Payment webhook processed successfully:`);
+      console.log(`   Order ID: ${orderId}`);
+      console.log(`   Payment Status: ${oldPaymentStatus} → ${newPaymentStatus}`);
+      console.log(`   Ticket Status: ${oldTicketStatus} → ${newTicketStatus}`);
+      console.log(`   Updated Tickets: ${updatedTicketCount}`);
+      console.log(`   Order Group: ${masterTicket.order_group_id || 'N/A'}`);
     
       // Log status changes
       webhookLogger.logPaymentStatusChange(
@@ -426,6 +501,7 @@ exports.handleNotification = async (req, res) => {
       
     } catch (transactionError) {
       await transaction.rollback();
+      console.error('❌ Transaction rollback due to error:', transactionError);
       throw transactionError;
     }
 

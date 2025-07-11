@@ -108,6 +108,78 @@ const PaymentFinishPage = ({
 
     checkPayment();
   }, [orderId, transactionStatus, checkPaymentStatus, setAlert, getGroupedTicketById]);
+
+  // TAMBAH: Helper function untuk menghitung total bayar yang benar
+  const getTotalAmount = () => {
+    // Priority 1: Grouped ticket order total amount
+    if (groupedTicketData?.order?.total_amount) {
+      return groupedTicketData.order.total_amount;
+    }
+    
+    // Priority 2: Calculate from individual tickets in group
+    if (groupedTicketData?.tickets && Array.isArray(groupedTicketData.tickets)) {
+      return groupedTicketData.tickets.reduce((sum, ticket) => {
+        return sum + parseFloat(ticket.individual_price || ticket.total_bayar || 0);
+      }, 0);
+    }
+    
+    // Priority 3: Single ticket total
+    if (groupedTicketData?.total_bayar) {
+      return groupedTicketData.total_bayar;
+    }
+    
+    // Priority 4: From payment data
+    if (paymentData?.ticket?.total_bayar) {
+      return paymentData.ticket.total_bayar;
+    }
+    
+    // Fallback
+    return 0;
+  };
+
+  // TAMBAH: Helper function untuk mendapatkan informasi ticket count
+  const getTicketCount = () => {
+    if (groupedTicketData?.order?.total_tickets) {
+      return groupedTicketData.order.total_tickets;
+    }
+    
+    if (groupedTicketData?.tickets && Array.isArray(groupedTicketData.tickets)) {
+      return groupedTicketData.tickets.length;
+    }
+    
+    if (groupedTicketData?.ticket_count) {
+      return groupedTicketData.ticket_count;
+    }
+    
+    return 1; // Default single ticket
+  };
+
+  // TAMBAH: Helper function untuk mendapatkan informasi seats
+  const getSeatsInfo = () => {
+    // From grouped order
+    if (groupedTicketData?.order?.seats) {
+      return Array.isArray(groupedTicketData.order.seats) ? 
+        groupedTicketData.order.seats : [groupedTicketData.order.seats];
+    }
+    
+    // From tickets array
+    if (groupedTicketData?.tickets && Array.isArray(groupedTicketData.tickets)) {
+      return groupedTicketData.tickets.map(t => t.nomor_kursi).sort();
+    }
+    
+    // From grouped ticket data
+    if (groupedTicketData?.nomor_kursi) {
+      return Array.isArray(groupedTicketData.nomor_kursi) ? 
+        groupedTicketData.nomor_kursi : [groupedTicketData.nomor_kursi];
+    }
+    
+    // From payment data
+    if (paymentData?.ticket?.nomor_kursi) {
+      return [paymentData.ticket.nomor_kursi];
+    }
+    
+    return [];
+  };
   
   const getStatusInfo = () => {
     if (!transactionStatus) return { color: 'gray', text: 'Unknown', icon: 'question-circle' };
@@ -225,6 +297,11 @@ const PaymentFinishPage = ({
     );
   }
 
+  // TAMBAH: Calculate values untuk display
+  const totalAmount = getTotalAmount();
+  const ticketCount = getTicketCount();
+  const seatsInfo = getSeatsInfo();
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -267,12 +344,41 @@ const PaymentFinishPage = ({
                     </span>
                   </div>
                   
+                  {/* FIXED: Tampilkan total amount yang benar */}
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                    <span className="text-gray-600 text-sm sm:text-base">Total Bayar:</span>
+                    <span className="text-gray-600 text-sm sm:text-base">
+                      Total Bayar:
+                      {ticketCount > 1 && (
+                        <span className="text-xs text-gray-500 block sm:inline sm:ml-1">
+                          ({ticketCount} tiket)
+                        </span>
+                      )}
+                    </span>
                     <span className="font-bold text-base sm:text-lg lg:text-xl text-pink-600">
-                      {formatCurrency(paymentData.ticket?.total_bayar || 0)}
+                      {formatCurrency(totalAmount)}
                     </span>
                   </div>
+                  
+                  {/* TAMBAH: Show breakdown untuk multiple tickets */}
+                  {ticketCount > 1 && groupedTicketData?.tickets && (
+                    <div className="ml-4 pl-4 border-l-2 border-gray-200">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-2">Rincian:</div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs sm:text-sm">
+                          <span>Harga per tiket:</span>
+                          <span>{formatCurrency(groupedTicketData.tickets[0]?.individual_price || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs sm:text-sm">
+                          <span>Jumlah tiket:</span>
+                          <span>{ticketCount}</span>
+                        </div>
+                        <div className="flex justify-between text-xs sm:text-sm font-medium pt-1 border-t">
+                          <span>Subtotal:</span>
+                          <span>{formatCurrency(totalAmount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {paymentData.payment?.waktu_pembayaran && (
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
@@ -289,47 +395,45 @@ const PaymentFinishPage = ({
                   <div className="border-t pt-4 sm:pt-6">
                     <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-4 sm:mb-6">Detail Tiket</h3>
                     
-                    {groupedTicketData && groupedTicketData.order ? (
+                    {groupedTicketData && (groupedTicketData.order || ticketCount > 1) ? (
                       // Show grouped order details
                       <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Nomor Pesanan:</span>
                           <span className="font-semibold text-sm sm:text-base break-all">
-                            {groupedTicketData.order.order_group_id}
+                            {groupedTicketData.order?.order_group_id || `ORDER-${groupedTicketData.id_tiket || paymentData.ticket?.id}`}
                           </span>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Rute:</span>
                           <span className="font-semibold text-sm sm:text-base">
-                            {groupedTicketData.route?.asal} → {groupedTicketData.route?.tujuan}
+                            {groupedTicketData.route?.asal || groupedTicketData.rute?.asal || paymentData.route?.asal} → {groupedTicketData.route?.tujuan || groupedTicketData.rute?.tujuan || paymentData.route?.tujuan}
                           </span>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Jumlah Tiket:</span>
                           <span className="font-semibold text-sm sm:text-base">
-                            {groupedTicketData.order.total_tickets} tiket
+                            {ticketCount} tiket
                           </span>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Kursi:</span>
                           <span className="font-semibold text-sm sm:text-base text-right">
-                            {Array.isArray(groupedTicketData.order.seats) ? 
-                              groupedTicketData.order.seats.join(', ') : 
-                              groupedTicketData.order.seats
-                            }
+                            {seatsInfo.join(', ')}
                           </span>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                           <span className="text-gray-600 text-sm sm:text-base">Status Tiket:</span>
                           <span className={`font-semibold text-sm sm:text-base ${
-                            groupedTicketData.tickets?.[0]?.status_tiket === 'confirmed' ? 'text-green-600' : 
-                            groupedTicketData.tickets?.[0]?.status_tiket === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                            (groupedTicketData.status_tiket || groupedTicketData.tickets?.[0]?.status_tiket) === 'confirmed' ? 'text-green-600' : 
+                            (groupedTicketData.status_tiket || groupedTicketData.tickets?.[0]?.status_tiket) === 'pending' ? 'text-yellow-600' : 
+                            (groupedTicketData.status_tiket || groupedTicketData.tickets?.[0]?.status_tiket) === 'completed' ? 'text-blue-600' : 'text-red-600'
                           }`}>
-                            {groupedTicketData.tickets?.[0]?.status_tiket || 'N/A'}
+                            {groupedTicketData.status_tiket || groupedTicketData.tickets?.[0]?.status_tiket || 'N/A'}
                           </span>
                         </div>
                       </div>
@@ -359,7 +463,8 @@ const PaymentFinishPage = ({
                           <span className="text-gray-600 text-sm sm:text-base">Status Tiket:</span>
                           <span className={`font-semibold text-sm sm:text-base ${
                             paymentData.ticket.status === 'confirmed' ? 'text-green-600' : 
-                            paymentData.ticket.status === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                            paymentData.ticket.status === 'pending' ? 'text-yellow-600' : 
+                            paymentData.ticket.status === 'completed' ? 'text-blue-600' : 'text-red-600'
                           }`}>
                             {paymentData.ticket.status}
                           </span>
@@ -371,9 +476,9 @@ const PaymentFinishPage = ({
 
                 {/* Actions */}
                 <div className="border-t pt-4 sm:pt-6 space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3 lg:gap-4">
-                  {(groupedTicketData?.order?.master_ticket_id || paymentData?.ticket?.id) && (
+                  {(groupedTicketData?.order?.master_ticket_id || groupedTicketData?.id_tiket || paymentData?.ticket?.id) && (
                     <Link
-                      to={`/ticket/${groupedTicketData?.order?.master_ticket_id || paymentData.ticket.id}`}
+                      to={`/ticket/${groupedTicketData?.order?.master_ticket_id || groupedTicketData?.id_tiket || paymentData.ticket.id}`}
                       className="block sm:flex-1 px-4 py-3 bg-pink-500 text-white text-center rounded-lg hover:bg-pink-700 transition duration-300 text-sm sm:text-base font-medium"
                     >
                       <i className="fas fa-ticket-alt mr-2 sm:mr-1"></i>

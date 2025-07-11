@@ -295,12 +295,6 @@ const MyTicketsPage = ({ getUserTickets, createPaymentToken, setAlert, tickets, 
                                 </span>
                               )}
                             </div>
-                            <p className="text-gray-600">{route?.nama_bus}</p>
-                            {order.type === 'order' && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Order ID: {order.order_group_id}
-                              </p>
-                            )}
                           </div>
                           <div className={`${status.colorClass} font-semibold px-3 py-1 rounded-full text-sm bg-opacity-20`}>
                             {status.text}

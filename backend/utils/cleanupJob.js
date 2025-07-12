@@ -1,268 +1,231 @@
-const { checkExpiredReservations } = require('../controllers/reservasiController');
-const { Tiket } = require('../models');
+const cron = require('node-cron');
+const { Tiket, ReservasiSementara, Rute } = require('../models');
 const { Op } = require('sequelize');
 
-let cleanupInterval = null;
+// Track if cleanup job is running
+let isCleanupJobRunning = false;
 
-
-//  Start the cleanup job to check for expired reservations and tickets
-//  Runs every 2 minutes for responsive cleanup
-const startCleanupJob = () => {
-  // Run immediately on start
-  runCleanup();
+function isBookingAllowed(waktuBerangkat) {
+  const now = new Date();
+  const departure = new Date(waktuBerangkat);
+  const timeDiff = departure - now;
+  const minutesDiff = Math.floor(timeDiff / (1000 * 60));
   
-  // UBAH: Run every 1 minute untuk auto-cancel yang lebih responsif
-  cleanupInterval = setInterval(() => {
-    runCleanup();
-  }, 1 * 60 * 1000); 
-  
-  console.log(' Cleanup job started - running every 1 minute');
-};
+  return minutesDiff > 10;
+}
 
-
-// Stop the cleanup job
-
-const stopCleanupJob = () => {
-  if (cleanupInterval) {
-    clearInterval(cleanupInterval);
-    cleanupInterval = null;
-    console.log(' Cleanup job stopped');
-  }
-};
-
-// Run the comprehensive cleanup process
-const runCleanup = async () => {
+async function cleanupExpiredReservations() {
   try {
-    let totalCleaned = 0;
+    const expiredReservations = await ReservasiSementara.findAll({
+      where: {
+        waktu_expired: {
+          [Op.lt]: new Date()
+        }
+      },
+      include: [
+        {
+          model: Rute,
+          attributes: ['asal', 'tujuan']
+        }
+      ]
+    });
 
-    // 1. Clean expired reservations
-    const reservationResult = await checkExpiredReservations();
-    if (reservationResult.success && reservationResult.deletedCount > 0) {
-      totalCleaned += reservationResult.deletedCount;
-      console.log(` Cleaned ${reservationResult.deletedCount} expired reservations`);
+    if (expiredReservations.length > 0) {
+      const deletedCount = await ReservasiSementara.destroy({
+        where: {
+          waktu_expired: {
+            [Op.lt]: new Date()
+          }
+        }
+      });
+
+      return {
+        success: true,
+        deletedCount: deletedCount
+      };
     }
 
-    // 2. Clean expired pending tickets (30 minutes old)
-    const expiredTickets = await cleanExpiredTickets();
-    if (expiredTickets > 0) {
-      totalCleaned += expiredTickets;
-      console.log(` Cleaned ${expiredTickets} expired pending tickets`);
-    }
-
-    // 3. AUTO-CANCEL DEPARTED TICKETS - TAMBAH INI
-    const cancelledTickets = await autoCancelDepartedTickets();
-    if (cancelledTickets > 0) {
-      totalCleaned += cancelledTickets;
-      console.log(` Auto-cancelled ${cancelledTickets} tickets for departed buses`);
-    }
-
-    // Log total cleanup if any items were cleaned
-    if (totalCleaned > 0) {
-      console.log(` Total cleanup completed: ${totalCleaned} items cleaned`);
-    }
-
+    return {
+      success: true,
+      deletedCount: 0
+    };
   } catch (error) {
-    console.error(' Cleanup error:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
   }
-};
+}
 
-// Clean expired pending tickets (30 minutes after creation)
-const cleanExpiredTickets = async () => {
+async function cleanupExpiredTickets() {
   try {
-    // Find tickets that are pending and older than 30 minutes
-    const expiredTime = new Date(Date.now() - (30 * 60 * 1000)); // 30 minutes ago
-
     const expiredTickets = await Tiket.findAll({
       where: {
         status_tiket: 'pending',
-        [Op.or]: [
-          {
-            batas_pembayaran: {
-              [Op.lt]: new Date() // Payment deadline passed
-            }
-          },
-          {
-            tanggal_pemesanan: {
-              [Op.lt]: expiredTime // Created more than 30 minutes ago
-            }
-          }
-        ]
-      }
+        batas_pembayaran: {
+          [Op.lt]: new Date()
+        }
+      },
+      include: [
+        {
+          model: Rute,
+          attributes: ['asal', 'tujuan']
+        }
+      ]
     });
 
     if (expiredTickets.length > 0) {
-      // Group tickets by order_group_id to handle grouped orders
-      const orderGroups = new Set();
-      const individualTickets = [];
-      
-      expiredTickets.forEach(ticket => {
-        if (ticket.order_group_id) {
-          orderGroups.add(ticket.order_group_id);
-        } else {
-          individualTickets.push(ticket.id_tiket);
-        }
-      });
-      
-      let totalUpdated = 0;
-      
-      // Update individual tickets
-      if (individualTickets.length > 0) {
-        const result = await Tiket.update(
-          { status_tiket: 'expired' },
-          {
-            where: {
-              id_tiket: { [Op.in]: individualTickets }
-            }
-          }
-        );
-        totalUpdated += result[0];
-      }
-      
-      // Update grouped tickets by order_group_id
-      for (const orderGroupId of orderGroups) {
-        const result = await Tiket.update(
-          { status_tiket: 'expired' },
-          {
-            where: {
-              order_group_id: orderGroupId,
-              status_tiket: 'pending' // Only update if still pending
-            }
-          }
-        );
-        totalUpdated += result[0];
-      }
-
-      // Also update associated payments if they exist
-      const { Pembayaran } = require('../models');
-      await Pembayaran.update(
-        { status: 'expired' },
+      const updatedCount = await Tiket.update(
+        { status_tiket: 'expired' },
         {
           where: {
-            id_tiket: {
-              [Op.in]: expiredTickets.map(ticket => ticket.id_tiket)
-            },
-            status: 'pending'
+            status_tiket: 'pending',
+            batas_pembayaran: {
+              [Op.lt]: new Date()
+            }
           }
         }
       );
 
-      return totalUpdated;
+      return {
+        success: true,
+        updatedCount: updatedCount[0]
+      };
     }
 
-    return 0;
+    return {
+      success: true,
+      updatedCount: 0
+    };
   } catch (error) {
-    console.error('❌ Error cleaning expired tickets:', error);
-    return 0;
+    return {
+      success: false,
+      error: error.message
+    };
   }
-};
+}
 
-// Get cleanup job status
-const getCleanupStatus = () => {
-  return {
-    isRunning: cleanupInterval !== null,
-    intervalId: cleanupInterval,
-    intervalMinutes: 2,
-    reservationTimeout: 30, // minutes
-    ticketTimeout: 30, // minutes
-    nextRunIn: cleanupInterval ? '< 2 minutes' : 'Not scheduled'
-  };
-};
-
-// Manual cleanup trigger (for testing or manual intervention)
-
-const triggerManualCleanup = async () => {
-  console.log('🔧 Manual cleanup triggered');
-  return await runCleanup();
-};
-
-
-// Check if a specific reservation/ticket should be expired
-
-const shouldExpire = (createdAt, timeoutMinutes = 30) => {
-  const expiryTime = new Date(createdAt.getTime() + (timeoutMinutes * 60 * 1000));
-  return new Date() > expiryTime;
-};
-
-// Auto cancel tickets for departed buses
-const autoCancelDepartedTickets = async () => {
+async function updateCompletedTickets() {
   try {
-    const { Tiket, Rute, Pembayaran } = require('../models');
-    const { Op } = require('sequelize');
-
-    // Find tickets for buses that have already departed
-    const departedTickets = await Tiket.findAll({
-      include: [{
-        model: Rute,
-        where: {
-          waktu_berangkat: {
-            [Op.lt]: new Date() // Departure time has passed
+    // Find confirmed tickets where bus has departed 15+ minutes ago
+    const ticketsToComplete = await Tiket.findAll({
+      where: {
+        status_tiket: 'confirmed'
+      },
+      include: [
+        {
+          model: Rute,
+          attributes: ['id_rute', 'asal', 'tujuan', 'waktu_berangkat'],
+          where: {
+            // Bus departed more than 15 minutes ago
+            waktu_berangkat: {
+              [Op.lt]: new Date(Date.now() - 15 * 60 * 1000) // 15 minutes ago
+            }
           }
         }
-      }],
-      where: {
-        status_tiket: {
-          [Op.in]: ['pending', 'confirmed']
-        }
-      }
+      ]
     });
 
-    if (departedTickets.length > 0) {
-      // Update tickets to cancelled
-      await Tiket.update(
-        { status_tiket: 'cancelled' },
+    if (ticketsToComplete.length > 0) {
+      // Get all ticket IDs to update
+      const ticketIds = ticketsToComplete.map(ticket => ticket.id_tiket);
+      
+      // Update tickets to completed status
+      const updatedCount = await Tiket.update(
+        { status_tiket: 'completed' },
         {
           where: {
             id_tiket: {
-              [Op.in]: departedTickets.map(ticket => ticket.id_tiket)
-            }
-          }
-        }
-      );
-
-      // Update associated payments
-      await Pembayaran.update(
-        { status: 'cancelled' },
-        {
-          where: {
-            id_tiket: {
-              [Op.in]: departedTickets.map(ticket => ticket.id_tiket)
+              [Op.in]: ticketIds
             },
-            status: {
-              [Op.in]: ['pending', 'completed']
-            }
+            status_tiket: 'confirmed'
           }
         }
       );
 
-      console.log(`🚌 Auto-cancelled ${departedTickets.length} tickets for departed buses`);
-      return departedTickets.length;
+      return {
+        success: true,
+        updatedCount: updatedCount[0]
+      };
     }
 
-    return 0;
+    return {
+      success: true,
+      updatedCount: 0
+    };
   } catch (error) {
-    console.error('❌ Error auto-cancelling departed tickets:', error);
-    return 0;
+    return {
+      success: false,
+      error: error.message
+    };
   }
-};
+}
 
-// Check if booking is still allowed (10 minutes before departure)
-const isBookingAllowed = (departureTime) => {
-  const now = new Date();
-  const departure = new Date(departureTime);
-  const timeDiff = departure - now;
-  const minutesUntilDeparture = timeDiff / (1000 * 60);
+async function runCleanupTasks() {
+  if (isCleanupJobRunning) {
+    return;
+  }
 
-  return minutesUntilDeparture > 10; // Allow booking if more than 10 minutes left
-};
+  isCleanupJobRunning = true;
+  
+  try {
+    // Run all cleanup tasks
+    const [reservationResult, ticketResult, completedResult] = await Promise.all([
+      cleanupExpiredReservations(),
+      cleanupExpiredTickets(),
+      updateCompletedTickets()
+    ]);
 
+    return {
+      success: true,
+      results: {
+        reservations: reservationResult,
+        tickets: ticketResult,
+        completed: completedResult
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  } finally {
+    isCleanupJobRunning = false;
+  }
+}
+
+function startCleanupJob() {
+  const task = cron.schedule('* * * * *', async () => {
+    await runCleanupTasks();
+  }, {
+    scheduled: false,
+    timezone: 'Asia/Jakarta'
+  });
+
+  task.start();
+  
+  // Run immediately on startup
+  setTimeout(async () => {
+    await runCleanupTasks();
+  }, 5000); // Wait 5 seconds after startup
+
+  return task;
+}
+
+function stopCleanupJob() {
+  if (global.cleanupTask) {
+    global.cleanupTask.stop();
+    global.cleanupTask = null;
+  }
+}
+
+// Export functions
 module.exports = {
+  isBookingAllowed,
+  cleanupExpiredReservations,
+  cleanupExpiredTickets,
+  updateCompletedTickets,
+  runCleanupTasks,
   startCleanupJob,
-  stopCleanupJob,
-  runCleanup,
-  getCleanupStatus,
-  triggerManualCleanup,
-  cleanExpiredTickets,
-  shouldExpire,
-  autoCancelDepartedTickets,
-  isBookingAllowed
+  stopCleanupJob
 };

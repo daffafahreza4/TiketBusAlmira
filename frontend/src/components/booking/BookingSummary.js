@@ -603,7 +603,7 @@ const BookingSummary = ({
             </div>
           </div>
 
-          {/* 2. PASSENGER INFORMATION - ALWAYS SECOND */}
+          {/* 2. PASSENGER INFORMATION - ALWAYS SECOND - READONLY FIELDS */}
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4 sm:mb-6">Informasi Penumpang</h2>
 
@@ -616,10 +616,12 @@ const BookingSummary = ({
                     name="nama"
                     value={nama}
                     onChange={onChange}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base bg-gray-50 cursor-not-allowed"
                     required
                     disabled={submitting}
+                    readOnly
                   />
+                  <p className="text-xs text-gray-500 mt-1">Data diambil dari profil akun Anda</p>
                 </div>
 
                 <div>
@@ -629,10 +631,12 @@ const BookingSummary = ({
                     name="email"
                     value={email}
                     onChange={onChange}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base bg-gray-50 cursor-not-allowed"
                     required
                     disabled={submitting}
+                    readOnly
                   />
+                  <p className="text-xs text-gray-500 mt-1">Data diambil dari profil akun Anda</p>
                 </div>
               </div>
 
@@ -643,12 +647,13 @@ const BookingSummary = ({
                   name="noTelepon"
                   value={noTelepon}
                   onChange={onChange}
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm sm:text-base bg-gray-50 cursor-not-allowed"
                   required
                   disabled={submitting}
+                  readOnly
                 />
                 <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                  Nomor telepon akan digunakan untuk konfirmasi perjalanan
+                  Data diambil dari profil akun Anda. <span className="text-pink-600 hover:underline cursor-pointer" onClick={() => window.open('/profile', '_blank')}>Edit profil</span> untuk mengubah.
                 </p>
               </div>
 

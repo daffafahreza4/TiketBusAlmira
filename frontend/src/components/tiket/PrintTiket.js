@@ -49,7 +49,26 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     documentTitle: `Tiket_${id}`,
-    onAfterPrint: () => console.log('Dokumen berhasil dicetak')
+    onAfterPrint: () => console.log('Dokumen berhasil dicetak'),
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+        }
+        .print-container {
+          width: 100%;
+          height: 100vh;
+          padding: 0;
+          margin: 0;
+        }
+      }
+    `
   });
   
   useEffect(() => {
@@ -128,60 +147,59 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
       <div className="fixed top-4 right-4 print:hidden z-10">
         <button
           onClick={handlePrint}
-          className="px-3 sm:px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition text-sm sm:text-base"
+          className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition text-base"
         >
-          <i className="fas fa-print mr-1 sm:mr-2"></i>
-          <span className="hidden sm:inline">Cetak</span>
-          <span className="sm:hidden">Print</span>
+          <i className="fas fa-print mr-2"></i>
+          Cetak
         </button>
       </div>
       
-      <div ref={componentRef} className="max-w-2xl mx-auto bg-white p-4 sm:p-6 lg:p-8 my-4 sm:my-8 print:my-0 print:p-0 print:max-w-none">
-        {/* Ticket Header */}
-        <div className="border-b-2 border-gray-200 pb-4 mb-4 sm:mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-          <div className="text-center sm:text-left">
-            <h1 className="text-xl sm:text-2xl font-bold">Almira Tiket</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Almira Travel - Perjalanan Nyaman Anda</p>
+      <div ref={componentRef} className="print-container bg-white" style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', padding: '15mm', boxSizing: 'border-box' }}>
+        
+        {/* Ticket Header - A4 Optimized */}
+        <div className="border-b-2 border-gray-300 pb-6 mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Almira Tiket</h1>
           </div>
-          <div className="text-center sm:text-right">
+          <div>
             <img 
               src="\assets\img\LogoAlmira.png" 
               alt="Logo" 
-              className="h-8 sm:h-12 mx-auto sm:mx-0"
+              className="h-16"
             />
           </div>
         </div>
         
-        {/* Ticket Body */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        {/* Ticket Body - A4 Layout */}
+        <div className="grid grid-cols-2 gap-12 mb-8">
           <div>
-            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Informasi Perjalanan</h2>
-            <div className="space-y-2 sm:space-y-0">
+            <h2 className="text-xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-2">Informasi Perjalanan</h2>
+            <div className="space-y-0">
               <table className="w-full">
                 <tbody>
                   <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Nama Bus</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">{busData.nama_bus}</td>
+                    <td className="py-3 text-gray-600 text-base font-medium">Nama Bus</td>
+                    <td className="py-3 font-semibold text-base">{busData.nama_bus}</td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Rute</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">{routeData.asal} - {routeData.tujuan}</td>
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Rute</td>
+                    <td className="py-3 font-semibold text-base">{routeData.asal} - {routeData.tujuan}</td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Tanggal</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base">
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Tanggal</td>
+                    <td className="py-3 font-semibold text-base">
                       {routeData.waktu_berangkat ? formatDate(routeData.waktu_berangkat) : 'N/A'}
                     </td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Waktu Berangkat</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base">
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Waktu Berangkat</td>
+                    <td className="py-3 font-semibold text-base">
                       {routeData.waktu_berangkat ? formatTime(routeData.waktu_berangkat) : 'N/A'}
                     </td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Nomor Kursi</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Nomor Kursi</td>
+                    <td className="py-3 font-semibold text-base">
                       {orderData ? (
                         Array.isArray(orderData.seats) ? orderData.seats.join(', ') : (orderData.seats || 'N/A')
                       ) : (
@@ -197,43 +215,44 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
           </div>
           
           <div>
-            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Informasi Penumpang</h2>
-            <div className="space-y-2 sm:space-y-0">
+            <h2 className="text-xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-2">Informasi Penumpang</h2>
+            <div className="space-y-0">
               <table className="w-full">
                 <tbody>
                   <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Nama</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">{userData.username || 'N/A'}</td>
+                    <td className="py-3 text-gray-600 text-base font-medium">Nama</td>
+                    <td className="py-3 font-semibold text-base">{userData.username || 'N/A'}</td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Email</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-all">{userData.email || 'N/A'}</td>
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Email</td>
+                    <td className="py-3 font-semibold text-base break-all">{userData.email || 'N/A'}</td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">No. Telepon</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">{userData.no_telepon || 'N/A'}</td>
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">No. Telepon</td>
+                    <td className="py-3 font-semibold text-base">{userData.no_telepon || 'N/A'}</td>
                   </tr>
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">{orderData ? 'No. Pesanan' : 'No. Tiket'}</td>
-                    <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base break-words">
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">{orderData ? 'No. Pesanan' : 'No. Tiket'}</td>
+                    <td className="py-3 font-semibold text-base">
                       {orderData ? orderData.order_group_id : `TB-${mainTicket?.id_tiket || ticket?.id_tiket || '000'}`}
                     </td>
                   </tr>
                   {orderData && (
-                    <tr>
-                      <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Jumlah Tiket</td>
-                      <td className="py-1 sm:py-2 font-semibold text-sm sm:text-base">{orderData.total_tickets} tiket</td>
+                    <tr className="border-t border-gray-100">
+                      <td className="py-3 text-gray-600 text-base font-medium">Jumlah Tiket</td>
+                      <td className="py-3 font-semibold text-base">{orderData.total_tickets} tiket</td>
                     </tr>
                   )}
-                  <tr>
-                    <td className="py-1 sm:py-2 text-gray-600 text-sm sm:text-base">Status</td>
-                    <td className={`py-1 sm:py-2 font-semibold text-sm sm:text-base ${
+                  <tr className="border-t border-gray-100">
+                    <td className="py-3 text-gray-600 text-base font-medium">Status</td>
+                    <td className={`py-3 font-semibold text-base ${
                       mainTicket?.status_tiket === 'confirmed' ? 'text-green-600' : 
                       mainTicket?.status_tiket === 'pending' ? 'text-yellow-600' : 
                       'text-gray-600'
                     }`}>
                       {mainTicket?.status_tiket === 'confirmed' ? 'Dikonfirmasi' : 
                        mainTicket?.status_tiket === 'pending' ? 'Menunggu Pembayaran' : 
+                       mainTicket?.status_tiket === 'completed' ? 'Selesai' :
                        mainTicket?.status_tiket || ticket?.status_tiket || 'N/A'}
                     </td>
                   </tr>
@@ -243,19 +262,21 @@ const PrintTiket = ({ getGroupedTicketById, ticket, loading, error }) => {
           </div>
         </div>
         
-        {/* Ticket Footer */}
-        <div className="text-center text-gray-600 text-xs sm:text-sm mb-4">
-          <p className="mb-2 font-semibold">Penting:</p>
-          <ul className="list-disc text-left pl-4 sm:pl-8 space-y-1 text-xs sm:text-sm leading-relaxed">
-            <li>Harap tiba di terminal minimal 30 menit sebelum keberangkatan.</li>
+        {/* Important Notes - A4 Optimized */}
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-8">
+          <h3 className="text-lg font-bold text-yellow-800 mb-4">Informasi Penting</h3>
+          <ul className="list-disc pl-6 text-yellow-800 space-y-2 text-base leading-relaxed">
+            <li>Harap tiba di terminal sebelum keberangkatan bus.</li>
             <li>Tiket ini harus ditunjukkan kepada petugas sebelum naik bus.</li>
             <li>Untuk informasi lebih lanjut, hubungi customer service Almira di 0812-2549-6270.</li>
           </ul>
         </div>
         
-        <div className="border-t border-gray-200 pt-3 sm:pt-4 text-center text-xs text-gray-500">
-          <p>Tiket ini diterbitkan oleh Almira © {new Date().getFullYear()}</p>
-          <p>almiratravel.site</p>
+        {/* Footer - A4 Optimized */}
+        <div className="border-t border-gray-200 pt-6 text-center text-gray-500">
+          <p className="text-base font-medium">Tiket ini diterbitkan oleh Almira Travel © {new Date().getFullYear()}</p>
+          <p className="text-sm mt-2">almiratravel.site | Melayani dengan Sepenuh Hati</p>
+          <p className="text-xs mt-4 text-gray-400">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
         </div>
       </div>
     </div>

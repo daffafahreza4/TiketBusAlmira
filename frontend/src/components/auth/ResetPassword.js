@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
@@ -15,28 +15,8 @@ const ResetPassword = ({ setAlert }) => {
     password2: ''
   });
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
 
   const { password, password2 } = formData;
-
-  // Verifikasi token ketika komponen dimuat
-  useEffect(() => {
-    const verifyToken = async () => {
-      try {
-        // FIXED: Changed endpoint to match backend route
-        await axios.get(`/api/auth/reset-password/${token}`);
-        setTokenValid(true);
-      } catch (err) {
-        setAlert('Token reset password tidak valid atau sudah kadaluarsa', 'danger');
-        setTokenValid(false);
-      } finally {
-        setVerifying(false);
-      }
-    };
-
-    verifyToken();
-  }, [token, setAlert]);
 
   const onChange = e =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,6 +26,11 @@ const ResetPassword = ({ setAlert }) => {
     
     if (password !== password2) {
       setAlert('Password tidak cocok', 'danger');
+      return;
+    }
+
+    if (password.length < 6) {
+      setAlert('Password minimal 6 karakter', 'danger');
       return;
     }
     
@@ -60,55 +45,21 @@ const ResetPassword = ({ setAlert }) => {
       
       const body = JSON.stringify({ password });
       
-      // FIXED: Changed endpoint to match backend route with kebab-case
-      await axios.post(`/api/auth/reset-password/${token}`, body, config);
+      // FIXED: Use the correct backend endpoint (resetpassword, not reset-password)
+      await axios.put(`/api/auth/resetpassword/${token}`, body, config);
       
       setAlert('Password berhasil direset', 'success');
       navigate('/login');
     } catch (err) {
       const errorMsg = err.response && err.response.data.message 
         ? err.response.data.message 
-        : 'Terjadi kesalahan saat mereset password';
+        : 'Token tidak valid atau sudah kadaluarsa';
         
       setAlert(errorMsg, 'danger');
     } finally {
       setLoading(false);
     }
   };
-
-  if (verifying) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
-          <h3 className="text-2xl font-bold text-center text-gray-800">Reset Password</h3>
-          <div className="mt-4 text-center">
-            <Spinner />
-            <p className="mt-4">Memverifikasi token reset password...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!tokenValid) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
-          <h3 className="text-2xl font-bold text-center text-gray-800">Token Tidak Valid</h3>
-          <div className="mt-4 text-center">
-            <p className="mb-4">
-              Token reset password tidak valid atau sudah kadaluarsa.
-            </p>
-            <p className="mt-6">
-              <Link to="/forgot-password" className="text-pink-600 hover:underline">
-                Kirim ulang link reset password
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

@@ -5,12 +5,14 @@ import {
   UPDATE_BUS,
   DELETE_BUS,
   BUS_ERROR,
-  CLEAR_BUS
+  CLEAR_BUS,
+  GET_AVAILABLE_BUSES
 } from '../types';
 
 const initialState = {
   buses: [],
   selectedBus: null,
+  availableBuses: null,
   loading: false,
   error: null
 };
@@ -23,6 +25,13 @@ const busReducer = (state = initialState, action) => {
       return {
         ...state,
         buses: payload || [],
+        loading: false,
+        error: null
+      };
+          case GET_AVAILABLE_BUSES:
+      return {
+        ...state,
+        availableBuses: payload,
         loading: false,
         error: null
       };
@@ -70,6 +79,8 @@ const busReducer = (state = initialState, action) => {
       };
     case CLEAR_BUS:
       return {
+        ...state,
+        availableBuses: null,
         ...initialState
       };
     default:

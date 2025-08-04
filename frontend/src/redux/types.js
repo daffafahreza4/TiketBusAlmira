@@ -32,6 +32,7 @@ export const DELETE_BUS = 'DELETE_BUS';
 export const CLEAR_BUS = 'CLEAR_BUS';
 export const BUS_ERROR = 'BUS_ERROR';
 export const GET_ALL_BUSES = 'GET_ALL_BUSES';
+export const GET_AVAILABLE_BUSES = 'GET_AVAILABLE_BUSES';
 export const GET_BUS_BY_ID = 'GET_BUS_BY_ID';
 export const CREATE_BUS_SUCCESS = 'CREATE_BUS_SUCCESS';
 export const UPDATE_BUS_SUCCESS = 'UPDATE_BUS_SUCCESS';

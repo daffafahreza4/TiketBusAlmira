@@ -2,22 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
-import { 
-  getAllAdminTickets, 
+import {
+  getAllAdminTickets,
   updateTicketStatus,
   deleteAdminTicket
 } from '../../redux/actions/ticketAdminActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatDate, formatTime, formatCurrency, formatStatus } from '../../utils/formatters';
 
-const AdminTicketList = ({ 
-  getAllAdminTickets, 
+const AdminTicketList = ({
+  getAllAdminTickets,
   updateTicketStatus,
   deleteAdminTicket,
   setAlert,
-  tickets, 
-  loading, 
-  error 
+  tickets,
+  loading,
+  error
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredTickets, setFilteredTickets] = useState([]);
@@ -27,7 +27,7 @@ const AdminTicketList = ({
   const [newStatus, setNewStatus] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -39,7 +39,7 @@ const AdminTicketList = ({
   // Filter tickets based on search and status
   useEffect(() => {
     if (tickets) {
-      let filtered = tickets.filter(ticket => 
+      let filtered = tickets.filter(ticket =>
         ticket.User?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ticket.Rute?.asal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ticket.Rute?.tujuan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,9 +66,9 @@ const AdminTicketList = ({
   const handlePageChange = (page) => {
     setCurrentPage(page);
     // Scroll to top of table
-    document.querySelector('.ticket-table-container')?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
+    document.querySelector('.ticket-table-container')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
     });
   };
 
@@ -81,7 +81,7 @@ const AdminTicketList = ({
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -109,7 +109,7 @@ const AdminTicketList = ({
         pageNumbers.push(totalPages);
       }
     }
-    
+
     return pageNumbers;
   };
 
@@ -199,6 +199,7 @@ const AdminTicketList = ({
             <option value="confirmed">Confirmed</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="expired">Kadaluarsa</option>
           </select>
         </div>
         <div>
@@ -308,7 +309,7 @@ const AdminTicketList = ({
                           <i className="fas fa-edit mr-1"></i>
                           Status
                         </button>
-                        
+
                         <button
                           onClick={() => handleDeleteClick(ticket)}
                           className="text-red-600 hover:text-red-900 text-sm px-3 py-1 rounded border border-red-600 hover:bg-red-50 transition-colors"
@@ -411,7 +412,7 @@ const AdminTicketList = ({
                     <i className="fas fa-edit mr-1"></i>
                     Status
                   </button>
-                  
+
                   <button
                     onClick={() => handleDeleteClick(ticket)}
                     className="flex-1 text-red-600 hover:text-red-900 text-xs px-3 py-2 rounded border border-red-600 hover:bg-red-50 transition-colors text-center"
@@ -434,17 +435,16 @@ const AdminTicketList = ({
             <span className="font-medium">{Math.min(endIndex, filteredTickets.length)}</span> dari{' '}
             <span className="font-medium">{filteredTickets.length}</span> hasil
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === 1
+              className={`px-2 py-1 rounded text-sm ${currentPage === 1
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <i className="fas fa-chevron-left"></i>
             </button>
@@ -456,13 +456,12 @@ const AdminTicketList = ({
                   key={index}
                   onClick={() => typeof page === 'number' && handlePageChange(page)}
                   disabled={page === '...'}
-                  className={`px-3 py-1 rounded text-sm ${
-                    page === currentPage
+                  className={`px-3 py-1 rounded text-sm ${page === currentPage
                       ? 'bg-pink-500 text-white'
                       : page === '...'
-                      ? 'bg-white text-gray-400 cursor-default'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  }`}
+                        ? 'bg-white text-gray-400 cursor-default'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   {page}
                 </button>
@@ -473,11 +472,10 @@ const AdminTicketList = ({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === totalPages
+              className={`px-2 py-1 rounded text-sm ${currentPage === totalPages
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <i className="fas fa-chevron-right"></i>
             </button>
@@ -498,7 +496,7 @@ const AdminTicketList = ({
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            
+
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 Tiket ID: <strong>{ticketToUpdate.id_tiket}</strong>
@@ -507,7 +505,7 @@ const AdminTicketList = ({
                 Penumpang: <strong>{ticketToUpdate.User?.username}</strong>
               </p>
             </div>
-            
+
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Status Baru
@@ -524,7 +522,7 @@ const AdminTicketList = ({
                 ))}
               </select>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowStatusModal(false)}
@@ -554,13 +552,13 @@ const AdminTicketList = ({
               </div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
             </div>
-            
+
             <p className="text-gray-700 mb-6 text-sm sm:text-base">
-              Apakah Anda yakin ingin menghapus tiket <strong>ID: {ticketToDelete.id_tiket}</strong> 
-              milik <strong>{ticketToDelete.User?.username}</strong>? 
+              Apakah Anda yakin ingin menghapus tiket <strong>ID: {ticketToDelete.id_tiket}</strong>
+              milik <strong>{ticketToDelete.User?.username}</strong>?
               Tindakan ini tidak dapat dibatalkan.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -599,9 +597,9 @@ const mapStateToProps = state => ({
   error: state.ticketAdmin ? state.ticketAdmin.error : null
 });
 
-export default connect(mapStateToProps, { 
-  getAllAdminTickets, 
+export default connect(mapStateToProps, {
+  getAllAdminTickets,
   updateTicketStatus,
   deleteAdminTicket,
-  setAlert 
+  setAlert
 })(AdminTicketList);

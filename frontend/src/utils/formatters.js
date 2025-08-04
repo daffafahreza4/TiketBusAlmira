@@ -5,7 +5,7 @@
  */
 export const formatCurrency = (amount) => {
   if (amount === undefined || amount === null) return 'Rp 0';
-  
+
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -21,14 +21,14 @@ export const formatCurrency = (amount) => {
  */
 export const formatDate = (dateString) => {
   if (!dateString) return '';
-  
-  const options = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   };
-  
+
   return new Date(dateString).toLocaleDateString('id-ID', options);
 };
 
@@ -39,12 +39,12 @@ export const formatDate = (dateString) => {
  */
 export const formatShortDate = (dateString) => {
   if (!dateString) return '';
-  
+
   const date = new Date(dateString);
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
-  
+
   return `${day}/${month}/${year}`;
 };
 
@@ -55,13 +55,13 @@ export const formatShortDate = (dateString) => {
  */
 export const formatTime = (dateString) => {
   if (!dateString) return '';
-  
-  const options = { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: false 
+
+  const options = {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   };
-  
+
   return new Date(dateString).toLocaleTimeString('id-ID', options);
 };
 
@@ -71,24 +71,24 @@ export const formatTime = (dateString) => {
  * @returns {Object} Object containing formatted text and color class
  */
 export const formatStatus = (status) => {
-  if (!status) return { text: 'Tidak diketahui', colorClass: 'text-gray-500' };
-  
+  if (!status) return { text: 'Tidak diketahui', colorClass: 'bg-gray-100 text-gray-800' };
+
   switch (status.toLowerCase()) {
     case 'pending':
-      return { text: 'Menunggu Pembayaran', colorClass: 'text-yellow-600' };
+      return { text: 'Menunggu Pembayaran', colorClass: 'bg-yellow-100 text-yellow-800' };
     case 'confirmed':
     case 'paid':
-      return { text: 'Dikonfirmasi', colorClass: 'text-green-600' };
+      return { text: 'Dikonfirmasi', colorClass: 'bg-green-100 text-green-800' };
     case 'cancelled':
-      return { text: 'Dibatalkan', colorClass: 'text-red-600' };
+      return { text: 'Dibatalkan', colorClass: 'bg-red-100 text-red-800' };
     case 'completed':
-      return { text: 'Selesai', colorClass: 'text-pink-600' };
+      return { text: 'Selesai', colorClass: 'bg-pink-100 text-pink-800' };
     case 'processing':
-      return { text: 'Diproses', colorClass: 'text-pink-600' };
+      return { text: 'Diproses', colorClass: 'bg-blue-100 text-blue-800' };
     case 'expired':
-      return { text: 'Kadaluarsa', colorClass: 'text-gray-600' };
+      return { text: 'Kadaluarsa', colorClass: 'bg-gray-100 text-gray-800' };
     default:
-      return { text: status, colorClass: 'text-gray-600' };
+      return { text: status, colorClass: 'bg-gray-100 text-gray-800' };
   }
 };
 
@@ -99,6 +99,6 @@ export const formatStatus = (status) => {
  */
 export const formatSeatList = (seats) => {
   if (!seats || seats.length === 0) return '-';
-  
+
   return seats.sort().join(', ');
 };

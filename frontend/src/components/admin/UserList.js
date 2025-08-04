@@ -2,35 +2,36 @@ import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
-import { 
-  getAllUsers, 
-  deleteUser, 
+import {
+  getAllUsers,
+  deleteUser,
   makeUserAdmin,
-  updateUser  
+  updateUser
 } from '../../redux/actions/adminActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatDate } from '../../utils/formatters';
 
-const UserList = ({ 
-  getAllUsers, 
-  deleteUser, 
+const UserList = ({
+  getAllUsers,
+  deleteUser,
   makeUserAdmin,
-  updateUser,  
+  updateUser,
   setAlert,
-  users, 
-  loading, 
-  error 
+  users,
+  loading,
+  error,
+  currentUser
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
@@ -47,7 +48,7 @@ const UserList = ({
   // Filter users based on search and role
   useEffect(() => {
     if (users) {
-      let filtered = users.filter(user => 
+      let filtered = users.filter(user =>
         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -72,9 +73,9 @@ const UserList = ({
   const handlePageChange = (page) => {
     setCurrentPage(page);
     // Scroll to top of table
-    document.querySelector('.user-table-container')?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
+    document.querySelector('.user-table-container')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
     });
   };
 
@@ -87,7 +88,7 @@ const UserList = ({
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -115,8 +116,48 @@ const UserList = ({
         pageNumbers.push(totalPages);
       }
     }
-    
+
     return pageNumbers;
+  };
+
+  // TAMBAH: Helper function untuk check permission
+  const canEditUser = (targetUser) => {
+    if (!currentUser) return false;
+    
+    // Super admin can edit anyone except other super_admins
+    if (currentUser.role === 'super_admin') {
+      return targetUser.role !== 'super_admin';
+    }
+    
+    // Admin can only edit regular users
+    if (currentUser.role === 'admin') {
+      return targetUser.role === 'user';
+    }
+    
+    return false;
+  };
+
+  const canDeleteUser = (targetUser) => {
+    if (!currentUser) return false;
+    
+    // Super admin can delete anyone except other super_admins
+    if (currentUser.role === 'super_admin') {
+      return targetUser.role !== 'super_admin';
+    }
+    
+    // Admin can only delete regular users
+    if (currentUser.role === 'admin') {
+      return targetUser.role === 'user';
+    }
+    
+    return false;
+  };
+
+  const canMakeAdmin = (targetUser) => {
+    if (!currentUser) return false;
+    
+    // Only regular users can be made admin, and super_admin cannot be changed
+    return targetUser.role === 'user';
   };
 
   const handleDeleteClick = (user) => {
@@ -213,6 +254,7 @@ const UserList = ({
             <option value="all">Semua Role</option>
             <option value="user">User</option>
             <option value="admin">Admin</option>
+            <option value="super_admin">Super Admin</option>
           </select>
         </div>
         <div>
@@ -265,9 +307,15 @@ const UserList = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mr-4 ${
-                        user.role === 'admin' ? 'bg-red-600' : 'bg-pink-500'
+                        user.role === 'super_admin' 
+                          ? 'bg-purple-600' 
+                          : user.role === 'admin' 
+                          ? 'bg-red-600' 
+                          : 'bg-pink-500'
                       }`}>
-                        {user.role === 'admin' ? (
+                        {user.role === 'super_admin' ? (
+                          <i className="fas fa-crown"></i>
+                        ) : user.role === 'admin' ? (
                           <i className="fas fa-user-shield"></i>
                         ) : (
                           user.username.charAt(0).toUpperCase()
@@ -289,11 +337,14 @@ const UserList = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'admin' 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-green-100 text-green-800'
+                      user.role === 'super_admin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.role === 'admin'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
                     }`}>
-                      {user.role === 'admin' ? 'Administrator' : 'User'}
+                      {user.role === 'super_admin' ? 'Super Admin' :
+                        user.role === 'admin' ? 'Administrator' : 'User'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -301,16 +352,20 @@ const UserList = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditClick(user)}
-                        className="text-green-600 hover:text-green-900 text-sm px-3 py-1 rounded border border-green-600 hover:bg-green-50 transition-colors"
-                        title="Edit User"
-                      >
-                        <i className="fas fa-edit mr-1"></i>
-                        Edit
-                      </button>
-                      
-                      {user.role !== 'admin' && (
+                      {/* HIERARCHICAL EDIT BUTTON */}
+                      {canEditUser(user) && (
+                        <button
+                          onClick={() => handleEditClick(user)}
+                          className="text-green-600 hover:text-green-900 text-sm px-3 py-1 rounded border border-green-600 hover:bg-green-50 transition-colors"
+                          title="Edit User"
+                        >
+                          <i className="fas fa-edit mr-1"></i>
+                          Edit
+                        </button>
+                      )}
+
+                      {/* MAKE ADMIN BUTTON */}
+                      {canMakeAdmin(user) && (
                         <button
                           onClick={() => handleMakeAdmin(user.id_user, user.username)}
                           className="text-pink-600 hover:text-pink-900 text-sm px-3 py-1 rounded border border-pink-600 hover:bg-blue-50 transition-colors"
@@ -320,15 +375,18 @@ const UserList = ({
                           Admin
                         </button>
                       )}
-                      
-                      <button
-                        onClick={() => handleDeleteClick(user)}
-                        className="text-red-600 hover:text-red-900 text-sm px-3 py-1 rounded border border-red-600 hover:bg-red-50 transition-colors"
-                        title="Hapus User"
-                      >
-                        <i className="fas fa-trash mr-1"></i>
-                        Hapus
-                      </button>
+
+                      {/* HIERARCHICAL DELETE BUTTON */}
+                      {canDeleteUser(user) && (
+                        <button
+                          onClick={() => handleDeleteClick(user)}
+                          className="text-red-600 hover:text-red-900 text-sm px-3 py-1 rounded border border-red-600 hover:bg-red-50 transition-colors"
+                          title="Hapus User"
+                        >
+                          <i className="fas fa-trash mr-1"></i>
+                          Hapus
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -351,9 +409,15 @@ const UserList = ({
               {/* User Info */}
               <div className="flex items-start space-x-3 mb-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${
-                  user.role === 'admin' ? 'bg-red-600' : 'bg-pink-500'
+                  user.role === 'super_admin' 
+                    ? 'bg-purple-600' 
+                    : user.role === 'admin' 
+                    ? 'bg-red-600' 
+                    : 'bg-pink-500'
                 }`}>
-                  {user.role === 'admin' ? (
+                  {user.role === 'super_admin' ? (
+                    <i className="fas fa-crown text-sm"></i>
+                  ) : user.role === 'admin' ? (
                     <i className="fas fa-user-shield text-sm"></i>
                   ) : (
                     user.username.charAt(0).toUpperCase()
@@ -365,11 +429,14 @@ const UserList = ({
                       {user.username}
                     </h3>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2 ${
-                      user.role === 'admin' 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-green-100 text-green-800'
+                      user.role === 'super_admin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.role === 'admin'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
                     }`}>
-                      {user.role === 'admin' ? 'Admin' : 'User'}
+                      {user.role === 'super_admin' ? 'Super Admin' :
+                        user.role === 'admin' ? 'Admin' : 'User'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">ID: {user.id_user}</p>
@@ -385,15 +452,19 @@ const UserList = ({
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleEditClick(user)}
-                  className="flex-1 min-w-0 text-green-600 hover:text-green-900 text-xs px-3 py-2 rounded border border-green-600 hover:bg-green-50 transition-colors text-center"
-                >
-                  <i className="fas fa-edit mr-1"></i>
-                  Edit
-                </button>
-                
-                {user.role !== 'admin' && (
+                {/* HIERARCHICAL EDIT BUTTON - MOBILE */}
+                {canEditUser(user) && (
+                  <button
+                    onClick={() => handleEditClick(user)}
+                    className="flex-1 min-w-0 text-green-600 hover:text-green-900 text-xs px-3 py-2 rounded border border-green-600 hover:bg-green-50 transition-colors text-center"
+                  >
+                    <i className="fas fa-edit mr-1"></i>
+                    Edit
+                  </button>
+                )}
+
+                {/* MAKE ADMIN BUTTON - MOBILE */}
+                {canMakeAdmin(user) && (
                   <button
                     onClick={() => handleMakeAdmin(user.id_user, user.username)}
                     className="flex-1 min-w-0 text-pink-600 hover:text-pink-900 text-xs px-3 py-2 rounded border border-pink-600 hover:bg-blue-50 transition-colors text-center"
@@ -402,14 +473,17 @@ const UserList = ({
                     Admin
                   </button>
                 )}
-                
-                <button
-                  onClick={() => handleDeleteClick(user)}
-                  className="flex-1 min-w-0 text-red-600 hover:text-red-900 text-xs px-3 py-2 rounded border border-red-600 hover:bg-red-50 transition-colors text-center"
-                >
-                  <i className="fas fa-trash mr-1"></i>
-                  Hapus
-                </button>
+
+                {/* HIERARCHICAL DELETE BUTTON - MOBILE */}
+                {canDeleteUser(user) && (
+                  <button
+                    onClick={() => handleDeleteClick(user)}
+                    className="flex-1 min-w-0 text-red-600 hover:text-red-900 text-xs px-3 py-2 rounded border border-red-600 hover:bg-red-50 transition-colors text-center"
+                  >
+                    <i className="fas fa-trash mr-1"></i>
+                    Hapus
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -424,17 +498,16 @@ const UserList = ({
             <span className="font-medium">{Math.min(endIndex, filteredUsers.length)}</span> dari{' '}
             <span className="font-medium">{filteredUsers.length}</span> hasil
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              className={`px-2 py-1 rounded text-sm ${currentPage === 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
             >
               <i className="fas fa-chevron-left"></i>
             </button>
@@ -446,13 +519,12 @@ const UserList = ({
                   key={index}
                   onClick={() => typeof page === 'number' && handlePageChange(page)}
                   disabled={page === '...'}
-                  className={`px-3 py-1 rounded text-sm ${
-                    page === currentPage
-                      ? 'bg-pink-500 text-white'
-                      : page === '...'
+                  className={`px-3 py-1 rounded text-sm ${page === currentPage
+                    ? 'bg-pink-500 text-white'
+                    : page === '...'
                       ? 'bg-white text-gray-400 cursor-default'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>
@@ -463,11 +535,10 @@ const UserList = ({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              className={`px-2 py-1 rounded text-sm ${currentPage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
             >
               <i className="fas fa-chevron-right"></i>
             </button>
@@ -488,7 +559,7 @@ const UserList = ({
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            
+
             <form onSubmit={handleEditSubmit}>
               <div className="space-y-3 sm:space-y-4">
                 <div>
@@ -504,7 +575,7 @@ const UserList = ({
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -518,7 +589,7 @@ const UserList = ({
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     No. Telepon
@@ -532,7 +603,7 @@ const UserList = ({
                     placeholder="Opsional"
                   />
                 </div>
-                
+
                 {/* Info Role */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -540,13 +611,16 @@ const UserList = ({
                   </label>
                   <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                     <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                      userToEdit.role === 'admin' 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-green-100 text-green-800'
+                      userToEdit.role === 'super_admin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : userToEdit.role === 'admin'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
                     }`}>
-                      {userToEdit.role === 'admin' ? 'Administrator' : 'User'}
+                      {userToEdit.role === 'super_admin' ? 'Super Administrator' :
+                        userToEdit.role === 'admin' ? 'Administrator' : 'User'}
                     </span>
-                    {userToEdit.role !== 'admin' && (
+                    {userToEdit.role === 'user' && (
                       <span className="text-xs text-gray-500">
                         (Gunakan tombol "Admin" untuk mengubah role)
                       </span>
@@ -554,7 +628,7 @@ const UserList = ({
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
                 <button
                   type="button"
@@ -586,12 +660,12 @@ const UserList = ({
               </div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
             </div>
-            
+
             <p className="text-gray-700 mb-6 text-sm sm:text-base">
-              Apakah Anda yakin ingin menghapus user <strong>{userToDelete.username}</strong>? 
+              Apakah Anda yakin ingin menghapus user <strong>{userToDelete.username}</strong>?
               Tindakan ini tidak dapat dibatalkan.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -618,23 +692,25 @@ UserList.propTypes = {
   getAllUsers: PropTypes.func.isRequired,
   deleteUser: PropTypes.func.isRequired,
   makeUserAdmin: PropTypes.func.isRequired,
-  updateUser: PropTypes.func.isRequired,  
+  updateUser: PropTypes.func.isRequired,
   setAlert: PropTypes.func.isRequired,
   users: PropTypes.array,
   loading: PropTypes.bool,
-  error: PropTypes.string
+  error: PropTypes.string,
+  currentUser: PropTypes.object
 };
 
 const mapStateToProps = state => ({
   users: state.admin.users,
   loading: state.admin.loading,
-  error: state.admin.error
+  error: state.admin.error,
+  currentUser: state.auth.user
 });
 
-export default connect(mapStateToProps, { 
-  getAllUsers, 
-  deleteUser, 
+export default connect(mapStateToProps, {
+  getAllUsers,
+  deleteUser,
   makeUserAdmin,
-  updateUser,  
-  setAlert 
+  updateUser,
+  setAlert
 })(UserList);

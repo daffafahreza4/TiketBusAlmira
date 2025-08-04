@@ -23,6 +23,7 @@ import TicketDetailPage from './pages/TicketDetailPage';
 import PrintTiket from './components/tiket/PrintTiket';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminBusesPage from './pages/AdminBusesPage';
 import AdminRoutesPage from './pages/AdminRoutesPage';
@@ -174,11 +175,21 @@ const App = () => {
             }
           />
 
+          {/* Super Admin Routes - NEW */}
+          <Route
+            path="/admin/super-dashboard"
+            element={
+              <PrivateRoute requiredRole="super_admin">
+                <SuperAdminDashboardPage />
+              </PrivateRoute>
+            }
+          />
+
           {/* Admin Routes */}
           <Route
             path="/admin/dashboard"
             element={
-              <PrivateRoute>
+              <PrivateRoute requiredRole={['admin', 'super_admin']}>
                 <AdminDashboardPage />
               </PrivateRoute>
             }
@@ -186,7 +197,7 @@ const App = () => {
           <Route
             path="/admin/users"
             element={
-              <PrivateRoute>
+              <PrivateRoute requiredRole={['admin', 'super_admin']}>
                 <AdminUsersPage />
               </PrivateRoute>
             }
@@ -194,7 +205,7 @@ const App = () => {
           <Route
             path="/admin/buses"
             element={
-              <PrivateRoute>
+              <PrivateRoute requiredRole={['admin', 'super_admin']}>
                 <AdminBusesPage />
               </PrivateRoute>
             }
@@ -202,7 +213,7 @@ const App = () => {
           <Route
             path="/admin/routes"
             element={
-              <PrivateRoute>
+              <PrivateRoute requiredRole={['admin', 'super_admin']}>
                 <AdminRoutesPage />
               </PrivateRoute>
             }
@@ -210,7 +221,7 @@ const App = () => {
           <Route
             path="/admin/tickets"
             element={
-              <PrivateRoute>
+              <PrivateRoute requiredRole={['admin', 'super_admin']}>
                 <AdminTicketsPage />
               </PrivateRoute>
             }

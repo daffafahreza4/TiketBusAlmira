@@ -2,52 +2,62 @@ import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { Navigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import Spinner from '../components/layout/Spinner';
+import { Link } from 'react-router-dom';
 
-// Admin Dashboard Widgets (reuse existing widgets)
+// Admin Dashboard Widgets
 import AdminStatsWidget from '../components/admin/AdminStatsWidget';
 import RecentTicketsAdminWidget from '../components/admin/RecentTicketsAdminWidget';
 import UserStatsWidget from '../components/admin/UserStatsWidget';
 
 // Actions
-import { 
-  getAdminDashboardStats, 
-  getAllUsers, 
-  createVerifiedUser 
-} from '../redux/actions/adminActions';
+import { getAdminDashboardStats, createVerifiedUser } from '../redux/actions/adminActions';
 import { setAlert } from '../redux/actions/alertActions';
 
 const SuperAdminDashboardPage = ({
   auth: { user, isAuthenticated, loading: authLoading },
-  admin: { stats, users, loading: adminLoading },
+  admin: { stats, loading: adminLoading },
   getAdminDashboardStats,
-  getAllUsers,
   createVerifiedUser,
   setAlert
 }) => {
-  // State untuk Quick Create User Modal
+  // Quick Create User Modal State
   const [showQuickCreateModal, setShowQuickCreateModal] = useState(false);
-  const [quickCreateData, setQuickCreateData] = useState({
+  const [quickCreateFormData, setQuickCreateFormData] = useState({
     username: '',
     email: '',
     password: '',
     no_telepon: '',
     role: 'user'
   });
-  const [quickCreateLoading, setQuickCreateLoading] = useState(false);
+  
+  // Validation State
+  const [quickCreateValidation, setQuickCreateValidation] = useState({
+    username: { isValid: true, message: '' },
+    email: { isValid: true, message: '' },
+    password: { isValid: true, message: '' }
+  });
 
-  // Fetch dashboard data when component mounts
+  // Fetch admin dashboard stats when component mounts
   useEffect(() => {
     if (isAuthenticated && user && user.role === 'super_admin') {
       getAdminDashboardStats();
-      getAllUsers();
     }
-  }, [getAdminDashboardStats, getAllUsers, isAuthenticated, user]);
+  }, [getAdminDashboardStats, isAuthenticated, user]);
+
+  // Listen for global quick create user event
+  useEffect(() => {
+    const handleQuickCreateUser = () => {
+      setShowQuickCreateModal(true);
+    };
+
+    window.addEventListener('openQuickCreateUser', handleQuickCreateUser);
+    return () => window.removeEventListener('openQuickCreateUser', handleQuickCreateUser);
+  }, []);
 
   // Redirect if not authenticated
   if (!isAuthenticated && !authLoading) {
@@ -56,70 +66,128 @@ const SuperAdminDashboardPage = ({
 
   // Redirect if not super admin
   if (isAuthenticated && user && user.role !== 'super_admin') {
-    // Redirect regular admin to admin dashboard
-    if (user.role === 'admin') {
-      return <Navigate to="/admin" />;
-    }
-    return <Navigate to="/dashboard" />;
+    return user.role === 'admin' ? <Navigate to="/admin/dashboard" /> : <Navigate to="/dashboard" />;
   }
 
   // Calculate if we're loading anything
   const isLoading = authLoading || adminLoading;
 
-  // Handler untuk Quick Create User
+  // Validation Functions
+  const validateUsername = (username) => {
+    if (!username || username.trim().length < 3) {
+      return { isValid: false, message: 'Username minimal 3 karakter' };
+    }
+    if (username.trim().length > 50) {
+      return { isValid: false, message: 'Username maksimal 50 karakter' };
+    }
+    return { isValid: true, message: 'Username valid' };
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return { isValid: false, message: 'Format email tidak valid' };
+    }
+    return { isValid: true, message: 'Email valid' };
+  };
+
+  const validatePassword = (password) => {
+    if (!password || password.length < 6) {
+      return { isValid: false, message: 'Password minimal 6 karakter' };
+    }
+    if (password.length > 100) {
+      return { isValid: false, message: 'Password maksimal 100 karakter' };
+    }
+    return { isValid: true, message: 'Password valid' };
+  };
+
+  // Helper function for input styling
+  const getInputStyling = (validation, inputValue) => {
+    if (!validation.isValid) {
+      return 'border-red-300 focus:ring-red-500';
+    }
+    if (inputValue && inputValue.length > 0 && validation.isValid) {
+      return 'border-green-300 focus:ring-green-500';
+    }
+    return 'border-gray-300 focus:ring-blue-500';
+  };
+
+  // Quick Create User Handlers
   const handleQuickCreateSubmit = async (e) => {
     e.preventDefault();
     
-    if (!quickCreateData.username || !quickCreateData.email || !quickCreateData.password) {
-      setAlert('Username, email, dan password harus diisi', 'danger');
+    // Validate all fields
+    const usernameValidation = validateUsername(quickCreateFormData.username);
+    const emailValidation = validateEmail(quickCreateFormData.email);
+    const passwordValidation = validatePassword(quickCreateFormData.password);
+    
+    setQuickCreateValidation({
+      username: usernameValidation,
+      email: emailValidation,
+      password: passwordValidation
+    });
+    
+    if (!usernameValidation.isValid || !emailValidation.isValid || !passwordValidation.isValid) {
+      setAlert('Mohon periksa kembali data yang diisi', 'danger');
       return;
     }
-
-    if (quickCreateData.password.length < 6) {
-      setAlert('Password minimal 6 karakter', 'danger');
-      return;
-    }
-
+    
     try {
-      setQuickCreateLoading(true);
-      await createVerifiedUser(quickCreateData);
-      
-      // Reset form dan tutup modal
-      setQuickCreateData({
+      await createVerifiedUser(quickCreateFormData);
+      setShowQuickCreateModal(false);
+      setQuickCreateFormData({
         username: '',
         email: '',
         password: '',
         no_telepon: '',
         role: 'user'
       });
-      setShowQuickCreateModal(false);
-      
-      // Refresh stats dan user list
-      getAdminDashboardStats();
-      getAllUsers();
-      
+      setQuickCreateValidation({
+        username: { isValid: true, message: '' },
+        email: { isValid: true, message: '' },
+        password: { isValid: true, message: '' }
+      });
     } catch (error) {
       // Error handled by action
-    } finally {
-      setQuickCreateLoading(false);
     }
   };
 
   const handleQuickCreateChange = (e) => {
-    setQuickCreateData({
-      ...quickCreateData,
-      [e.target.name]: e.target.value
+    const { name, value } = e.target;
+    setQuickCreateFormData({
+      ...quickCreateFormData,
+      [name]: value
     });
+    
+    // Real-time validation
+    if (name === 'username') {
+      setQuickCreateValidation(prev => ({
+        ...prev,
+        username: validateUsername(value)
+      }));
+    } else if (name === 'email') {
+      setQuickCreateValidation(prev => ({
+        ...prev,
+        email: validateEmail(value)
+      }));
+    } else if (name === 'password') {
+      setQuickCreateValidation(prev => ({
+        ...prev,
+        password: validatePassword(value)
+      }));
+    }
   };
 
-  // Statistik tambahan untuk super admin
-  const usersByRole = users?.reduce((acc, user) => {
-    acc[user.role] = (acc[user.role] || 0) + 1;
-    return acc;
-  }, {}) || {};
-
-  const adminUsers = users?.filter(u => u.role === 'admin') || [];
-  const recentUsers = users?.slice(0, 5) || [];
+  // Enhanced stats with super admin specific data
+  const enhancedStats = {
+    ...stats,
+    adminStats: {
+      totalAdmins: stats?.users?.filter(u => u.role === 'admin' || u.role === 'super_admin').length || 0,
+      regularAdmins: stats?.users?.filter(u => u.role === 'admin').length || 0,
+      superAdmins: stats?.users?.filter(u => u.role === 'super_admin').length || 1,
+      totalUsers: stats?.users?.filter(u => u.role === 'user').length || 0
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -133,23 +201,32 @@ const SuperAdminDashboardPage = ({
           <div className="p-6 min-h-full">
             <Alert />
 
-            {/* Page Header - Super Admin Style */}
+            {/* Enhanced Super Admin Header */}
             <div className="mb-8">
-              <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                  <i className="fas fa-crown text-xl"></i>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+                  <p className="text-purple-600 font-medium">
+                    Selamat datang, {user?.username || 'Super Admin'}!
+                  </p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold flex items-center">
-                      <i className="fas fa-crown mr-3"></i>
-                      Super Admin Dashboard
-                    </h1>
-                    <p className="mt-2 opacity-90">
-                      Selamat datang, {user?.username}! Kelola seluruh sistem Bus Almira Travel.
-                    </p>
+                    <p className="text-sm opacity-90">Hak Akses Penuh</p>
+                    <p className="font-semibold">Kelola seluruh sistem & administrator</p>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm opacity-75">Total Pengguna</div>
-                    <div className="text-3xl font-bold">{stats?.totalUsers || 0}</div>
-                  </div>
+                  <button
+                    onClick={() => setShowQuickCreateModal(true)}
+                    className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all text-sm font-medium"
+                  >
+                    <i className="fas fa-user-plus mr-2"></i>
+                    Quick Create User
+                  </button>
                 </div>
               </div>
             </div>
@@ -160,172 +237,190 @@ const SuperAdminDashboardPage = ({
               </div>
             ) : (
               <div className="space-y-6 pb-8">
-                {/* Row 1: Stats Overview - Enhanced with User Role Stats */}
+                {/* Row 1: Enhanced Stats Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <AdminStatsWidget
-                    stats={stats || {}}
-                    loading={isLoading}
-                  />
-                  
-                  {/* User Role Breakdown Widget */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Users by Role</h3>
-                      <i className="fas fa-users-cog text-purple-500 text-xl"></i>
+                  {/* Total Users */}
+                  <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-center">
+                      <div className="bg-blue-500 p-3 rounded-lg">
+                        <i className="fas fa-users text-white text-xl"></i>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Users</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {enhancedStats.adminStats.totalUsers}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Super Admin:</span>
-                        <span className="font-semibold text-purple-600">{usersByRole['super_admin'] || 0}</span>
+                  </div>
+
+                  {/* Total Administrators */}
+                  <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-center">
+                      <div className="bg-red-500 p-3 rounded-lg">
+                        <i className="fas fa-user-shield text-white text-xl"></i>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Admin:</span>
-                        <span className="font-semibold text-blue-600">{usersByRole['admin'] || 0}</span>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Administrators</p>
+                        <p className="text-2xl font-bold text-red-600">
+                          {enhancedStats.adminStats.regularAdmins}
+                        </p>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">User:</span>
-                        <span className="font-semibold text-green-600">{usersByRole['user'] || 0}</span>
+                    </div>
+                  </div>
+
+                  {/* Super Admins */}
+                  <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-center">
+                      <div className="bg-purple-500 p-3 rounded-lg">
+                        <i className="fas fa-crown text-white text-xl"></i>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Super Admins</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {enhancedStats.adminStats.superAdmins}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Bus */}
+                  <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-center">
+                      <div className="bg-green-500 p-3 rounded-lg">
+                        <i className="fas fa-bus text-white text-xl"></i>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Bus</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {stats?.totalBuses || 0}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Row 2: Charts and Super Admin Actions */}
+                {/* Row 2: Management Panels */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Super Admin Actions */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold mb-4 flex items-center">
+                      <i className="fas fa-crown text-purple-600 mr-2"></i>
+                      Super Admin Actions
+                    </h3>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => setShowQuickCreateModal(true)}
+                        className="block w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-user-plus mr-3 text-purple-600"></i>
+                        <span className="font-medium">Buat User Terverifikasi</span>
+                        <p className="text-sm text-gray-600 ml-6">Bypass OTP - langsung aktif</p>
+                      </button>
+
+                      <Link 
+                        to="/admin/users" 
+                        className="block w-full text-left p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-users-cog mr-3 text-red-600"></i>
+                        <span className="font-medium">Kelola Semua User & Admin</span>
+                        <p className="text-sm text-gray-600 ml-6">Manajemen role & permissions</p>
+                      </Link>
+
+                      <Link 
+                        to="/admin/tickets" 
+                        className="block w-full text-left p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-ticket-alt mr-3 text-orange-600"></i>
+                        <span className="font-medium">Monitoring Tiket System</span>
+                        <p className="text-sm text-gray-600 ml-6">Oversight seluruh transaksi</p>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* System Management */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h3 className="text-lg font-bold mb-4 flex items-center">
+                      <i className="fas fa-cogs text-gray-600 mr-2"></i>
+                      System Management
+                    </h3>
+                    <div className="space-y-3">
+                      <Link 
+                        to="/admin/buses" 
+                        className="block w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-bus mr-3 text-green-600"></i>
+                        <span className="font-medium">Kelola Armada Bus</span>
+                        <p className="text-sm text-gray-600 ml-6">Manajemen bus & kapasitas</p>
+                      </Link>
+
+                      <Link 
+                        to="/admin/routes" 
+                        className="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <i className="fas fa-route mr-3 text-blue-600"></i>
+                        <span className="font-medium">Kelola Rute Perjalanan</span>
+                        <p className="text-sm text-gray-600 ml-6">Jadwal & harga tiket</p>
+                      </Link>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <i className="fas fa-chart-line mr-3 text-gray-600"></i>
+                        <span className="font-medium">Analytics & Reports</span>
+                        <p className="text-sm text-gray-600 ml-6">Coming soon...</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Detailed Analytics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <UserStatsWidget
                     stats={stats || {}}
                     loading={isLoading}
                   />
 
-                  {/* Super Admin Quick Actions Widget */}
+                  {/* Admin Overview Widget */}
                   <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-bold mb-4">
-                      <i className="fas fa-crown mr-2 text-purple-500"></i>
-                      Super Admin Actions
-                    </h3>
-                    <div className="space-y-3">
-                      {/* Quick Create User - Fitur Utama */}
-                      <button
-                        onClick={() => setShowQuickCreateModal(true)}
-                        className="block w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                      >
-                        <i className="fas fa-user-plus mr-3 text-purple-600"></i>
-                        <span className="font-medium">Buat User Baru (Bypass OTP)</span>
-                        <div className="text-xs text-gray-500 mt-1">Langsung aktif tanpa verifikasi email</div>
-                      </button>
-
-                      <Link to="/admin/users" className="block w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                        <i className="fas fa-users mr-3 text-blue-600"></i>
-                        <span className="font-medium">Kelola Semua Users</span>
-                        <div className="text-xs text-gray-500 mt-1">{stats?.totalUsers || 0} total users</div>
-                      </Link>
-
-                      <Link to="/admin/buses" className="block w-full text-left p-3 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors">
-                        <i className="fas fa-bus mr-3 text-pink-600"></i>
-                        <span className="font-medium">Kelola Bus & Rute</span>
-                        <div className="text-xs text-gray-500 mt-1">{stats?.totalBuses || 0} bus, {stats?.totalActiveRoutes || 0} rute aktif</div>
-                      </Link>
-
-                      <Link to="/admin/routes" className="block w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                        <i className="fas fa-route mr-3 text-green-600"></i>
-                        <span className="font-medium">Tambah Rute Baru</span>
-                        <div className="text-xs text-gray-500 mt-1">Sistem 1 bus = 1 rute aktif</div>
-                      </Link>
+                    <h3 className="text-lg font-bold mb-4">Administrator Overview</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-purple-400 rounded-full mr-2"></div>
+                          <span>Super Administrators</span>
+                        </div>
+                        <span className="font-semibold">{enhancedStats.adminStats.superAdmins}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-red-400 rounded-full mr-2"></div>
+                          <span>Regular Administrators</span>
+                        </div>
+                        <span className="font-semibold">{enhancedStats.adminStats.regularAdmins}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-blue-400 rounded-full mr-2"></div>
+                          <span>Regular Users</span>
+                        </div>
+                        <span className="font-semibold">{enhancedStats.adminStats.totalUsers}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6 p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
+                      <div className="flex items-center">
+                        <i className="fas fa-shield-alt text-purple-600 mr-2"></i>
+                        <span className="text-purple-800 text-sm font-medium">
+                          Sistem role hierarchy aktif
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Row 3: Recent Activities & Admin Management */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Recent Users Widget */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold">Pengguna Terbaru</h3>
-                      <Link to="/admin/users" className="text-purple-500 hover:text-purple-700 text-sm">
-                        Lihat Semua
-                      </Link>
-                    </div>
-                    
-                    {recentUsers.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        <i className="fas fa-users text-2xl mb-2"></i>
-                        <p>Belum ada pengguna terbaru</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {recentUsers.map((user) => (
-                          <div key={user.id_user} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm mr-3 ${
-                                user.role === 'super_admin' ? 'bg-purple-500' :
-                                user.role === 'admin' ? 'bg-blue-500' : 'bg-green-500'
-                              }`}>
-                                {user.role === 'super_admin' ? (
-                                  <i className="fas fa-crown"></i>
-                                ) : user.role === 'admin' ? (
-                                  <i className="fas fa-user-shield"></i>
-                                ) : (
-                                  user.username.charAt(0).toUpperCase()
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium text-sm">{user.username}</div>
-                                <div className="text-xs text-gray-500">{user.email}</div>
-                              </div>
-                            </div>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              user.role === 'super_admin' ? 'bg-purple-100 text-purple-800' :
-                              user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                            }`}>
-                              {user.role}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Admin Users Management */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold">
-                        <i className="fas fa-user-shield mr-2 text-blue-500"></i>
-                        Administrator ({adminUsers.length})
-                      </h3>
-                      <Link to="/admin/users?role=admin" className="text-purple-500 hover:text-purple-700 text-sm">
-                        Kelola Admin
-                      </Link>
-                    </div>
-                    
-                    {adminUsers.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        <i className="fas fa-user-shield text-2xl mb-2"></i>
-                        <p>Belum ada administrator</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {adminUsers.slice(0, 4).map((admin) => (
-                          <div key={admin.id_user} className="flex items-center p-3 bg-blue-50 rounded-lg">
-                            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">
-                              <i className="fas fa-user-shield text-sm"></i>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm truncate">{admin.username}</div>
-                              <div className="text-xs text-gray-500 truncate">{admin.email}</div>
-                            </div>
-                          </div>
-                        ))}
-                        {adminUsers.length > 4 && (
-                          <div className="text-center text-sm text-gray-500">
-                            +{adminUsers.length - 4} admin lainnya
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row 4: Recent Tickets (reuse existing widget) */}
+                {/* Row 4: Recent Activities */}
                 <div>
                   <RecentTicketsAdminWidget
                     recentTickets={stats?.recentTickets || []}
@@ -338,146 +433,185 @@ const SuperAdminDashboardPage = ({
         </main>
       </div>
 
-      {/* Footer positioned properly */}
-      <div className="ml-0 md:ml-64">
-        <Footer />
-      </div>
-
       {/* Quick Create User Modal */}
       {showQuickCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6 max-h-screen overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                <i className="fas fa-crown mr-2 text-purple-500"></i>
-                Quick Create User
-              </h3>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Quick Create User
+                </h3>
+                <p className="text-sm text-purple-600 mt-1">
+                  <i className="fas fa-crown mr-1"></i>
+                  Bypass OTP - User langsung aktif
+                </p>
+              </div>
               <button
                 onClick={() => setShowQuickCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-                disabled={quickCreateLoading}
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center text-purple-700">
-                <i className="fas fa-info-circle mr-2"></i>
-                <span className="text-sm font-medium">Bypass OTP - User langsung aktif</span>
-              </div>
-            </div>
-
             <form onSubmit={handleQuickCreateSubmit}>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
+                {/* Username */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Username *
+                    Username <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="username"
-                    value={quickCreateData.username}
+                    value={quickCreateFormData.username}
                     onChange={handleQuickCreateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                    disabled={quickCreateLoading}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(quickCreateValidation.username, quickCreateFormData.username)}`}
                     placeholder="Masukkan username"
+                    required
                   />
+                  {quickCreateFormData.username.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      quickCreateValidation.username.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        quickCreateValidation.username.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {quickCreateValidation.username.message}
+                    </p>
+                  )}
                 </div>
 
+                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     name="email"
-                    value={quickCreateData.email}
+                    value={quickCreateFormData.email}
                     onChange={handleQuickCreateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                    disabled={quickCreateLoading}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(quickCreateValidation.email, quickCreateFormData.email)}`}
                     placeholder="user@example.com"
+                    required
                   />
+                  {quickCreateFormData.email.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      quickCreateValidation.email.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        quickCreateValidation.email.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {quickCreateValidation.email.message}
+                    </p>
+                  )}
                 </div>
 
+                {/* Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password *
+                    Password <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="password"
                     name="password"
-                    value={quickCreateData.password}
+                    value={quickCreateFormData.password}
                     onChange={handleQuickCreateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    required
-                    disabled={quickCreateLoading}
-                    minLength="6"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(quickCreateValidation.password, quickCreateFormData.password)}`}
                     placeholder="Minimal 6 karakter"
+                    required
                   />
+                  {quickCreateFormData.password.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      quickCreateValidation.password.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        quickCreateValidation.password.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {quickCreateValidation.password.message}
+                    </p>
+                  )}
                 </div>
 
+                {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    No. Telepon
+                    No. Telepon <span className="text-gray-400">(Opsional)</span>
                   </label>
                   <input
                     type="text"
                     name="no_telepon"
-                    value={quickCreateData.no_telepon}
+                    value={quickCreateFormData.no_telepon}
                     onChange={handleQuickCreateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    disabled={quickCreateLoading}
-                    placeholder="08xxxxxxxxxx (opsional)"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="08xxxxxxxxxx"
                   />
                 </div>
 
+                {/* Role */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role *
+                    Role <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="role"
-                    value={quickCreateData.role}
+                    value={quickCreateFormData.role}
                     onChange={handleQuickCreateChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                    disabled={quickCreateLoading}
                   >
                     <option value="user">User - Pengguna biasa</option>
-                    <option value="admin">Admin - Administrator</option>
+                    <option value="admin">Admin - Administrator sistem</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    User akan langsung aktif tanpa verifikasi email
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowQuickCreateModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                  disabled={quickCreateLoading}
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center"
-                  disabled={quickCreateLoading}
+                  disabled={!quickCreateValidation.username.isValid || 
+                           !quickCreateValidation.email.isValid || 
+                           !quickCreateValidation.password.isValid ||
+                           !quickCreateFormData.username || 
+                           !quickCreateFormData.email || 
+                           !quickCreateFormData.password}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors text-sm ${
+                    quickCreateValidation.username.isValid && 
+                    quickCreateValidation.email.isValid && 
+                    quickCreateValidation.password.isValid &&
+                    quickCreateFormData.username && 
+                    quickCreateFormData.email && 
+                    quickCreateFormData.password
+                      ? 'bg-purple-500 text-white hover:bg-purple-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
-                  {quickCreateLoading ? (
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                  ) : (
-                    <i className="fas fa-crown mr-2"></i>
-                  )}
-                  {quickCreateLoading ? 'Membuat...' : 'Buat User'}
+                  <i className="fas fa-crown mr-2"></i>
+                  Create User
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Footer positioned properly */}
+      <div className="ml-0 md:ml-64">
+        <Footer />
+      </div>
     </div>
   );
 };
@@ -486,7 +620,6 @@ SuperAdminDashboardPage.propTypes = {
   auth: PropTypes.object.isRequired,
   admin: PropTypes.object.isRequired,
   getAdminDashboardStats: PropTypes.func.isRequired,
-  getAllUsers: PropTypes.func.isRequired,
   createVerifiedUser: PropTypes.func.isRequired,
   setAlert: PropTypes.func.isRequired
 };
@@ -498,7 +631,6 @@ const mapStateToProps = state => ({
 
 export default connect(mapStateToProps, { 
   getAdminDashboardStats, 
-  getAllUsers, 
-  createVerifiedUser, 
+  createVerifiedUser,
   setAlert 
 })(SuperAdminDashboardPage);

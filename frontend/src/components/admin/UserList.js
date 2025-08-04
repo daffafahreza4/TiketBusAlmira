@@ -6,7 +6,8 @@ import {
   getAllUsers,
   deleteUser,
   makeUserAdmin,
-  updateUser
+  updateUser,
+  createVerifiedUser  
 } from '../../redux/actions/adminActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatDate } from '../../utils/formatters';
@@ -16,6 +17,7 @@ const UserList = ({
   deleteUser,
   makeUserAdmin,
   updateUser,
+  createVerifiedUser,  
   setAlert,
   users,
   loading,
@@ -40,6 +42,70 @@ const UserList = ({
     email: '',
     no_telepon: ''
   });
+
+  // TAMBAH: Create Verified User Modal State (Super Admin Only)
+  const [showCreateVerifiedModal, setShowCreateVerifiedModal] = useState(false);
+  const [createVerifiedFormData, setCreateVerifiedFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    no_telepon: '',
+    role: 'user'
+  });
+
+  // TAMBAH: Validation State untuk Create Verified User
+  const [createVerifiedValidation, setCreateVerifiedValidation] = useState({
+    username: { isValid: true, message: '' },
+    email: { isValid: true, message: '' },
+    password: { isValid: true, message: '' }
+  });
+
+  // TAMBAH: Validation Functions
+  const validateUsername = (username) => {
+    if (!username || username.trim().length < 3) {
+      return { isValid: false, message: 'Username minimal 3 karakter' };
+    }
+    if (username.trim().length > 50) {
+      return { isValid: false, message: 'Username maksimal 50 karakter' };
+    }
+    
+    // Check if username already exists
+    const existingUser = users?.find(user => 
+      user.username.toLowerCase() === username.toLowerCase()
+    );
+    if (existingUser) {
+      return { isValid: false, message: 'Username sudah digunakan' };
+    }
+    
+    return { isValid: true, message: 'Username valid' };
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return { isValid: false, message: 'Format email tidak valid' };
+    }
+    
+    // Check if email already exists
+    const existingUser = users?.find(user => 
+      user.email.toLowerCase() === email.toLowerCase()
+    );
+    if (existingUser) {
+      return { isValid: false, message: 'Email sudah terdaftar' };
+    }
+    
+    return { isValid: true, message: 'Email valid' };
+  };
+
+  const validatePassword = (password) => {
+    if (!password || password.length < 6) {
+      return { isValid: false, message: 'Password minimal 6 karakter' };
+    }
+    if (password.length > 100) {
+      return { isValid: false, message: 'Password maksimal 100 karakter' };
+    }
+    return { isValid: true, message: 'Password valid' };
+  };
 
   useEffect(() => {
     getAllUsers();
@@ -120,7 +186,7 @@ const UserList = ({
     return pageNumbers;
   };
 
-  // TAMBAH: Helper function untuk check permission
+  // Helper function untuk check permission
   const canEditUser = (targetUser) => {
     if (!currentUser) return false;
     
@@ -206,6 +272,87 @@ const UserList = ({
     });
   };
 
+  // TAMBAH: Create Verified User Handlers (Super Admin Only)
+  const handleCreateVerifiedClick = () => {
+    setCreateVerifiedFormData({
+      username: '',
+      email: '',
+      password: '',
+      no_telepon: '',
+      role: 'user'
+    });
+    setCreateVerifiedValidation({
+      username: { isValid: true, message: '' },
+      email: { isValid: true, message: '' },
+      password: { isValid: true, message: '' }
+    });
+    setShowCreateVerifiedModal(true);
+  };
+
+  const handleCreateVerifiedSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate all fields
+    const usernameValidation = validateUsername(createVerifiedFormData.username);
+    const emailValidation = validateEmail(createVerifiedFormData.email);
+    const passwordValidation = validatePassword(createVerifiedFormData.password);
+    
+    setCreateVerifiedValidation({
+      username: usernameValidation,
+      email: emailValidation,
+      password: passwordValidation
+    });
+    
+    if (!usernameValidation.isValid || !emailValidation.isValid || !passwordValidation.isValid) {
+      setAlert('Mohon periksa kembali data yang diisi', 'danger');
+      return;
+    }
+    
+    try {
+      await createVerifiedUser(createVerifiedFormData);
+      setShowCreateVerifiedModal(false);
+    } catch (error) {
+      // Error handled by action
+    }
+  };
+
+  const handleCreateVerifiedChange = (e) => {
+    const { name, value } = e.target;
+    setCreateVerifiedFormData({
+      ...createVerifiedFormData,
+      [name]: value
+    });
+    
+    // Real-time validation
+    if (name === 'username') {
+      setCreateVerifiedValidation(prev => ({
+        ...prev,
+        username: validateUsername(value)
+      }));
+    } else if (name === 'email') {
+      setCreateVerifiedValidation(prev => ({
+        ...prev,
+        email: validateEmail(value)
+      }));
+    } else if (name === 'password') {
+      setCreateVerifiedValidation(prev => ({
+        ...prev,
+        password: validatePassword(value)
+      }));
+    }
+  };
+
+  // Helper function untuk styling input berdasarkan validasi
+  const getInputStyling = (validation, inputValue) => {
+    if (!validation.isValid) {
+      return 'border-red-300 focus:ring-red-500';
+    }
+    if (inputValue && inputValue.length > 0 && validation.isValid) {
+      return 'border-green-300 focus:ring-green-500';
+    }
+    return 'border-gray-300 focus:ring-blue-500';
+  };
+
   if (loading) {
     return <Spinner />;
   }
@@ -220,6 +367,7 @@ const UserList = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 user-table-container">
+      {/* UPDATED HEADER SECTION - TAMBAH BUTTON SUPER ADMIN */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
         <h2 className="text-lg sm:text-xl font-bold">Kelola User</h2>
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
@@ -230,6 +378,18 @@ const UserList = ({
             <span className="text-xs sm:text-sm text-gray-600">
               Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} dari {filteredUsers.length}
             </span>
+          )}
+          
+          {/* TAMBAH: BUTTON SUPER ADMIN CREATE VERIFIED USER */}
+          {currentUser?.role === 'super_admin' && (
+            <button
+              onClick={handleCreateVerifiedClick}
+              className="w-full sm:w-auto bg-purple-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+              title="Buat user/admin tanpa verifikasi email"
+            >
+              <i className="fas fa-crown mr-2"></i>
+              Buat User Verified
+            </button>
           )}
         </div>
       </div>
@@ -546,6 +706,180 @@ const UserList = ({
         </div>
       )}
 
+      {/* TAMBAH: CREATE VERIFIED USER MODAL - SUPER ADMIN ONLY */}
+      {showCreateVerifiedModal && currentUser?.role === 'super_admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6 max-h-screen overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Buat User Terverifikasi
+                </h3>
+                <p className="text-sm text-purple-600 mt-1">
+                  <i className="fas fa-crown mr-1"></i>
+                  Bypass verifikasi email - langsung aktif
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreateVerifiedModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVerifiedSubmit}>
+              <div className="space-y-3 sm:space-y-4">
+                {/* Username */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={createVerifiedFormData.username}
+                    onChange={handleCreateVerifiedChange}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(createVerifiedValidation.username, createVerifiedFormData.username)}`}
+                    placeholder="Masukkan username"
+                    required
+                  />
+                  {createVerifiedFormData.username.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      createVerifiedValidation.username.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        createVerifiedValidation.username.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {createVerifiedValidation.username.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={createVerifiedFormData.email}
+                    onChange={handleCreateVerifiedChange}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(createVerifiedValidation.email, createVerifiedFormData.email)}`}
+                    placeholder="user@example.com"
+                    required
+                  />
+                  {createVerifiedFormData.email.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      createVerifiedValidation.email.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        createVerifiedValidation.email.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {createVerifiedValidation.email.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={createVerifiedFormData.password}
+                    onChange={handleCreateVerifiedChange}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${getInputStyling(createVerifiedValidation.password, createVerifiedFormData.password)}`}
+                    placeholder="Minimal 6 karakter"
+                    required
+                  />
+                  {createVerifiedFormData.password.length > 0 && (
+                    <p className={`text-xs mt-1 ${
+                      createVerifiedValidation.password.isValid ? 'text-green-600' : 'text-red-500'
+                    }`}>
+                      <i className={`fas ${
+                        createVerifiedValidation.password.isValid ? 'fa-check-circle' : 'fa-times-circle'
+                      } mr-1`}></i>
+                      {createVerifiedValidation.password.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    No. Telepon <span className="text-gray-400">(Opsional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="no_telepon"
+                    value={createVerifiedFormData.no_telepon}
+                    onChange={handleCreateVerifiedChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="08xxxxxxxxxx"
+                  />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="role"
+                    value={createVerifiedFormData.role}
+                    onChange={handleCreateVerifiedChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="user">User - Pengguna biasa</option>
+                    <option value="admin">Admin - Administrator sistem</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    User akan langsung aktif tanpa verifikasi email
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateVerifiedModal(false)}
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!createVerifiedValidation.username.isValid || 
+                           !createVerifiedValidation.email.isValid || 
+                           !createVerifiedValidation.password.isValid ||
+                           !createVerifiedFormData.username || 
+                           !createVerifiedFormData.email || 
+                           !createVerifiedFormData.password}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors text-sm ${
+                    createVerifiedValidation.username.isValid && 
+                    createVerifiedValidation.email.isValid && 
+                    createVerifiedValidation.password.isValid &&
+                    createVerifiedFormData.username && 
+                    createVerifiedFormData.email && 
+                    createVerifiedFormData.password
+                      ? 'bg-purple-500 text-white hover:bg-purple-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <i className="fas fa-crown mr-2"></i>
+                  Buat User Verified
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit Modal */}
       {showEditModal && userToEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -693,6 +1027,7 @@ UserList.propTypes = {
   deleteUser: PropTypes.func.isRequired,
   makeUserAdmin: PropTypes.func.isRequired,
   updateUser: PropTypes.func.isRequired,
+  createVerifiedUser: PropTypes.func.isRequired,  
   setAlert: PropTypes.func.isRequired,
   users: PropTypes.array,
   loading: PropTypes.bool,
@@ -712,5 +1047,6 @@ export default connect(mapStateToProps, {
   deleteUser,
   makeUserAdmin,
   updateUser,
+  createVerifiedUser,  
   setAlert
 })(UserList);

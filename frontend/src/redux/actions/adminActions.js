@@ -50,6 +50,38 @@ export const getAllUsers = () => async dispatch => {
   }
 };
 
+export const createVerifiedUser = (userData) => async dispatch => {
+  try {
+    const config = {
+      headers: { 'Content-Type': 'application/json' }
+    };
+
+    const res = await axios.post('/api/admin/users/create-verified', userData, config);
+    
+    dispatch({
+      type: 'CREATE_VERIFIED_USER_SUCCESS',
+      payload: res.data.data
+    });
+    
+    dispatch(setAlert(res.data.message || 'User berhasil dibuat dan langsung aktif', 'success'));
+    
+    // Refresh user list
+    dispatch(getAllUsers());
+    
+    return res.data;
+  } catch (err) {
+    const errorMsg = err.response?.data?.message || 'Terjadi kesalahan saat membuat user';
+    
+    dispatch(setAlert(errorMsg, 'danger'));
+    dispatch({
+      type: ADMIN_ERROR,
+      payload: errorMsg
+    });
+    
+    throw err;
+  }
+};
+
 // Delete user
 export const deleteUser = (userId) => async dispatch => {
   try {

@@ -33,6 +33,13 @@ const adminReducer = (state = initialState, action) => {
         loading: false,
         error: null
       };
+    case 'CREATE_VERIFIED_USER_SUCCESS':
+      return {
+        ...state,
+        users: state.users ? [...state.users, payload] : [payload],
+        loading: false,
+        error: null
+      };
     case DELETE_USER_SUCCESS:
       return {
         ...state,

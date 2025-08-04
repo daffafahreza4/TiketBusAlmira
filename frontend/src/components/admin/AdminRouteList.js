@@ -2,38 +2,41 @@ import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
-import { 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
+import {
+  getAllAdminRoutes,
+  deleteAdminRoute,
   updateAdminRoute,
-  createAdminRoute  
+  createAdminRoute
 } from '../../redux/actions/routeAdminActions';
-import { getAllBuses } from '../../redux/actions/busActions';
+import { getAllBuses, getAvailableBuses } from '../../redux/actions/busActions';
 import { setAlert } from '../../redux/actions/alertActions';
 import { formatDate, formatTime, formatCurrency } from '../../utils/formatters';
 
-const AdminRouteList = ({ 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
+const AdminRouteList = ({
+  getAllAdminRoutes,
+  deleteAdminRoute,
   updateAdminRoute,
   createAdminRoute,
   getAllBuses,
+  getAvailableBuses, // TAMBAH INI
   setAlert,
-  routes, 
+  routes,
   buses,
-  loading, 
-  error 
+  availableBuses, // TAMBAH INI - dari redux state
+  loading,
+  error
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredRoutes, setFilteredRoutes] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState(null);
-  
+  const [busLoading, setBusLoading] = useState(false);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
   const [routeToEdit, setRouteToEdit] = useState(null);
@@ -59,13 +62,13 @@ const AdminRouteList = ({
 
   useEffect(() => {
     getAllAdminRoutes();
-    getAllBuses(); // Fetch buses for dropdown
+    getAllBuses(); // Fetch all buses for reference
   }, [getAllAdminRoutes, getAllBuses]);
 
   // Filter routes based on search and status
   useEffect(() => {
     if (routes) {
-      let filtered = routes.filter(route => 
+      let filtered = routes.filter(route =>
         route.asal.toLowerCase().includes(searchTerm.toLowerCase()) ||
         route.tujuan.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (route.Bus && route.Bus.nama_bus.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -76,10 +79,44 @@ const AdminRouteList = ({
       }
 
       setFilteredRoutes(filtered);
-      // Reset to first page when filters change
       setCurrentPage(1);
     }
   }, [routes, searchTerm, filterStatus]);
+
+  // TAMBAH: Functions untuk load available buses
+  const loadAvailableBusesForCreate = async () => {
+    try {
+      console.log('🔄 Loading available buses for CREATE...');
+      setBusLoading(true);
+      
+      await getAvailableBuses(); // No excludeRouteId untuk create
+      
+      console.log('✅ CREATE - Available buses loaded');
+      
+    } catch (error) {
+      console.error('❌ Error loading available buses for create:', error);
+      setAlert('Gagal memuat data bus tersedia', 'danger');
+    } finally {
+      setBusLoading(false);
+    }
+  };
+
+  const loadAvailableBusesForEdit = async (routeId) => {
+    try {
+      console.log('🔄 Loading available buses for EDIT routeId:', routeId);
+      setBusLoading(true);
+      
+      await getAvailableBuses(routeId); // Include excludeRouteId untuk edit
+      
+      console.log('✅ EDIT - Available buses loaded');
+      
+    } catch (error) {
+      console.error('❌ Error loading available buses for edit:', error);
+      setAlert('Gagal memuat data bus tersedia', 'danger');
+    } finally {
+      setBusLoading(false);
+    }
+  };
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredRoutes.length / itemsPerPage);
@@ -90,10 +127,9 @@ const AdminRouteList = ({
   // Pagination handlers
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    // Scroll to top of table
-    document.querySelector('.route-table-container')?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
+    document.querySelector('.route-table-container')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
     });
   };
 
@@ -106,7 +142,7 @@ const AdminRouteList = ({
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -134,7 +170,7 @@ const AdminRouteList = ({
         pageNumbers.push(totalPages);
       }
     }
-    
+
     return pageNumbers;
   };
 
@@ -152,13 +188,15 @@ const AdminRouteList = ({
     }
   };
 
-  // Edit handlers
-  const handleEditClick = (route) => {
-    setRouteToEdit(route);
+  // PERBAIKI: Edit handlers dengan load available buses
+  const handleEditClick = async (route) => {
+    console.log('✏️ EDIT button clicked for route:', route.id_rute);
     
+    setRouteToEdit(route);
+
     // Format datetime for input field
     const formattedDateTime = new Date(route.waktu_berangkat).toISOString().slice(0, 16);
-    
+
     setEditFormData({
       id_bus: route.id_bus,
       asal: route.asal,
@@ -167,15 +205,28 @@ const AdminRouteList = ({
       harga: route.harga,
       status: route.status
     });
+
+    // Load available buses untuk edit (include current bus)
+    await loadAvailableBusesForEdit(route.id_rute);
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!editFormData.id_bus) {
+      setAlert('Silakan pilih bus', 'danger');
+      return;
+    }
+    
     if (routeToEdit) {
-      updateAdminRoute(routeToEdit.id_rute, editFormData);
-      setShowEditModal(false);
-      setRouteToEdit(null);
+      try {
+        await updateAdminRoute(routeToEdit.id_rute, editFormData);
+        setShowEditModal(false);
+        setRouteToEdit(null);
+      } catch (error) {
+        console.error('Edit route error:', error);
+      }
     }
   };
 
@@ -186,8 +237,10 @@ const AdminRouteList = ({
     });
   };
 
-  // Create handlers
-  const handleCreateClick = () => {
+  // PERBAIKI: Create handlers dengan load available buses
+  const handleCreateClick = async () => {
+    console.log('🆕 CREATE button clicked');
+
     setCreateFormData({
       id_bus: '',
       asal: '',
@@ -196,13 +249,26 @@ const AdminRouteList = ({
       harga: '',
       status: 'aktif'
     });
+
+    // Load available buses untuk create
+    await loadAvailableBusesForCreate();
     setShowCreateModal(true);
   };
 
-  const handleCreateSubmit = (e) => {
+  const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    createAdminRoute(createFormData);
-    setShowCreateModal(false);
+    
+    if (!createFormData.id_bus) {
+      setAlert('Silakan pilih bus', 'danger');
+      return;
+    }
+    
+    try {
+      await createAdminRoute(createFormData);
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Create route error:', error);
+    }
   };
 
   const handleCreateChange = (e) => {
@@ -345,11 +411,10 @@ const AdminRouteList = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      route.status === 'aktif' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${route.status === 'aktif'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {route.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
                     </span>
                   </td>
@@ -363,7 +428,7 @@ const AdminRouteList = ({
                         <i className="fas fa-edit mr-1"></i>
                         Edit
                       </button>
-                      
+
                       <button
                         onClick={() => handleDeleteClick(route)}
                         className="text-red-600 hover:text-red-900 text-sm px-3 py-1 rounded border border-red-600 hover:bg-red-50 transition-colors"
@@ -401,11 +466,10 @@ const AdminRouteList = ({
                     <h3 className="text-sm font-semibold text-gray-900 truncate">
                       {route.asal} → {route.tujuan}
                     </h3>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2 ${
-                      route.status === 'aktif' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2 ${route.status === 'aktif'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {route.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
                     </span>
                   </div>
@@ -437,7 +501,7 @@ const AdminRouteList = ({
                   <i className="fas fa-edit mr-1"></i>
                   Edit
                 </button>
-                
+
                 <button
                   onClick={() => handleDeleteClick(route)}
                   className="flex-1 text-red-600 hover:text-red-900 text-xs px-3 py-2 rounded border border-red-600 hover:bg-red-50 transition-colors text-center"
@@ -459,17 +523,16 @@ const AdminRouteList = ({
             <span className="font-medium">{Math.min(endIndex, filteredRoutes.length)}</span> dari{' '}
             <span className="font-medium">{filteredRoutes.length}</span> hasil
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Previous Button */}
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              className={`px-2 py-1 rounded text-sm ${currentPage === 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
             >
               <i className="fas fa-chevron-left"></i>
             </button>
@@ -481,13 +544,12 @@ const AdminRouteList = ({
                   key={index}
                   onClick={() => typeof page === 'number' && handlePageChange(page)}
                   disabled={page === '...'}
-                  className={`px-3 py-1 rounded text-sm ${
-                    page === currentPage
-                      ? 'bg-pink-500 text-white'
-                      : page === '...'
+                  className={`px-3 py-1 rounded text-sm ${page === currentPage
+                    ? 'bg-pink-500 text-white'
+                    : page === '...'
                       ? 'bg-white text-gray-400 cursor-default'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>
@@ -498,11 +560,10 @@ const AdminRouteList = ({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-2 py-1 rounded text-sm ${
-                currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+              className={`px-2 py-1 rounded text-sm ${currentPage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
             >
               <i className="fas fa-chevron-right"></i>
             </button>
@@ -510,7 +571,7 @@ const AdminRouteList = ({
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* PERBAIKI: Create Modal dengan Available Buses Filter */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6 max-h-screen overflow-y-auto">
@@ -523,12 +584,13 @@ const AdminRouteList = ({
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            
+
             <form onSubmit={handleCreateSubmit}>
               <div className="space-y-3 sm:space-y-4">
+                {/* Bus Select - DENGAN FILTERING AVAILABLE BUSES */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bus
+                    Bus <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="id_bus"
@@ -536,16 +598,48 @@ const AdminRouteList = ({
                     onChange={handleCreateChange}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={busLoading}
                   >
-                    <option value="">Pilih Bus</option>
-                    {buses && buses.map(bus => (
-                      <option key={bus.id_bus} value={bus.id_bus}>
-                        {bus.nama_bus} ({bus.total_kursi} kursi)
-                      </option>
-                    ))}
+                    <option value="">
+                      {busLoading ? 'Memuat bus tersedia...' : 'Pilih Bus'}
+                    </option>
+                    {availableBuses && availableBuses.length > 0 ? (
+                      availableBuses.map(bus => (
+                        <option key={bus.id_bus} value={bus.id_bus}>
+                          {bus.nama_bus} ({bus.total_kursi} kursi)
+                        </option>
+                      ))
+                    ) : (
+                      !busLoading && (
+                        <option disabled>Tidak ada bus tersedia</option>
+                      )
+                    )}
                   </select>
+                  
+                  {/* Status Info */}
+                  <div className="mt-1 text-xs">
+                    {busLoading ? (
+                      <span className="text-blue-500">
+                        <i className="fas fa-spinner fa-spin mr-1"></i>
+                        Memuat data bus...
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-green-600">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          {availableBuses?.length || 0} bus tersedia
+                        </span>
+                        {availableBuses?.length === 0 && (
+                          <span className="text-red-500 ml-3">
+                            <i className="fas fa-exclamation-triangle mr-1"></i>
+                            Semua bus sedang digunakan untuk rute aktif
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -561,7 +655,7 @@ const AdminRouteList = ({
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tujuan
@@ -577,7 +671,7 @@ const AdminRouteList = ({
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Waktu Berangkat
@@ -591,7 +685,7 @@ const AdminRouteList = ({
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Harga
@@ -607,7 +701,7 @@ const AdminRouteList = ({
                     min="0"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
@@ -623,7 +717,7 @@ const AdminRouteList = ({
                   </select>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
                 <button
                   type="button"
@@ -634,7 +728,12 @@ const AdminRouteList = ({
                 </button>
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors text-sm"
+                  disabled={!availableBuses?.length || busLoading}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors text-sm ${
+                    availableBuses?.length && !busLoading
+                      ? 'bg-pink-500 text-white hover:bg-pink-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   <i className="fas fa-plus mr-2"></i>
                   Tambah Rute
@@ -645,7 +744,7 @@ const AdminRouteList = ({
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* PERBAIKI: Edit Modal dengan Available Buses + Current Bus */}
       {showEditModal && routeToEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4 sm:p-6 max-h-screen overflow-y-auto">
@@ -658,12 +757,13 @@ const AdminRouteList = ({
                 <i className="fas fa-times"></i>
               </button>
             </div>
-            
+
             <form onSubmit={handleEditSubmit}>
               <div className="space-y-3 sm:space-y-4">
+                {/* Bus Select - Edit Mode DENGAN CURRENT BUS INFO */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bus
+                    Bus <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="id_bus"
@@ -671,16 +771,47 @@ const AdminRouteList = ({
                     onChange={handleEditChange}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
+                    disabled={busLoading}
                   >
-                    <option value="">Pilih Bus</option>
-                    {buses && buses.map(bus => (
-                      <option key={bus.id_bus} value={bus.id_bus}>
-                        {bus.nama_bus} ({bus.total_kursi} kursi)
-                      </option>
-                    ))}
+                    <option value="">
+                      {busLoading ? 'Memuat bus tersedia...' : 'Pilih Bus'}
+                    </option>
+                    {availableBuses && availableBuses.length > 0 ? (
+                      availableBuses.map(bus => (
+                        <option key={bus.id_bus} value={bus.id_bus}>
+                          {bus.nama_bus} ({bus.total_kursi} kursi)
+                          {bus.isCurrentBus ? ' ← Saat ini' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      !busLoading && (
+                        <option disabled>Tidak ada bus tersedia</option>
+                      )
+                    )}
                   </select>
+                  
+                  {/* Edit Mode Status Info */}
+                  <div className="mt-1 text-xs">
+                    {busLoading ? (
+                      <span className="text-blue-500">
+                        <i className="fas fa-spinner fa-spin mr-1"></i>
+                        Memuat data bus...
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-green-600">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          {availableBuses?.filter(b => !b.isCurrentBus).length || 0} bus lain tersedia
+                        </span>
+                        <span className="text-blue-500 ml-3">
+                          <i className="fas fa-bus mr-1"></i>
+                          Dapat ganti atau tetap gunakan bus saat ini
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -695,7 +826,7 @@ const AdminRouteList = ({
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tujuan
@@ -710,7 +841,7 @@ const AdminRouteList = ({
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Waktu Berangkat
@@ -724,7 +855,7 @@ const AdminRouteList = ({
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Harga
@@ -739,7 +870,7 @@ const AdminRouteList = ({
                     min="0"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
@@ -755,7 +886,7 @@ const AdminRouteList = ({
                   </select>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
                 <button
                   type="button"
@@ -766,7 +897,12 @@ const AdminRouteList = ({
                 </button>
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors text-sm"
+                  disabled={busLoading}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors text-sm ${
+                    !busLoading
+                      ? 'bg-pink-500 text-white hover:bg-pink-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   <i className="fas fa-save mr-2"></i>
                   Simpan Perubahan
@@ -787,12 +923,12 @@ const AdminRouteList = ({
               </div>
               <h3 className="text-base sm:text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
             </div>
-            
+
             <p className="text-gray-700 mb-6 text-sm sm:text-base">
-              Apakah Anda yakin ingin menghapus rute <strong>{routeToDelete.asal} → {routeToDelete.tujuan}</strong>? 
+              Apakah Anda yakin ingin menghapus rute <strong>{routeToDelete.asal} → {routeToDelete.tujuan}</strong>?
               Tindakan ini tidak dapat dibatalkan.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -821,9 +957,11 @@ AdminRouteList.propTypes = {
   updateAdminRoute: PropTypes.func.isRequired,
   createAdminRoute: PropTypes.func.isRequired,
   getAllBuses: PropTypes.func.isRequired,
+  getAvailableBuses: PropTypes.func.isRequired, // TAMBAH INI
   setAlert: PropTypes.func.isRequired,
   routes: PropTypes.array,
   buses: PropTypes.array,
+  availableBuses: PropTypes.array, // TAMBAH INI
   loading: PropTypes.bool,
   error: PropTypes.string
 };
@@ -831,15 +969,17 @@ AdminRouteList.propTypes = {
 const mapStateToProps = state => ({
   routes: state.routeAdmin ? state.routeAdmin.routes : [],
   buses: state.bus ? state.bus.buses : [],
+  availableBuses: state.bus ? state.bus.availableBuses : [], // TAMBAH INI
   loading: state.routeAdmin ? state.routeAdmin.loading : false,
   error: state.routeAdmin ? state.routeAdmin.error : null
 });
 
-export default connect(mapStateToProps, { 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
+export default connect(mapStateToProps, {
+  getAllAdminRoutes,
+  deleteAdminRoute,
   updateAdminRoute,
   createAdminRoute,
   getAllBuses,
-  setAlert 
+  getAvailableBuses, // TAMBAH INI
+  setAlert
 })(AdminRouteList);

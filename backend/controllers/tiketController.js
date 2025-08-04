@@ -6,10 +6,38 @@ const { Op } = require('sequelize');
 // Get all tickets for authenticated user
 exports.getMyTickets = async (req, res) => {
   try {
+    const { status } = req.query; // TAMBAH: Query parameter untuk filter
+    
+    let whereClause = {
+      id_user: req.user.id_user
+    };
+    
+    // TAMBAH: Filter berdasarkan status termasuk expired
+    if (status && status !== 'all') {
+      if (status === 'expired') {
+        // Filter untuk tiket expired
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - (10 * 60 * 1000));
+        
+        whereClause = {
+          ...whereClause,
+          [Op.or]: [
+            { status_tiket: 'expired' },
+            {
+              status_tiket: 'pending',
+              batas_pembayaran: {
+                [Op.lt]: tenMinutesAgo
+              }
+            }
+          ]
+        };
+      } else {
+        whereClause.status_tiket = status;
+      }
+    }
+
     const tickets = await Tiket.findAll({
-      where: {
-        id_user: req.user.id_user
-      },
+      where: whereClause,
       include: [
         {
           model: User,
@@ -31,11 +59,22 @@ exports.getMyTickets = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    // Transform data to ensure consistent structure
+    // TAMBAH: Transform dan mark expired tickets
     const transformedTickets = tickets.map(ticket => {
       const ticketData = ticket.toJSON();
+      
+      // Check if ticket is expired
+      if (ticketData.status_tiket === 'pending' && ticketData.batas_pembayaran) {
+        const now = new Date();
+        const batasPembayaran = new Date(ticketData.batas_pembayaran);
+        const tenMinutesAfterDeadline = new Date(batasPembayaran.getTime() + (10 * 60 * 1000));
+        
+        if (now > tenMinutesAfterDeadline) {
+          ticketData.status_tiket = 'expired';
+        }
+      }
 
-      // Ensure rute property exists (lowercase for frontend consistency)
+      // Ensure lowercase properties for frontend consistency
       if (ticketData.Rute && !ticketData.rute) {
         ticketData.rute = {
           ...ticketData.Rute,
@@ -44,12 +83,10 @@ exports.getMyTickets = async (req, res) => {
         };
       }
 
-      // Ensure user property exists (lowercase for frontend consistency)
       if (ticketData.User && !ticketData.user) {
         ticketData.user = ticketData.User;
       }
 
-      // Ensure pembayaran property exists (lowercase for frontend consistency)
       if (ticketData.Pembayaran && !ticketData.pembayaran) {
         ticketData.pembayaran = ticketData.Pembayaran;
       }

@@ -59,11 +59,15 @@ async function cleanupExpiredReservations() {
 
 async function cleanupExpiredTickets() {
   try {
+    // UBAH: 10 menit setelah batas_pembayaran, bukan waktu sekarang
+    const now = new Date();
+    const tenMinutesAgo = new Date(now.getTime() - (10 * 60 * 1000));
+    
     const expiredTickets = await Tiket.findAll({
       where: {
         status_tiket: 'pending',
         batas_pembayaran: {
-          [Op.lt]: new Date()
+          [Op.lt]: tenMinutesAgo // 10 menit setelah batas_pembayaran
         }
       },
       include: [
@@ -81,7 +85,7 @@ async function cleanupExpiredTickets() {
           where: {
             status_tiket: 'pending',
             batas_pembayaran: {
-              [Op.lt]: new Date()
+              [Op.lt]: tenMinutesAgo
             }
           }
         }

@@ -1,13 +1,14 @@
 const express = require('express');
 const {
   getAllUsers,
-  getUserById, 
+  getUserById,
   updateUser,
   deleteUser,
   createBus,
   getAllBuses,
   updateBus,
   deleteBus,
+  getAvailableBuses,
   createRoute,
   updateRoute,
   deleteRoute,
@@ -37,6 +38,7 @@ router.post('/users', createUser);
 // Bus management routes
 router.post('/buses', createBus);
 router.get('/buses', getAllBuses);
+router.get('/buses/available', getAvailableBuses);  
 router.put('/buses/:id', updateBus);
 router.delete('/buses/:id', deleteBus);
 

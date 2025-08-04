@@ -46,10 +46,10 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Update user (admin only)
 exports.updateUser = async (req, res) => {
   try {
     const { username, email, no_telepon, role } = req.body;
+    const currentUserRole = req.user.role; // Dari middleware auth
 
     const user = await User.findByPk(req.params.id);
 
@@ -60,11 +60,30 @@ exports.updateUser = async (req, res) => {
       });
     }
 
+    // TAMBAH: Hierarchical protection untuk edit
+    if (user.role === 'admin' && currentUserRole !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya super admin yang dapat mengedit admin'
+      });
+    }
+
+    // Prevent editing super_admin
+    if (user.role === 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin tidak dapat diedit'
+      });
+    }
+
     // Update fields
     if (username) user.username = username;
     if (email) user.email = email;
     if (no_telepon) user.no_telepon = no_telepon;
-    if (role) user.role = role;
+    if (role && currentUserRole === 'super_admin') {
+      // TAMBAH: Hanya super_admin yang bisa ubah role
+      user.role = role;
+    }
 
     await user.save();
 
@@ -89,16 +108,33 @@ exports.updateUser = async (req, res) => {
 // Delete user (admin only)
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const currentUserRole = req.user.role; // Dari middleware auth
+    const targetUser = await User.findByPk(req.params.id);
 
-    if (!user) {
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
         message: 'User tidak ditemukan'
       });
     }
 
-    await user.destroy();
+    // TAMBAH: Hierarchical admin protection
+    if (targetUser.role === 'admin' && currentUserRole !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya super admin yang dapat menghapus admin'
+      });
+    }
+
+    // Prevent deleting super_admin
+    if (targetUser.role === 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Super admin tidak dapat dihapus'
+      });
+    }
+
+    await targetUser.destroy();
 
     res.status(200).json({
       success: true,
@@ -116,6 +152,28 @@ exports.deleteUser = async (req, res) => {
 exports.createBus = async (req, res) => {
   try {
     const { nama_bus, total_kursi } = req.body;
+
+    // UBAH: Validasi nama bus 3-20 karakter
+    if (!nama_bus || nama_bus.length < 3 || nama_bus.length > 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nama bus harus antara 3-20 karakter'
+      });
+    }
+
+    // TAMBAH: Validasi nama bus unik (case-sensitive)
+    const existingBus = await Bus.findOne({
+      where: {
+        nama_bus: nama_bus // Case-sensitive exact match
+      }
+    });
+
+    if (existingBus) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nama bus sudah digunakan'
+      });
+    }
 
     const bus = await Bus.create({
       nama_bus,
@@ -166,8 +224,36 @@ exports.updateBus = async (req, res) => {
       });
     }
 
-    // Update fields
-    if (nama_bus) bus.nama_bus = nama_bus;
+    // UBAH: Validasi nama bus jika diubah (3-20 karakter)
+    if (nama_bus) {
+      // Validasi 3-20 karakter
+      if (nama_bus.length < 3 || nama_bus.length > 20) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nama bus harus antara 3-20 karakter'
+        });
+      }
+
+      // Validasi unik (exclude bus yang sedang diedit)
+      const existingBus = await Bus.findOne({
+        where: {
+          nama_bus: nama_bus,
+          id_bus: {
+            [Op.ne]: req.params.id
+          }
+        }
+      });
+
+      if (existingBus) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nama bus sudah digunakan'
+        });
+      }
+
+      bus.nama_bus = nama_bus;
+    }
+
     if (total_kursi) bus.total_kursi = total_kursi;
 
     await bus.save();
@@ -210,7 +296,7 @@ exports.deleteBus = async (req, res) => {
   }
 };
 
-// Create a new route (admin only)
+// Create a new route
 exports.createRoute = async (req, res) => {
   try {
     const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
@@ -224,6 +310,7 @@ exports.createRoute = async (req, res) => {
       });
     }
 
+    // HAPUS validasi konflik - langsung create saja
     const rute = await Rute.create({
       id_bus,
       asal,
@@ -245,7 +332,7 @@ exports.createRoute = async (req, res) => {
   }
 };
 
-// Update route (admin only)
+// HAPUS validasi di updateRoute juga - kembalikan ke original
 exports.updateRoute = async (req, res) => {
   try {
     const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
@@ -292,6 +379,96 @@ exports.updateRoute = async (req, res) => {
   }
 };
 
+// Update route (admin only)
+exports.updateRoute = async (req, res) => {
+  try {
+    const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
+
+    const rute = await Rute.findByPk(req.params.id);
+
+    if (!rute) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rute tidak ditemukan'
+      });
+    }
+
+    // Check if bus exists if id_bus is provided
+    if (id_bus) {
+      const bus = await Bus.findByPk(id_bus);
+      if (!bus) {
+        return res.status(404).json({
+          success: false,
+          message: 'Bus tidak ditemukan'
+        });
+      }
+
+      // TAMBAH: Validasi bus unik saat update (exclude rute yang sedang diedit)
+      if (id_bus !== rute.id_bus) { // Hanya cek jika bus berubah
+        const existingRoute = await Rute.findOne({
+          where: {
+            id_bus: id_bus,
+            status: 'aktif',
+            id_rute: {
+              [Op.ne]: req.params.id // Exclude rute yang sedang diedit
+            }
+          },
+          include: [
+            {
+              model: Bus,
+              attributes: ['nama_bus']
+            }
+          ]
+        });
+
+        if (existingRoute) {
+          return res.status(400).json({
+            success: false,
+            message: `Bus "${bus.nama_bus}" sudah digunakan pada rute aktif lain: ${existingRoute.asal} → ${existingRoute.tujuan}`,
+            conflictRoute: {
+              id_rute: existingRoute.id_rute,
+              asal: existingRoute.asal,
+              tujuan: existingRoute.tujuan,
+              waktu_berangkat: existingRoute.waktu_berangkat
+            }
+          });
+        }
+      }
+
+      rute.id_bus = id_bus;
+    }
+
+    // Update fields
+    if (asal) rute.asal = asal;
+    if (tujuan) rute.tujuan = tujuan;
+    if (waktu_berangkat) rute.waktu_berangkat = waktu_berangkat;
+    if (harga) rute.harga = harga;
+    if (status) rute.status = status;
+
+    await rute.save();
+
+    // Return updated route with bus data
+    const updatedRute = await Rute.findByPk(rute.id_rute, {
+      include: [
+        {
+          model: Bus,
+          attributes: ['nama_bus', 'total_kursi']
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedRute
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
 // Delete route (admin only)
 exports.deleteRoute = async (req, res) => {
   try {
@@ -311,6 +488,63 @@ exports.deleteRoute = async (req, res) => {
       message: 'Rute berhasil dihapus'
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+exports.getAvailableBuses = async (req, res) => {
+  try {
+    console.log('🔍 getAvailableBuses endpoint called!');
+    console.log('📝 Query params:', req.query);
+    
+    const { excludeRouteId } = req.query;
+
+    // Get all buses
+    const allBuses = await Bus.findAll({
+      attributes: ['id_bus', 'nama_bus', 'total_kursi'],
+      order: [['nama_bus', 'ASC']]
+    });
+
+    console.log('📋 All buses found:', allBuses.length);
+
+    // Get used bus IDs dari rute aktif
+    let whereClause = { status: 'aktif' };
+    
+    if (excludeRouteId) {
+      whereClause.id_rute = { [Op.ne]: excludeRouteId };
+    }
+
+    const usedRoutes = await Rute.findAll({
+      where: whereClause,
+      attributes: ['id_bus', 'asal', 'tujuan'],
+      raw: true
+    });
+
+    const usedBusIds = usedRoutes.map(route => route.id_bus);
+    
+    console.log('🚫 Used bus IDs:', usedBusIds);
+
+    // Filter available buses
+    const availableBuses = allBuses.filter(bus => !usedBusIds.includes(bus.id_bus));
+    
+    console.log('✅ Available buses:', availableBuses.length);
+
+    res.status(200).json({
+      success: true,
+      data: availableBuses,
+      debug: {
+        total: allBuses.length,
+        used: usedBusIds.length,
+        available: availableBuses.length,
+        usedBusIds: usedBusIds
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in getAvailableBuses:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

@@ -1,5 +1,5 @@
-const { User, Bus, Rute, Tiket, Pembayaran, Refund } = require('../models');
-const { Op } = require('sequelize');
+const { User, Bus, Rute, Tiket, Pembayaran } = require('../models');
+const { Op, sequelize } = require('sequelize');
 
 // Get all users (admin only)
 exports.getAllUsers = async (req, res) => {
@@ -948,6 +948,577 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// ================================
+// 🚀 NEW SUPER ADMIN FEATURES
+// ================================
+
+// Get enhanced dashboard stats for super admin
+exports.getSuperAdminDashboardStats = async (req, res) => {
+  try {
+    console.log('🔍 Getting super admin dashboard stats...');
+    
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya super admin yang dapat mengakses data ini.'
+      });
+    }
+
+    // Get all basic stats
+    const [
+      totalUsers,
+      totalBuses,
+      totalActiveRoutes,
+      totalTickets,
+      recentTickets,
+      usersByRole,
+      adminList
+    ] = await Promise.all([
+      User.count(),
+      Bus.count(),
+      Rute.count({ where: { status: 'aktif' } }),
+      Tiket.count(),
+      
+      // Recent tickets with enhanced includes
+      Tiket.findAll({
+        limit: 10,
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: User,
+            attributes: ['id_user', 'username', 'email', 'role']
+          },
+          {
+            model: Rute,
+            attributes: ['id_rute', 'asal', 'tujuan', 'waktu_berangkat', 'harga'],
+            include: [
+              {
+                model: Bus,
+                attributes: ['id_bus', 'nama_bus', 'total_kursi']
+              }
+            ]
+          }
+        ]
+      }),
+      
+      // Enhanced user stats by role
+      User.findAll({
+        attributes: [
+          'role',
+          [sequelize.fn('COUNT', sequelize.col('id_user')), 'count']
+        ],
+        group: ['role'],
+        raw: true
+      }),
+      
+      // List of all administrators
+      User.findAll({
+        where: {
+          role: {
+            [Op.in]: ['admin', 'super_admin']
+          }
+        },
+        attributes: ['id_user', 'username', 'email', 'role', 'created_at', 'is_verified'],
+        order: [
+          [sequelize.literal("CASE WHEN role = 'super_admin' THEN 1 ELSE 2 END"), 'ASC'],
+          ['created_at', 'ASC']
+        ]
+      })
+    ]);
+
+    // Get ticket stats by status
+    const ticketStatsByStatus = await Tiket.findAll({
+      attributes: [
+        'status_tiket',
+        [sequelize.fn('COUNT', sequelize.col('id_tiket')), 'count']
+      ],
+      group: ['status_tiket'],
+      raw: true
+    });
+
+    // Calculate revenue (only from confirmed/completed tickets)
+    const revenueResult = await Tiket.findOne({
+      attributes: [
+        [sequelize.fn('SUM', sequelize.col('total_bayar')), 'total_revenue']
+      ],
+      where: {
+        status_tiket: {
+          [Op.in]: ['confirmed', 'completed']
+        }
+      },
+      raw: true
+    });
+
+    // Format user stats by role
+    const roleStats = {
+      user: 0,
+      admin: 0,
+      super_admin: 0,
+      total: totalUsers
+    };
+
+    usersByRole.forEach(stat => {
+      roleStats[stat.role] = parseInt(stat.count);
+    });
+
+    // Format ticket stats
+    const ticketStats = {
+      pending: 0,
+      confirmed: 0,
+      completed: 0,
+      cancelled: 0,
+      expired: 0,
+      total: totalTickets
+    };
+
+    ticketStatsByStatus.forEach(stat => {
+      ticketStats[stat.status_tiket] = parseInt(stat.count);
+    });
+
+    // Enhanced response for super admin
+    const enhancedStats = {
+      // Basic counts
+      totalUsers,
+      totalBuses,
+      totalActiveRoutes,
+      totalTickets,
+      totalRevenue: parseFloat(revenueResult?.total_revenue || 0),
+      
+      // Enhanced role breakdown
+      usersByRole: roleStats,
+      
+      // Administrator details
+      administrators: {
+        total: adminList.length,
+        super_admins: adminList.filter(admin => admin.role === 'super_admin').length,
+        regular_admins: adminList.filter(admin => admin.role === 'admin').length,
+        list: adminList.map(admin => ({
+          id: admin.id_user,
+          username: admin.username,
+          email: admin.email,
+          role: admin.role,
+          created_at: admin.created_at,
+          is_verified: admin.is_verified,
+          display_role: admin.role === 'super_admin' ? 'Super Administrator' : 'Administrator'
+        }))
+      },
+      
+      // Ticket analytics
+      tickets: ticketStats,
+      
+      // Recent activities
+      recentTickets: recentTickets.map(ticket => ({
+        id_tiket: ticket.id_tiket,
+        status_tiket: ticket.status_tiket,
+        total_bayar: ticket.total_bayar,
+        nomor_kursi: ticket.nomor_kursi,
+        created_at: ticket.created_at,
+        User: ticket.User ? {
+          id_user: ticket.User.id_user,
+          username: ticket.User.username,
+          email: ticket.User.email,
+          role: ticket.User.role
+        } : null,
+        Rute: ticket.Rute ? {
+          id_rute: ticket.Rute.id_rute,
+          asal: ticket.Rute.asal,
+          tujuan: ticket.Rute.tujuan,
+          waktu_berangkat: ticket.Rute.waktu_berangkat,
+          harga: ticket.Rute.harga,
+          Bus: ticket.Rute.Bus ? {
+            nama_bus: ticket.Rute.Bus.nama_bus,
+            total_kursi: ticket.Rute.Bus.total_kursi
+          } : null
+        } : null
+      })),
+      
+      // System health indicators
+      systemHealth: {
+        totalTransactions: totalTickets,
+        completionRate: totalTickets > 0 ? 
+          ((ticketStats.completed + ticketStats.confirmed) / totalTickets * 100).toFixed(1) : 0,
+        averageRevenuePerTicket: totalTickets > 0 ? 
+          (parseFloat(revenueResult?.total_revenue || 0) / totalTickets).toFixed(0) : 0
+      }
+    };
+
+    console.log('✅ Super admin dashboard stats retrieved successfully');
+    
+    res.status(200).json({
+      success: true,
+      message: 'Data dashboard super admin berhasil diambil',
+      data: enhancedStats
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting super admin dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengambil data dashboard',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get all administrators (super admin only)
+exports.getAllAdministrators = async (req, res) => {
+  try {
+    console.log('🔍 Getting all administrators...');
+    
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya super admin yang dapat mengakses data ini.'
+      });
+    }
+
+    const administrators = await User.findAll({
+      where: {
+        role: {
+          [Op.in]: ['admin', 'super_admin']
+        }
+      },
+      attributes: { 
+        exclude: ['password', 'verification_token', 'resetPasswordToken'] 
+      },
+      order: [
+        [sequelize.literal("CASE WHEN role = 'super_admin' THEN 1 ELSE 2 END"), 'ASC'],
+        ['created_at', 'ASC']
+      ]
+    });
+
+    const formattedAdmins = administrators.map(admin => ({
+      ...admin.toJSON(),
+      display_role: admin.role === 'super_admin' ? 'Super Administrator' : 'Administrator',
+      can_be_modified: admin.role !== 'super_admin' || admin.id_user === req.user.id_user,
+      is_current_user: admin.id_user === req.user.id_user
+    }));
+
+    console.log(`✅ Found ${administrators.length} administrators`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Data administrator berhasil diambil',
+      data: formattedAdmins,
+      meta: {
+        total: administrators.length,
+        super_admins: administrators.filter(a => a.role === 'super_admin').length,
+        regular_admins: administrators.filter(a => a.role === 'admin').length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting administrators:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengambil data administrator',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Enhanced create verified user (super admin only)
+exports.createVerifiedUserEnhanced = async (req, res) => {
+  try {
+    console.log('🆕 Creating verified user (Super Admin Enhanced)...');
+    
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya super admin yang dapat membuat user terverifikasi.'
+      });
+    }
+
+    const { username, email, password, no_telepon, role = 'user' } = req.body;
+
+    // Validate required fields
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, email, dan password wajib diisi'
+      });
+    }
+
+    // Validate role
+    const allowedRoles = ['user', 'admin'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role harus "user" atau "admin"'
+      });
+    }
+
+    // Validate username length
+    if (username.trim().length < 3 || username.trim().length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username harus 3-50 karakter'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email tidak valid'
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6 || password.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password harus 6-100 karakter'
+      });
+    }
+
+    // Check for existing username
+    const existingUsername = await User.findOne({
+      where: { username: username.trim() }
+    });
+
+    if (existingUsername) {
+      return res.status(409).json({
+        success: false,
+        message: 'Username sudah digunakan'
+      });
+    }
+
+    // Check for existing email
+    const existingEmail = await User.findOne({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingEmail) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email sudah terdaftar'
+      });
+    }
+
+    // Create user with verification bypassed
+    const newUser = await User.create({
+      username: username.trim(),
+      email: email.toLowerCase(),
+      password, // Will be hashed by model hook
+      no_telepon: no_telepon || null,
+      role,
+      is_verified: true, // BYPASS OTP - directly verified
+      verification_token: null,
+      verification_token_expire: null
+    });
+
+    // Remove sensitive data from response
+    const userData = newUser.toJSON();
+    delete userData.password;
+    delete userData.verification_token;
+    delete userData.resetPasswordToken;
+
+    console.log(`✅ User created successfully: ${userData.email} (${userData.role})`);
+    
+    res.status(201).json({
+      success: true,
+      message: `${role === 'admin' ? 'Administrator' : 'User'} berhasil dibuat dan langsung aktif`,
+      data: {
+        ...userData,
+        display_role: role === 'admin' ? 'Administrator' : 'User',
+        created_by: 'Super Admin',
+        bypass_otp: true
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating verified user:', error);
+    
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Data tidak valid',
+        errors: error.errors.map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat membuat user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get system analytics for super admin
+exports.getSystemAnalytics = async (req, res) => {
+  try {
+    console.log('📊 Getting system analytics...');
+    
+    // Check if user is super admin
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya super admin yang dapat mengakses analytics.'
+      });
+    }
+
+    // Get analytics data
+    const [
+      userGrowth,
+      ticketTrends,
+      revenueAnalytics,
+      busUtilization,
+      routePerformance
+    ] = await Promise.all([
+      // User growth over last 30 days
+      User.findAll({
+        attributes: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+          [sequelize.fn('COUNT', sequelize.col('id_user')), 'count'],
+          'role'
+        ],
+        where: {
+          created_at: {
+            [Op.gte]: sequelize.literal("DATE_SUB(NOW(), INTERVAL 30 DAY)")
+          }
+        },
+        group: [
+          sequelize.fn('DATE', sequelize.col('created_at')),
+          'role'
+        ],
+        order: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']
+        ],
+        raw: true
+      }),
+
+      // Ticket trends over last 30 days
+      Tiket.findAll({
+        attributes: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+          [sequelize.fn('COUNT', sequelize.col('id_tiket')), 'count'],
+          'status_tiket'
+        ],
+        where: {
+          created_at: {
+            [Op.gte]: sequelize.literal("DATE_SUB(NOW(), INTERVAL 30 DAY)")
+          }
+        },
+        group: [
+          sequelize.fn('DATE', sequelize.col('created_at')),
+          'status_tiket'
+        ],
+        order: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']
+        ],
+        raw: true
+      }),
+
+      // Revenue analytics
+      Tiket.findAll({
+        attributes: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+          [sequelize.fn('SUM', sequelize.col('total_bayar')), 'revenue'],
+          [sequelize.fn('COUNT', sequelize.col('id_tiket')), 'ticket_count']
+        ],
+        where: {
+          status_tiket: {
+            [Op.in]: ['confirmed', 'completed']
+          },
+          created_at: {
+            [Op.gte]: sequelize.literal("DATE_SUB(NOW(), INTERVAL 30 DAY)")
+          }
+        },
+        group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+        order: [
+          [sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']
+        ],
+        raw: true
+      }),
+
+      // Bus utilization
+      Bus.findAll({
+        attributes: [
+          'id_bus',
+          'nama_bus',
+          'total_kursi',
+          [sequelize.fn('COUNT', sequelize.col('Rutes.id_rute')), 'active_routes']
+        ],
+        include: [
+          {
+            model: Rute,
+            attributes: [],
+            where: { status: 'aktif' },
+            required: false
+          }
+        ],
+        group: ['Bus.id_bus'],
+        raw: true
+      }),
+
+      // Route performance
+      Rute.findAll({
+        attributes: [
+          'id_rute',
+          'asal',
+          'tujuan',
+          'harga',
+          [sequelize.fn('COUNT', sequelize.col('Tikets.id_tiket')), 'total_tickets'],
+          [sequelize.fn('SUM', sequelize.col('Tikets.total_bayar')), 'total_revenue']
+        ],
+        include: [
+          {
+            model: Tiket,
+            attributes: [],
+            where: {
+              status_tiket: {
+                [Op.in]: ['confirmed', 'completed']
+              }
+            },
+            required: false
+          }
+        ],
+        where: { status: 'aktif' },
+        group: ['Rute.id_rute'],
+        order: [
+          [sequelize.fn('COUNT', sequelize.col('Tikets.id_tiket')), 'DESC']
+        ],
+        limit: 10,
+        raw: true
+      })
+    ]);
+
+    const analytics = {
+      user_growth: userGrowth,
+      ticket_trends: ticketTrends,
+      revenue_analytics: revenueAnalytics,
+      bus_utilization: busUtilization,
+      top_routes: routePerformance,
+      generated_at: new Date().toISOString()
+    };
+
+    console.log('✅ System analytics retrieved successfully');
+    
+    res.status(200).json({
+      success: true,
+      message: 'Analytics data berhasil diambil',
+      data: analytics
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting system analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengambil data analytics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

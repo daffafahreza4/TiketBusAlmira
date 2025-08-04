@@ -130,3 +130,22 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+// TAMBAHKAN: Specific middleware untuk super admin only
+exports.authorizeSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'User tidak terautentikasi'
+    });
+  }
+  
+  if (req.user.role !== 'super_admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Hanya super admin yang dapat mengakses fitur ini'
+    });
+  }
+  
+  next();
+};

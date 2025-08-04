@@ -17,16 +17,19 @@ const {
   updateTicketStatus,
   getDashboardStats,
   createUser,
-  deleteTicket
+  deleteTicket,
+  createVerifiedUser  
 } = require('../controllers/adminController');
 
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Protect all routes and authorize only admin
+// Protect all routes
 router.use(protect);
-router.use(authorize('admin'));
+
+// PERBAIKAN 1: Allow both admin and super_admin for general admin routes
+router.use(authorize('admin', 'super_admin'));
 
 // User management routes
 router.get('/users', getAllUsers);
@@ -34,6 +37,7 @@ router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 router.post('/users', createUser);
+router.post('/users/create-verified', authorize('super_admin'), createVerifiedUser);
 
 // Bus management routes
 router.post('/buses', createBus);

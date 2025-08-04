@@ -296,7 +296,7 @@ exports.deleteBus = async (req, res) => {
   }
 };
 
-// Create a new route
+// Create a new route - FIXED: Add bus uniqueness validation
 exports.createRoute = async (req, res) => {
   try {
     const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
@@ -310,7 +310,34 @@ exports.createRoute = async (req, res) => {
       });
     }
 
-    // HAPUS validasi konflik - langsung create saja
+    // TAMBAH: Validasi bus tidak sedang digunakan di rute aktif lain
+    const existingActiveRoute = await Rute.findOne({
+      where: {
+        id_bus: id_bus,
+        status: 'aktif'
+      },
+      include: [
+        {
+          model: Bus,
+          attributes: ['nama_bus']
+        }
+      ]
+    });
+
+    if (existingActiveRoute) {
+      return res.status(400).json({
+        success: false,
+        message: `Bus "${bus.nama_bus}" sudah digunakan pada rute aktif: ${existingActiveRoute.asal} → ${existingActiveRoute.tujuan}`,
+        conflictRoute: {
+          id_rute: existingActiveRoute.id_rute,
+          asal: existingActiveRoute.asal,
+          tujuan: existingActiveRoute.tujuan,
+          waktu_berangkat: existingActiveRoute.waktu_berangkat
+        }
+      });
+    }
+
+    // Create route jika validasi passed
     const rute = await Rute.create({
       id_bus,
       asal,
@@ -320,11 +347,23 @@ exports.createRoute = async (req, res) => {
       status: status || 'aktif'
     });
 
+    // Return with bus data
+    const createdRoute = await Rute.findByPk(rute.id_rute, {
+      include: [
+        {
+          model: Bus,
+          attributes: ['nama_bus', 'total_kursi']
+        }
+      ]
+    });
+
     res.status(201).json({
       success: true,
-      data: rute
+      message: 'Rute berhasil dibuat',
+      data: createdRoute
     });
   } catch (error) {
+    console.error('❌ Error creating route:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -332,54 +371,7 @@ exports.createRoute = async (req, res) => {
   }
 };
 
-// HAPUS validasi di updateRoute juga - kembalikan ke original
-exports.updateRoute = async (req, res) => {
-  try {
-    const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
-
-    const rute = await Rute.findByPk(req.params.id);
-
-    if (!rute) {
-      return res.status(404).json({
-        success: false,
-        message: 'Rute tidak ditemukan'
-      });
-    }
-
-    // Check if bus exists if id_bus is provided
-    if (id_bus) {
-      const bus = await Bus.findByPk(id_bus);
-      if (!bus) {
-        return res.status(404).json({
-          success: false,
-          message: 'Bus tidak ditemukan'
-        });
-      }
-      rute.id_bus = id_bus;
-    }
-
-    // Update fields
-    if (asal) rute.asal = asal;
-    if (tujuan) rute.tujuan = tujuan;
-    if (waktu_berangkat) rute.waktu_berangkat = waktu_berangkat;
-    if (harga) rute.harga = harga;
-    if (status) rute.status = status;
-
-    await rute.save();
-
-    res.status(200).json({
-      success: true,
-      data: rute
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan server'
-    });
-  }
-};
-
-// Update route (admin only)
+// Update route (admin only) - FIXED: Add bus uniqueness validation
 exports.updateRoute = async (req, res) => {
   try {
     const { id_bus, asal, tujuan, waktu_berangkat, harga, status } = req.body;
@@ -403,9 +395,10 @@ exports.updateRoute = async (req, res) => {
         });
       }
 
-      // TAMBAH: Validasi bus unik saat update (exclude rute yang sedang diedit)
-      if (id_bus !== rute.id_bus) { // Hanya cek jika bus berubah
-        const existingRoute = await Rute.findOne({
+      // TAMBAH: Validasi bus tidak sedang digunakan di rute aktif lain
+      // Hanya cek jika bus berubah dari yang sekarang
+      if (id_bus !== rute.id_bus) {
+        const existingActiveRoute = await Rute.findOne({
           where: {
             id_bus: id_bus,
             status: 'aktif',
@@ -421,15 +414,15 @@ exports.updateRoute = async (req, res) => {
           ]
         });
 
-        if (existingRoute) {
+        if (existingActiveRoute) {
           return res.status(400).json({
             success: false,
-            message: `Bus "${bus.nama_bus}" sudah digunakan pada rute aktif lain: ${existingRoute.asal} → ${existingRoute.tujuan}`,
+            message: `Bus "${bus.nama_bus}" sudah digunakan pada rute aktif lain: ${existingActiveRoute.asal} → ${existingActiveRoute.tujuan}`,
             conflictRoute: {
-              id_rute: existingRoute.id_rute,
-              asal: existingRoute.asal,
-              tujuan: existingRoute.tujuan,
-              waktu_berangkat: existingRoute.waktu_berangkat
+              id_rute: existingActiveRoute.id_rute,
+              asal: existingActiveRoute.asal,
+              tujuan: existingActiveRoute.tujuan,
+              waktu_berangkat: existingActiveRoute.waktu_berangkat
             }
           });
         }
@@ -459,9 +452,11 @@ exports.updateRoute = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: 'Rute berhasil diperbarui',
       data: updatedRute
     });
   } catch (error) {
+    console.error('❌ Error updating route:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'
@@ -495,6 +490,7 @@ exports.deleteRoute = async (req, res) => {
   }
 };
 
+// Get available buses - IMPROVED LOGIC FOR 1 BUS = 1 ACTIVE ROUTE
 exports.getAvailableBuses = async (req, res) => {
   try {
     console.log('🔍 getAvailableBuses endpoint called!');
@@ -510,9 +506,10 @@ exports.getAvailableBuses = async (req, res) => {
 
     console.log('📋 All buses found:', allBuses.length);
 
-    // Get used bus IDs dari rute aktif
+    // Get bus IDs yang sedang digunakan di rute AKTIF
     let whereClause = { status: 'aktif' };
     
+    // Jika excludeRouteId ada, exclude dari pengecekan (untuk edit)
     if (excludeRouteId) {
       whereClause.id_rute = { [Op.ne]: excludeRouteId };
     }
@@ -525,10 +522,32 @@ exports.getAvailableBuses = async (req, res) => {
 
     const usedBusIds = usedRoutes.map(route => route.id_bus);
     
-    console.log('🚫 Used bus IDs:', usedBusIds);
+    console.log('🚫 Used bus IDs in active routes:', usedBusIds);
 
-    // Filter available buses
-    const availableBuses = allBuses.filter(bus => !usedBusIds.includes(bus.id_bus));
+    // UNTUK EDIT MODE: Tambahkan bus yang sedang digunakan rute ini sendiri
+    let availableBuses = [];
+    
+    if (excludeRouteId) {
+      // Edit mode: tampilkan available buses + current bus
+      const currentRoute = await Rute.findByPk(excludeRouteId, {
+        attributes: ['id_bus']
+      });
+      
+      availableBuses = allBuses.map(bus => {
+        const isCurrentBus = currentRoute && bus.id_bus === currentRoute.id_bus;
+        const isAvailable = !usedBusIds.includes(bus.id_bus) || isCurrentBus;
+        
+        return {
+          ...bus.toJSON(),
+          isCurrentBus,
+          isAvailable
+        };
+      }).filter(bus => bus.isAvailable);
+      
+    } else {
+      // Create mode: hanya available buses
+      availableBuses = allBuses.filter(bus => !usedBusIds.includes(bus.id_bus));
+    }
     
     console.log('✅ Available buses:', availableBuses.length);
 
@@ -536,10 +555,12 @@ exports.getAvailableBuses = async (req, res) => {
       success: true,
       data: availableBuses,
       debug: {
+        mode: excludeRouteId ? 'edit' : 'create',
         total: allBuses.length,
         used: usedBusIds.length,
         available: availableBuses.length,
-        usedBusIds: usedBusIds
+        usedBusIds: usedBusIds,
+        excludeRouteId: excludeRouteId
       }
     });
 
@@ -653,6 +674,111 @@ exports.createUser = async (req, res) => {
       }
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
+// NEW FEATURE: Create verified user/admin (super admin only) - BYPASS OTP
+exports.createVerifiedUser = async (req, res) => {
+  try {
+    const { username, email, password, no_telepon, role = 'user' } = req.body;
+    const currentUserRole = req.user.role; // Dari middleware auth
+
+    // SECURITY: Hanya super_admin yang bisa bypass OTP
+    if (currentUserRole !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya super admin yang dapat membuat user terverifikasi'
+      });
+    }
+
+    // Validasi input
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, email, dan password harus diisi'
+      });
+    }
+
+    // Validasi role
+    const allowedRoles = ['user', 'admin'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role harus user atau admin'
+      });
+    }
+
+    // Check if user already exists
+    const userExists = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email },
+          { username }
+        ]
+      }
+    });
+
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: userExists.email === email ?
+          'Email sudah terdaftar' : 'Username sudah digunakan'
+      });
+    }
+
+    // Validasi email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email tidak valid'
+      });
+    }
+
+    // Validasi password minimal 6 karakter
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password minimal 6 karakter'
+      });
+    }
+
+    // Create user LANGSUNG VERIFIED (bypass OTP)
+    const user = await User.create({
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
+      password, // Will be hashed by model hook
+      no_telepon: no_telepon ? no_telepon.trim() : null,
+      role,
+      is_verified: true, // BYPASS OTP - LANGSUNG VERIFIED
+      verification_token: null,
+      verification_token_expire: null
+    });
+
+    // Log audit trail
+    console.log(`✅ SUPER ADMIN BYPASS OTP: ${req.user.email} created ${role} user: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      message: `${role === 'admin' ? 'Admin' : 'User'} berhasil dibuat dan langsung aktif`,
+      data: {
+        id_user: user.id_user,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        no_telepon: user.no_telepon,
+        is_verified: user.is_verified,
+        created_by: req.user.email,
+        bypass_otp: true
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating verified user:', error);
     res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan server'

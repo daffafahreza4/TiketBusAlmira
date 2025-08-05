@@ -195,10 +195,10 @@ const AdminTicketList = ({
             className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Semua Status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="pending">Menunggu</option>
+            <option value="confirmed">Dikonfirmasi</option>
+            <option value="completed">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
             <option value="expired">Kadaluarsa</option>
           </select>
         </div>

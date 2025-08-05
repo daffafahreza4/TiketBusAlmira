@@ -1,652 +1,277 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Spinner from '../layout/Spinner';
-import { 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
-  updateAdminRoute,
-  createAdminRoute  
-} from '../../redux/actions/routeAdminActions';
-import { getAvailableBuses } from '../../redux/actions/busActions';
-import { setAlert } from '../../redux/actions/alertActions';
-import { formatDate, formatTime, formatCurrency } from '../../utils/formatters';
+import { getRutes } from '../../redux/actions/ruteActions';
+import { formatCurrency, formatTime, formatDate } from '../../utils/formatters';
 
-const RouteList = ({ 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
-  updateAdminRoute,
-  createAdminRoute,
-  getAvailableBuses,
-  setAlert,
-  routes, 
-  availableBuses,
-  loading, 
-  error 
-}) => {
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createFormData, setCreateFormData] = useState({
-    id_bus: '',
-    asal: '',
-    tujuan: '',
-    waktu_berangkat: '',
-    harga: '',
-    status: 'aktif'
-  });
-
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [routeToEdit, setRouteToEdit] = useState(null);
-  const [editFormData, setEditFormData] = useState({
-    id_bus: '',
-    asal: '',
-    tujuan: '',
-    waktu_berangkat: '',
-    harga: '',
-    status: 'aktif'
-  });
-
-  const [busLoading, setBusLoading] = useState(false);
-
+const RouteList = ({ routes, loading, error, getRutes }) => {
+  // Fetch all routes when component mounts
   useEffect(() => {
-    getAllAdminRoutes();
-  }, [getAllAdminRoutes]);
+    getRutes();
+  }, [getRutes]);
 
-  // Load available buses untuk create dengan debug
-  const loadAvailableBusesForCreate = async () => {
-    try {
-      console.log('🔄 Loading available buses for CREATE...');
-      setBusLoading(true);
-      
-      const result = await getAvailableBuses(); // No excludeRouteId
-      
-      console.log('✅ CREATE - Available buses loaded:', {
-        count: result?.data?.length,
-        buses: result?.data?.map(b => ({id: b.id_bus, name: b.nama_bus}))
-      });
-      
-    } catch (error) {
-      console.error('❌ Error loading available buses for create:', error);
-    } finally {
-      setBusLoading(false);
-    }
+  // Add refresh function for user
+  const handleRefresh = () => {
+    getRutes();
   };
 
-  // Load available buses untuk edit dengan debug
-  const loadAvailableBusesForEdit = async (routeId) => {
-    try {
-      console.log('🔄 Loading available buses for EDIT routeId:', routeId);
-      setBusLoading(true);
-      
-      const result = await getAvailableBuses(routeId);
-      
-      console.log('✅ EDIT - Available buses loaded:', {
-        count: result?.data?.length,
-        buses: result?.data?.map(b => ({
-          id: b.id_bus, 
-          name: b.nama_bus, 
-          isCurrent: b.isCurrentBus
-        }))
-      });
-      
-    } catch (error) {
-      console.error('❌ Error loading available buses for edit:', error);
-    } finally {
-      setBusLoading(false);
-    }
-  };
-
-  // Create handlers dengan debug
-  const handleCreateClick = async () => {
-    console.log('🆕 CREATE button clicked');
-    
-    setCreateFormData({
-      id_bus: '',
-      asal: '',
-      tujuan: '',
-      waktu_berangkat: '',
-      harga: '',
-      status: 'aktif'
-    });
-    
-    // Force refresh routes dulu, lalu load available buses
-    await getAllAdminRoutes();
-    await loadAvailableBusesForCreate();
-    setShowCreateModal(true);
-  };
-
-  const handleCreateSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!createFormData.id_bus) {
-      setAlert('Silakan pilih bus', 'danger');
-      return;
-    }
-    
-    try {
-      await createAdminRoute(createFormData);
-      setShowCreateModal(false);
-      
-      // Auto refresh setelah create berhasil
-      setTimeout(async () => {
-        await getAllAdminRoutes();
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Create route error:', error);
-    }
-  };
-
-  const handleCreateChange = (e) => {
-    setCreateFormData({
-      ...createFormData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // Edit handlers dengan debug
-  const handleEditClick = async (route) => {
-    console.log('✏️ EDIT button clicked for route:', route.id_rute);
-    
-    setRouteToEdit(route);
-    setEditFormData({
-      id_bus: route.id_bus,
-      asal: route.asal,
-      tujuan: route.tujuan,
-      waktu_berangkat: route.waktu_berangkat ? 
-        new Date(route.waktu_berangkat).toISOString().slice(0, 16) : '',
-      harga: route.harga,
-      status: route.status
-    });
-    
-    // Force refresh routes dulu, lalu load available buses  
-    await getAllAdminRoutes();
-    await loadAvailableBusesForEdit(route.id_rute);
-    setShowEditModal(true);
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (routeToEdit) {
-      try {
-        await updateAdminRoute(routeToEdit.id_rute, editFormData);
-        setShowEditModal(false);
-        setRouteToEdit(null);
-        
-        // Auto refresh setelah edit berhasil
-        setTimeout(async () => {
-          await getAllAdminRoutes();
-        }, 1000);
-        
-      } catch (error) {
-        console.error('Edit route error:', error);
-      }
-    }
-  };
-
-  const handleEditChange = (e) => {
-    setEditFormData({
-      ...editFormData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // Debug render
-  console.log('🎨 RouteList render:', {
-    routesCount: routes?.length,
-    availableBusesCount: availableBuses?.length,
-    availableBuses: availableBuses?.map(b => ({id: b.id_bus, name: b.nama_bus}))
-  });
-
-  if (loading) return <Spinner />;
+  if (loading) {
+    return <Spinner />;
+  }
 
   if (error) {
     return (
-      <div className="bg-red-100 text-red-700 p-4 rounded-lg">
-        {error}
+      <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+          <span className="text-sm sm:text-base">{error}</span>
+          <button 
+            onClick={handleRefresh}
+            className="w-full sm:w-auto px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (routes.length === 0) {
+    return (
+      <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg mb-4 text-center">
+        <div className="text-4xl mb-2">🚌</div>
+        <p className="font-medium text-sm sm:text-base">Belum ada rute yang tersedia saat ini</p>
+        <p className="text-xs sm:text-sm">Silakan cek kembali nanti</p>
+        <button 
+          onClick={handleRefresh}
+          className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+        >
+          Refresh Data
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-bold">Kelola Rute</h2>
-        <button
-          onClick={handleCreateClick}
-          className="bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors"
+    <div className="space-y-4">
+      {/* Add refresh button for users */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 space-y-2 sm:space-y-0">
+        <p className="text-gray-600 text-sm sm:text-base text-center sm:text-left">{routes.length} rute tersedia</p>
+        <button 
+          onClick={handleRefresh}
+          className="w-full sm:w-auto px-3 py-2 bg-pink-100 text-pink-600 rounded hover:bg-pink-200 transition-colors text-sm"
         >
-          <i className="fas fa-plus mr-2"></i>
-          Tambah Rute
+          <i className="fas fa-sync-alt mr-1"></i>
+          Refresh
         </button>
       </div>
 
-      {/* Routes Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rute</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bus</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jadwal & Harga</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {routes && routes.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                  <div className="text-4xl mb-2">🚌</div>
-                  <p>Tidak ada rute yang ditemukan</p>
-                </td>
-              </tr>
-            ) : (
-              routes?.map((route) => (
-                <tr key={route.id_rute} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {route.asal} → {route.tujuan}
-                    </div>
-                    <div className="text-sm text-gray-500">ID: {route.id_rute}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-semibold">
-                      {route.Bus?.nama_bus || 'N/A'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {route.Bus?.total_kursi || 0} kursi
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatDate(route.waktu_berangkat)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {formatTime(route.waktu_berangkat)}
-                    </div>
-                    <div className="text-sm font-semibold text-pink-600">
-                      {formatCurrency(route.harga)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      route.status === 'aktif' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {route.status === 'aktif' ? 'Aktif' : 'Nonaktif'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleEditClick(route)}
-                      className="text-green-600 hover:text-green-900 mr-3"
-                    >
-                      <i className="fas fa-edit"></i> Edit
-                    </button>
-                    <button
-                      onClick={() => deleteAdminRoute(route.id_rute)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <i className="fas fa-trash"></i> Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Tambah Rute Baru</h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="fas fa-times"></i>
-              </button>
+      {routes.map(route => (
+        <div 
+          key={route.id_rute} 
+          className={`bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 hover:shadow-lg transition-shadow duration-200 ${
+            route.minutes_until_departure <= 10 ? 'border-l-4 border-red-500' : ''
+          }`}
+        >
+          {/* Warning untuk rute yang hampir tutup */}
+          {route.minutes_until_departure <= 30 && route.minutes_until_departure > 10 && (
+            <div className="mb-4 p-2 sm:p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              <span className="text-xs sm:text-sm">
+                Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              </span>
             </div>
-            
-            <form onSubmit={handleCreateSubmit}>
-              <div className="space-y-4">
-                {/* Bus Select - DIPERBAIKI */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bus <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="id_bus"
-                    value={createFormData.id_bus}
-                    onChange={handleCreateChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                    disabled={busLoading}
+          )}
+          
+          {/* Warning untuk rute yang sudah sangat dekat waktu keberangkatan */}
+          {route.minutes_until_departure <= 10 && route.minutes_until_departure > 0 && (
+            <div className="mb-4 p-2 sm:p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              <span className="text-xs sm:text-sm">
+                <strong>Perhatian!</strong> Pemesanan akan ditutup dalam {route.minutes_until_departure} menit
+              </span>
+            </div>
+          )}
+
+          {/* Mobile Layout */}
+          <div className="block lg:hidden">
+            {/* Route Header */}
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+                  {route.asal} → {route.tujuan}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <i className="fas fa-bus mr-1"></i>
+                  {route.nama_bus || 'Bus Tidak Diketahui'}
+                </div>
+                {/* TAMBAH: Tanggal dan Waktu untuk Mobile */}
+                <div className="text-sm text-gray-600 mt-1">
+                  <i className="fas fa-calendar mr-1"></i>
+                  {formatDate(route.waktu_berangkat)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold text-pink-600 mb-2">
+                  {formatCurrency(route.harga)}
+                </div>
+                {route.booking_allowed ? (
+                  <Link
+                    to={`/booking/${route.id_rute}`}
+                    className="bg-black text-white px-4 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium text-sm"
                   >
-                    <option value="">
-                      {busLoading ? 'Memuat bus...' : 'Pilih Bus'}
-                    </option>
-                    {availableBuses?.length > 0 ? (
-                      availableBuses.map(bus => (
-                        <option key={bus.id_bus} value={bus.id_bus}>
-                          {bus.nama_bus} ({bus.total_kursi} kursi)
-                        </option>
-                      ))
-                    ) : (
-                      !busLoading && (
-                        <option disabled>Tidak ada bus tersedia</option>
-                      )
-                    )}
-                  </select>
-                  
-                  <div className="mt-1 text-xs">
-                    {busLoading ? (
-                      <span className="text-blue-500">
-                        <i className="fas fa-spinner fa-spin mr-1"></i>
-                        Memuat data bus...
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-green-600">
-                          <i className="fas fa-check-circle mr-1"></i>
-                          {availableBuses?.length || 0} bus tersedia
-                        </span>
-                        {availableBuses?.length === 0 && (
-                          <span className="text-red-500 ml-3">
-                            <i className="fas fa-exclamation-triangle mr-1"></i>
-                            Semua bus sedang digunakan
-                          </span>
-                        )}
-                      </>
-                    )}
+                    Pesan
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-gray-400 text-white px-4 py-2 rounded-full cursor-not-allowed font-medium text-sm"
+                  >
+                    Tutup
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Time and Details */}
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Berangkat</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {formatTime(route.waktu_berangkat)}
+                </div>
+                <div className="text-xs text-gray-600">{route.asal}</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">Tiba</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {formatTime(route.perkiraan_tiba)}
+                </div>
+                <div className="text-xs text-gray-600">{route.tujuan}</div>
+              </div>
+            </div>
+
+            {/* TAMBAH: Date display untuk mobile - lebih prominent */}
+            <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center text-blue-800">
+                  <i className="fas fa-calendar mr-2"></i>
+                  <span className="text-sm font-medium">Tanggal Keberangkatan</span>
+                </div>
+                <span className="text-sm font-bold text-blue-900">
+                  {formatDate(route.waktu_berangkat)}
+                </span>
+              </div>
+            </div>
+
+            {/* Bus Info */}
+            <div className="pt-3 border-t border-gray-100">
+              <div className="text-xs text-gray-600">
+                <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden lg:block">
+            {/* TAMBAH: Tanggal keberangkatan untuk Desktop - di atas */}
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center text-blue-800">
+                  <i className="fas fa-calendar mr-2"></i>
+                  <span className="font-medium">Tanggal Keberangkatan</span>
+                </div>
+                <span className="font-bold text-blue-900">
+                  {formatDate(route.waktu_berangkat)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              {/* Waktu & Rute */}
+              <div className="flex items-center space-x-8">
+                {/* Departure */}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatTime(route.waktu_berangkat)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {route.asal}
                   </div>
                 </div>
                 
-                {/* Asal & Tujuan */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Asal <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="asal"
-                      value={createFormData.asal}
-                      onChange={handleCreateChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Jakarta"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tujuan <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="tujuan"
-                      value={createFormData.tujuan}
-                      onChange={handleCreateChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Bandung"
-                      required
-                    />
+                {/* Route Line */}
+                <div className="flex-1 relative px-8">
+                  <div className="border-t-2 border-gray-300 relative">
+                    <div className="absolute left-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
+                    <div className="absolute right-0 top-0 w-3 h-3 bg-pink-500 rounded-full transform -translate-y-1/2"></div>
                   </div>
                 </div>
                 
-                {/* Waktu & Harga */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Waktu Berangkat <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="waktu_berangkat"
-                    value={createFormData.waktu_berangkat}
-                    onChange={handleCreateChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Harga <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="harga"
-                    value={createFormData.harga}
-                    onChange={handleCreateChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="150000"
-                    required
-                    min="0"
-                  />
+                {/* Arrival */}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatTime(route.perkiraan_tiba)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {route.tujuan}
+                  </div>
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                  disabled={!availableBuses?.length}
-                >
-                  <i className="fas fa-plus mr-2"></i>
-                  Tambah Rute
-                </button>
+              {/* Harga & Tombol */}
+              <div className="text-right ml-6">
+                <div className="text-xl font-bold text-gray-900 mb-2">
+                  {formatCurrency(route.harga)}
+                </div>
+                {route.booking_allowed ? (
+                  <Link
+                    to={`/booking/${route.id_rute}`}
+                    className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
+                  >
+                    Pesan
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-gray-400 text-white px-6 py-2 rounded-full cursor-not-allowed font-medium"
+                  >
+                    Tutup
+                  </button>
+                )}
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && routeToEdit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Edit Rute</h3>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="fas fa-times"></i>
-              </button>
             </div>
             
-            <form onSubmit={handleEditSubmit}>
-              <div className="space-y-4">
-                {/* Bus Select - Edit Mode DIPERBAIKI */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bus <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="id_bus"
-                    value={editFormData.id_bus}
-                    onChange={handleEditChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                    disabled={busLoading}
-                  >
-                    <option value="">
-                      {busLoading ? 'Memuat bus...' : 'Pilih Bus'}
-                    </option>
-                    {availableBuses?.length > 0 ? (
-                      availableBuses.map(bus => (
-                        <option key={bus.id_bus} value={bus.id_bus}>
-                          {bus.nama_bus} ({bus.total_kursi} kursi)
-                          {bus.isCurrentBus ? ' (Saat ini)' : ''}
-                        </option>
-                      ))
-                    ) : (
-                      !busLoading && (
-                        <option disabled>Tidak ada bus tersedia</option>
-                      )
-                    )}
-                  </select>
-                  
-                  <div className="mt-1 text-xs">
-                    {busLoading ? (
-                      <span className="text-blue-500">
-                        <i className="fas fa-spinner fa-spin mr-1"></i>
-                        Memuat data bus...
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-green-600">
-                          <i className="fas fa-check-circle mr-1"></i>
-                          {availableBuses?.filter(b => !b.isCurrentBus).length || 0} bus lain tersedia
-                        </span>
-                        <span className="text-blue-500 ml-3">
-                          <i className="fas fa-bus mr-1"></i>
-                          Dapat ganti atau tetap gunakan bus saat ini
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Asal & Tujuan */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Asal <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="asal"
-                      value={editFormData.asal}
-                      onChange={handleEditChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tujuan <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="tujuan"
-                      value={editFormData.tujuan}
-                      onChange={handleEditChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                {/* Waktu & Harga */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Waktu Berangkat <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="waktu_berangkat"
-                    value={editFormData.waktu_berangkat}
-                    onChange={handleEditChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Harga <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="harga"
-                    value={editFormData.harga}
-                    onChange={handleEditChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                    min="0"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={editFormData.status}
-                    onChange={handleEditChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="aktif">Aktif</option>
-                    <option value="nonaktif">Nonaktif</option>
-                  </select>
+            {/* Show bus info clearly - Desktop only */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-gray-600">
+                  <i className="fas fa-bus mr-2"></i>
+                  <span>Bus: <strong>{route.nama_bus || 'Bus Tidak Diketahui'}</strong></span>
+                  <span className="mx-2">•</span>
+                  <span>Kursi: <strong>{route.total_kursi || route.kursi_tersedia || 'N/A'}</strong></span>
                 </div>
               </div>
-              
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                >
-                  <i className="fas fa-save mr-2"></i>
-                  Simpan Perubahan
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
 
 RouteList.propTypes = {
-  getAllAdminRoutes: PropTypes.func.isRequired,
-  deleteAdminRoute: PropTypes.func.isRequired,
-  updateAdminRoute: PropTypes.func.isRequired,
-  createAdminRoute: PropTypes.func.isRequired,
-  getAvailableBuses: PropTypes.func.isRequired,
-  setAlert: PropTypes.func.isRequired,
-  routes: PropTypes.array,
-  availableBuses: PropTypes.array,
+  routes: PropTypes.array.isRequired,
   loading: PropTypes.bool,
-  error: PropTypes.string
+  error: PropTypes.string,
+  getRutes: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
-  routes: state.routeAdmin ? state.routeAdmin.routes : [],
-  availableBuses: state.bus ? state.bus.availableBuses : [],
-  loading: state.routeAdmin ? state.routeAdmin.loading : false,
-  error: state.routeAdmin ? state.routeAdmin.error : null
+  routes: state.rute.routes,
+  loading: state.rute.loading,
+  error: state.rute.error
 });
 
-export default connect(mapStateToProps, { 
-  getAllAdminRoutes, 
-  deleteAdminRoute, 
-  updateAdminRoute,
-  createAdminRoute,
-  getAvailableBuses,
-  setAlert 
-})(RouteList);
+export default connect(mapStateToProps, { getRutes })(RouteList);

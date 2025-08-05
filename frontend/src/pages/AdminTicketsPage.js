@@ -13,7 +13,8 @@ const AdminTicketsPage = ({ auth: { user, isAuthenticated, loading: authLoading 
     return <Navigate to="/login" />;
   }
 
-  if (isAuthenticated && user && user.role !== 'admin') {
+  // ✅ FIXED: Allow both admin and super_admin to access
+  if (isAuthenticated && user && !['admin', 'super_admin'].includes(user.role)) {
     return <Navigate to="/dashboard" />;
   }
 
@@ -35,6 +36,12 @@ const AdminTicketsPage = ({ auth: { user, isAuthenticated, loading: authLoading 
               <p className="mt-1 text-sm text-gray-600">
                 Kelola semua tiket yang telah dipesan oleh pengguna
               </p>
+              {/* ✅ ADDED: Show user's current role for debugging */}
+              {process.env.NODE_ENV === 'development' && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Current role: {user?.role} | Access level: {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                </p>
+              )}
             </div>
             
             {/* Ticket List Component */}

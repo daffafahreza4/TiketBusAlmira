@@ -8,7 +8,6 @@ import Footer from '../components/layout/Footer';
 import Alert from '../components/layout/Alert';
 import UserList from '../components/admin/UserList';
 
-//TODO harus responsive
 const AdminUsersPage = ({
   auth: { user, isAuthenticated, loading: authLoading }
 }) => {
@@ -17,8 +16,8 @@ const AdminUsersPage = ({
     return <Navigate to="/login" />;
   }
 
-  // Redirect if not admin
-  if (isAuthenticated && user && user.role !== 'admin') {
+  // ✅ FIXED: Allow both admin and super_admin to access
+  if (isAuthenticated && user && !['admin', 'super_admin'].includes(user.role)) {
     return <Navigate to="/dashboard" />;
   }
 
@@ -40,6 +39,12 @@ const AdminUsersPage = ({
               <p className="mt-1 text-sm text-gray-600">
                 Kelola semua user yang terdaftar di sistem
               </p>
+              {/* ✅ ADDED: Show user's current role for debugging */}
+              {process.env.NODE_ENV === 'development' && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Current role: {user?.role} | Access level: {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                </p>
+              )}
             </div>
             
             {/* User List Component */}

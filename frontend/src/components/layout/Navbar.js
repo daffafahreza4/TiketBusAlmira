@@ -11,19 +11,58 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // Helper function to check if user is admin or super admin
+  const isAdminRole = () => {
+    return auth.user && ['admin', 'super_admin'].includes(auth.user.role);
+  };
+
   // Helper function to get home path based on user role
   const getHomePath = () => {
     if (auth.isAuthenticated && auth.user) {
-      return auth.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+      if (auth.user.role === 'super_admin') {
+        return '/admin/super-dashboard';
+      } else if (auth.user.role === 'admin') {
+        return '/admin/dashboard';
+      } else {
+        return '/dashboard';
+      }
     }
     return '/';
   };
 
+  // Helper function to get user display info based on role
+  const getUserDisplayInfo = () => {
+    if (!auth.user) return { bgColor: 'bg-white text-pink-600', icon: 'U' };
+    
+    switch (auth.user.role) {
+      case 'super_admin':
+        return {
+          bgColor: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+          icon: <i className="fas fa-crown"></i>,
+          title: 'Super Admin'
+        };
+      case 'admin':
+        return {
+          bgColor: 'bg-red-600 text-white',
+          icon: <i className="fas fa-user-shield"></i>,
+          title: 'Admin'
+        };
+      default:
+        return {
+          bgColor: 'bg-white text-pink-600',
+          icon: auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U',
+          title: 'User'
+        };
+    }
+  };
+
+  const userInfo = getUserDisplayInfo();
+
   const authLinks = (
     <div className="flex items-center space-x-1 md:space-x-2 lg:space-x-3">
       {/* Show different links based on user role */}
-      {auth.user?.role === 'admin' ? (
-        // Admin links - empty for now
+      {isAdminRole() ? (
+        // Admin/Super Admin links - empty for desktop (handled by sidebar)
         <></>
       ) : (
         // Regular user links
@@ -48,30 +87,16 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
             <span className="text-sm lg:text-base font-medium">
               {auth.user ? auth.user.username : 'Profil'}
             </span>
-            <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold transition-all duration-200 flex-shrink-0 ${auth.user?.role === 'admin'
-                ? 'bg-red-600 text-white shadow-md'
-                : 'bg-white text-pink-600 shadow-md'
-              }`}>
-              {auth.user?.role === 'admin' ? (
-                <i className="fas fa-user-shield"></i>
-              ) : (
-                auth.user && auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U'
-              )}
+            <div className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold transition-all duration-200 flex-shrink-0 shadow-md ${userInfo.bgColor}`}>
+              {userInfo.icon}
             </div>
           </Link>
         </div>
 
         {/* Mobile Profile Avatar */}
         <div className="md:hidden">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${auth.user?.role === 'admin'
-              ? 'bg-red-600 text-white'
-              : 'bg-white text-pink-600'
-            }`}>
-            {auth.user?.role === 'admin' ? (
-              <i className="fas fa-user-shield"></i>
-            ) : (
-              auth.user && auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U'
-            )}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${userInfo.bgColor}`}>
+            {userInfo.icon}
           </div>
         </div>
 
@@ -131,7 +156,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                 Beranda
               </Link>
               {/* Only show "Cari Tiket" for non-admin users */}
-              {auth.user?.role !== 'admin' && (
+              {!isAdminRole() && (
                 <Link
                   to="/search-results"
                   className="text-white hover:text-gray-200 px-3 py-2 rounded-md hover:bg-pink-600 transition-all duration-200 text-sm lg:text-base font-medium flex items-center"
@@ -176,7 +201,7 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
               </Link>
 
               {/* Only show "Cari Tiket" for non-admin users */}
-              {auth.user?.role !== 'admin' && (
+              {!isAdminRole() && (
                 <Link
                   to="/search-results"
                   className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
@@ -191,47 +216,84 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                   <div className="border-t border-pink-600 my-3"></div>
 
                   {/* Show different mobile menu items based on user role */}
-                  {auth.user?.role === 'admin' ? (
-                    // Admin mobile menu items
+                  {isAdminRole() ? (
+                    // Admin/Super Admin mobile menu items
                     <>
+                      {/* Dashboard link based on role */}
                       <Link
-                        to="/admin/users"
-                        className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        to={auth.user?.role === 'super_admin' ? '/admin/super-dashboard' : '/admin/dashboard'}
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
+                        <i className={`${auth.user?.role === 'super_admin' ? 'fas fa-crown' : 'fas fa-tachometer-alt'} mr-3 w-5 text-center`}></i>
+                        <span>{auth.user?.role === 'super_admin' ? 'Super Admin Panel' : 'Admin Dashboard'}</span>
+                      </Link>
+
+                      {/* Super Admin gets both dashboards */}
+                      {auth.user?.role === 'super_admin' && (
+                        <Link
+                          to="/admin/dashboard"
+                          className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <i className="fas fa-tachometer-alt mr-3 w-5 text-center"></i>
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+
+                      <Link
+                        to="/admin/users"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <i className="fas fa-users mr-3 w-5 text-center"></i>
                         Kelola User
                       </Link>
                       <Link
                         to="/admin/buses"
-                        className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
+                        <i className="fas fa-bus mr-3 w-5 text-center"></i>
                         Kelola Bus
                       </Link>
                       <Link
                         to="/admin/routes"
-                        className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
+                        <i className="fas fa-route mr-3 w-5 text-center"></i>
                         Kelola Rute
                       </Link>
                       <Link
                         to="/admin/tickets"
-                        className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
+                        <i className="fas fa-ticket-alt mr-3 w-5 text-center"></i>
                         Kelola Tiket
                       </Link>
                     </>
                   ) : (
                     // Regular user mobile menu items
-                    <Link
-                      to="/my-tickets"
-                      className="block text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Tiket Saya
-                    </Link>
+                    <>
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <i className="fas fa-tachometer-alt mr-3 w-5 text-center"></i>
+                        Dashboard
+                      </Link>
+                      <Link
+                        to="/my-tickets"
+                        className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <i className="fas fa-ticket-alt mr-3 w-5 text-center"></i>
+                        Tiket Saya
+                      </Link>
+                    </>
                   )}
 
                   <Link
@@ -239,18 +301,21 @@ const Navbar = ({ auth = { isAuthenticated: false, loading: true, user: null }, 
                     className="flex items-center text-white hover:bg-pink-600 px-3 py-3 rounded-md transition-colors duration-200 text-base font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0 ${auth.user?.role === 'admin'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-white text-pink-600'
-                      }`}>
-                      {auth.user?.role === 'admin' ? (
-                        <i className="fas fa-user-shield"></i>
-                      ) : (
-                        auth.user && auth.user.username ? auth.user.username.charAt(0).toUpperCase() : 'U'
-                      )}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 flex-shrink-0 ${userInfo.bgColor}`}>
+                      {userInfo.icon}
                     </div>
                     <span>
                       Profil - {auth.user ? auth.user.username : 'User'}
+                      {auth.user?.role === 'super_admin' && (
+                        <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full">
+                          Super Admin
+                        </span>
+                      )}
+                      {auth.user?.role === 'admin' && (
+                        <span className="ml-2 text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded-full">
+                          Admin
+                        </span>
+                      )}
                     </span>
                   </Link>
 

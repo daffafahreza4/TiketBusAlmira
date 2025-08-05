@@ -24,7 +24,8 @@ const AdminDashboardPage = ({
 }) => {
   // Fetch admin dashboard stats when component mounts
   useEffect(() => {
-    if (isAuthenticated && user && user.role === 'admin') {
+    // ✅ FIXED: Allow both admin and super_admin to use regular admin dashboard
+    if (isAuthenticated && user && ['admin', 'super_admin'].includes(user.role)) {
       getAdminDashboardStats();
     }
   }, [getAdminDashboardStats, isAuthenticated, user]);
@@ -34,8 +35,8 @@ const AdminDashboardPage = ({
     return <Navigate to="/login" />;
   }
 
-  // Redirect if not admin
-  if (isAuthenticated && user && user.role !== 'admin') {
+  // ✅ FIXED: Allow both admin and super_admin to access
+  if (isAuthenticated && user && !['admin', 'super_admin'].includes(user.role)) {
     return <Navigate to="/dashboard" />;
   }
 
@@ -56,10 +57,25 @@ const AdminDashboardPage = ({
 
             {/* Page Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {/* ✅ IMPROVED: Show appropriate title based on role */}
+                {user?.role === 'super_admin' ? 'Admin Dashboard (Super Admin View)' : 'Admin Dashboard'}
+              </h1>
               <p className="mt-1 text-sm text-gray-600">
                 Selamat datang di panel admin, {user?.username || 'Admin'}!
+                {/* ✅ ADDED: Show role indicator */}
+                {user?.role === 'super_admin' && (
+                  <span className="ml-2 text-purple-600 font-semibold">
+                    (Super Admin Mode)
+                  </span>
+                )}
               </p>
+              {/* ✅ ADDED: Show user's current role for debugging */}
+              {process.env.NODE_ENV === 'development' && (
+                <p className="mt-1 text-xs text-blue-600">
+                  Current role: {user?.role} | Access level: {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                </p>
+              )}
             </div>
 
             {isLoading ? (
@@ -83,10 +99,19 @@ const AdminDashboardPage = ({
                     loading={isLoading}
                   />
 
-                  {/* Quick Actions Widget */}
+                  {/* Quick Actions Widget - Enhanced for Super Admin */}
                   <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
+                    <h3 className="text-lg font-bold mb-4">
+                      {user?.role === 'super_admin' ? 'Super Admin Quick Actions' : 'Quick Actions'}
+                    </h3>
                     <div className="space-y-3">
+                      {/* ✅ ADDED: Super Admin specific actions */}
+                      {user?.role === 'super_admin' && (
+                        <Link to="/admin/super-dashboard" className="block w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+                          <i className="fas fa-crown mr-3 text-purple-600"></i>
+                          Super Admin Dashboard
+                        </Link>
+                      )}
 
                       <Link to="/admin/buses" className="block w-full text-left p-3 bg-blue-50 hover:bg-pink-100 rounded-lg transition-colors">
                         <i className="fas fa-plus mr-3 text-pink-600"></i>

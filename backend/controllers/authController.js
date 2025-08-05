@@ -692,6 +692,7 @@ exports.changePassword = async (req, res) => {
 // Make user an admin (only accessible by admin)
 exports.makeAdmin = async (req, res) => {
   try {
+    const currentUserRole = req.user.role; // From auth middleware
     const user = await User.findByPk(req.params.id);
     
     if (!user) {
@@ -708,9 +709,28 @@ exports.makeAdmin = async (req, res) => {
       });
     }
 
+    // SECURITY: Prevent making super_admin (only one should exist)
+    if (user.role === 'super_admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Super admin tidak dapat diubah rolenya'
+      });
+    }
+
+    // SECURITY: Only super_admin can promote other admins to admin
+    if (user.role === 'admin' && currentUserRole !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Hanya super admin yang dapat mengubah role admin lain'
+      });
+    }
+
     // Change role to admin
     user.role = 'admin';
     await user.save();
+
+    // Log the action for audit
+    console.log(`🔄 ROLE CHANGE: ${currentUserRole} (${req.user.email}) made ${user.email} an admin`);
 
     res.status(200).json({
       success: true,
@@ -720,7 +740,8 @@ exports.makeAdmin = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        is_verified: user.is_verified
+        is_verified: user.is_verified,
+        promoted_by: currentUserRole
       }
     });
   } catch (error) {

@@ -31,7 +31,7 @@ router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changePassword);
 
-// Admin routes (protected with admin role)
-router.put('/make-admin/:id', protect, authorize('admin'), makeAdmin);
+// Admin routes (FIXED: Allow both admin and super_admin)
+router.put('/make-admin/:id', protect, authorize('admin', 'super_admin'), makeAdmin);
 
 module.exports = router;
